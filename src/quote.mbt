@@ -8,7 +8,7 @@ pub fn expand_quote(expr : SExpr) -> SExpr {
     SExpr::UnquoteSplicing(inner) => list2(sym("unquote-splicing"), expand_quote(inner))
     SExpr::Pair(left, right) => SExpr::Pair(expand_quote(left), expand_quote(right))
     SExpr::Vector(items) => {
-      let mut mapped : Array[SExpr] = []
+      let mapped : Array[SExpr] = []
       for item in items {
         mapped.push(expand_quote(item))
       }

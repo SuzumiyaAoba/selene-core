@@ -1,7 +1,4 @@
 /// Minimal S-expression parser for lists, identifiers, and integers.
-import src.lexer.lexer.{tokenize}
-import src.lexer.token.{Token}
-import src.parser.sexpr.{SExpr}
 
 fn list_from_array(items : Array[SExpr]) -> SExpr {
   let mut acc = SExpr::Nil
@@ -15,11 +12,11 @@ fn list_from_array(items : Array[SExpr]) -> SExpr {
 
 fn parse_expr(tokens : Array[Token], start : Int) -> (SExpr, Int) {
   if start >= tokens.length() {
-    panic("unexpected end of input")
+    panic()
   }
   match tokens[start] {
     Token::LParen => {
-      let mut items : Array[SExpr] = []
+      let items : Array[SExpr] = []
       let mut i = start + 1
       let _ = while i < tokens.length() {
         match tokens[i] {
@@ -33,16 +30,16 @@ fn parse_expr(tokens : Array[Token], start : Int) -> (SExpr, Int) {
           }
         }
       } else { () }
-      panic("unterminated list")
+      panic()
     }
-    Token::RParen => panic("unexpected )")
+    Token::RParen => panic()
     Token::Identifier(name) => (SExpr::Symbol(name), start + 1)
     Token::Number(value) => (SExpr::Number(value), start + 1)
   }
 }
 
 pub fn parse_tokens(tokens : Array[Token]) -> Array[SExpr] {
-  let mut exprs : Array[SExpr] = []
+  let exprs : Array[SExpr] = []
   let mut i = 0
   let len = tokens.length()
   let _ = while i < len {
@@ -60,11 +57,11 @@ pub fn parse(input : String) -> Array[SExpr] {
 pub fn parse_one(input : String) -> SExpr {
   let tokens = tokenize(input)
   if tokens.length() == 0 {
-    panic("empty input")
+    panic()
   }
   let (expr, next_i) = parse_expr(tokens, 0)
   if next_i != tokens.length() {
-    panic("unexpected tokens after expression")
+    panic()
   }
   expr
 }
