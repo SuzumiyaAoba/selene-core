@@ -1,0 +1,6 @@
+out/
+.moon/
+.cache/
+*.log
+*.tmp
+*.swp
