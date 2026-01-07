@@ -46,7 +46,7 @@ fn is_ident_subsequent(ch : Char) -> Bool {
 pub fn tokenize(input : String) -> Array[Token] {
   let chars : Array[Char] = input.iter().collect()
   let len = chars.length()
-  let mut tokens : Array[Token] = []
+  let tokens : Array[Token] = []
   let mut i = 0
   let _ = while i < len {
     let ch = chars[i]
@@ -81,7 +81,7 @@ pub fn tokenize(input : String) -> Array[Token] {
       continue
     }
     if is_ident_initial(ch) {
-      let mut builder = StringBuilder::new()
+      let builder = StringBuilder::new()
       let _ = while i < len && is_ident_subsequent(chars[i]) {
         builder.write_char(chars[i])
         i = i + 1
@@ -89,7 +89,7 @@ pub fn tokenize(input : String) -> Array[Token] {
       tokens.push(Token::Identifier(builder.to_string()))
       continue
     }
-    panic("unexpected character in input")
+    panic()
   } else { () }
   tokens
 }

@@ -2,9 +2,9 @@
   "name": "selene-core",
   "version": "0.1.0",
   "description": "Scheme (R5RS) implementation on Moonbit",
+  "is-main": true,
   "sources": [
-    "src",
-    "tests"
+    "."
   ],
   "dependencies": {}
 }

@@ -28,3 +28,12 @@ test "expand in vector" {
   ])
   assert_eq(expand_quote(expr), expected)
 }
+
+test "quote expansion snapshot" {
+  let expr = SExpr::Quote(SExpr::Symbol("x"))
+  let expanded = expand_quote(expr)
+  inspect(
+    sexpr_snapshot(expanded),
+    content="Pair(Symbol(quote), Pair(Symbol(x), Nil))",
+  )
+}
