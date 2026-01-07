@@ -1,15 +1,20 @@
+---
+name: moonbit
+description: MoonBit の文法・標準ライブラリ・ツールチェーンの参照、ドキュメント索引の案内、仕様確認、コード例作成が必要なときに使う。MoonBit に関する質問・調査・要約・ナビゲーションを行う場面で使用。
+---
+
 # Moonbit スキル
 
-Moonbit の文法・標準ライブラリを参照するためのスキルです。最小限の入口だけをここに示し、詳細は references で必要な部分だけを開く運用にしてください。
+Moonbit の文法・標準ライブラリを参照するために使う。最小限の入口だけをここに示し、詳細は references から必要な部分だけを開く。
 
-- まず見る: `references/index.md`（公式ドキュメントの目次）
-- 言語仕様: `references/language/index.md`（基礎と各章へのリンク）
-- チュートリアル: `references/tutorial/index.md`（概要）、`references/tutorial/tour.md`（入門ツアー）
-- フルテキストが必要な場合のみ `references/llms.txt`（全編）を参照
+- まず `references/index.md` を読む（公式ドキュメントの目次）
+- 言語仕様は `references/language/index.md` を読む（基礎と各章へのリンク）
+- チュートリアルは `references/tutorial/index.md` と `references/tutorial/tour.md` を読む
+- フルテキストが必要な場合のみ `references/llms.txt` を読む
 
 利用時のヒント:
-- 質問の範囲に応じて該当セクションだけを読み込み、不要な章は開かない。
-- 追加情報が必要なら上記パスをたどって目的の章を参照してください。
+- 質問の範囲に応じて該当セクションだけを読み、不要な章は開かない
+- 追加情報が必要なら上記パスをたどって目的の章を参照する
 
 ## references
 - `references/index.md`: Moonbit ドキュメント目次
