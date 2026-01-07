@@ -4,4 +4,4 @@ pub enum Token {
   RParen
   Identifier(String)
   Number(Int)
-} derive(Show, Eq)
+} derive(Show, Eq, ToJson(style="flat"))

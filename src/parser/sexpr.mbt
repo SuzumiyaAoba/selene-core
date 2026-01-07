@@ -9,7 +9,7 @@ pub(all) enum SExpr {
   Quasiquote(SExpr)
   Unquote(SExpr)
   UnquoteSplicing(SExpr)
-} derive(Show, Eq)
+} derive(Show, Eq, ToJson(style="flat"))
 
 pub fn list2(a : SExpr, b : SExpr) -> SExpr {
   SExpr::Pair(a, SExpr::Pair(b, SExpr::Nil))
