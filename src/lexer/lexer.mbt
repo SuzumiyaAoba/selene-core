@@ -1,0 +1,95 @@
+/// Minimal lexer for identifiers, integers, parentheses, and comments.
+
+fn is_whitespace(ch : Char) -> Bool {
+  ch == ' ' || ch == '\t' || ch == '\n' || ch == '\r'
+}
+
+fn digit_value(ch : Char) -> Int {
+  match ch {
+    '0' => 0
+    '1' => 1
+    '2' => 2
+    '3' => 3
+    '4' => 4
+    '5' => 5
+    '6' => 6
+    '7' => 7
+    '8' => 8
+    '9' => 9
+    _ => -1
+  }
+}
+
+fn is_digit(ch : Char) -> Bool {
+  digit_value(ch) >= 0
+}
+
+fn is_letter(ch : Char) -> Bool {
+  (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z')
+}
+
+fn is_symbol(ch : Char) -> Bool {
+  match ch {
+    '!' | '$' | '%' | '&' | '*' | '/' | ':' | '<' | '=' | '>' | '?' | '^' | '_' | '~' | '+' | '-' => true
+    _ => false
+  }
+}
+
+fn is_ident_initial(ch : Char) -> Bool {
+  is_letter(ch) || is_symbol(ch)
+}
+
+fn is_ident_subsequent(ch : Char) -> Bool {
+  is_ident_initial(ch) || is_digit(ch)
+}
+
+pub fn tokenize(input : String) -> Array[Token] {
+  let chars : Array[Char] = input.iter().collect()
+  let len = chars.length()
+  let mut tokens : Array[Token] = []
+  let mut i = 0
+  let _ = while i < len {
+    let ch = chars[i]
+    if is_whitespace(ch) {
+      i = i + 1
+      continue
+    }
+    if ch == ';' {
+      i = i + 1
+      let _ = while i < len && chars[i] != '\n' {
+        i = i + 1
+      } else { () }
+      continue
+    }
+    if ch == '(' {
+      tokens.push(Token::LParen)
+      i = i + 1
+      continue
+    }
+    if ch == ')' {
+      tokens.push(Token::RParen)
+      i = i + 1
+      continue
+    }
+    if is_digit(ch) {
+      let mut value = 0
+      let _ = while i < len && is_digit(chars[i]) {
+        value = value * 10 + digit_value(chars[i])
+        i = i + 1
+      } else { () }
+      tokens.push(Token::Number(value))
+      continue
+    }
+    if is_ident_initial(ch) {
+      let mut builder = StringBuilder::new()
+      let _ = while i < len && is_ident_subsequent(chars[i]) {
+        builder.write_char(chars[i])
+        i = i + 1
+      } else { () }
+      tokens.push(Token::Identifier(builder.to_string()))
+      continue
+    }
+    panic("unexpected character in input")
+  } else { () }
+  tokens
+}
