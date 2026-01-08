@@ -1,5 +1,6 @@
-/// Expand quote syntactic sugar (' ` , ,@) into canonical list forms.
+/// クォート構文糖（' ` , ,@）を正規形のリストへ展開する。
 
+/// Quote 系ノードを (quote ...) 形式へ再帰変換する。
 pub fn expand_quote(expr : SExpr) -> SExpr {
   match expr {
     SExpr::Quote(inner) => list2(sym("quote"), expand_quote(inner))
