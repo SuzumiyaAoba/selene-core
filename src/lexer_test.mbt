@@ -1,3 +1,4 @@
+/// 基本トークンの分割ができることを確認する。
 test "lex parens identifiers numbers" {
   let tokens = tokenize("(define x 42)")
   assert_eq(tokens.length(), 5)
@@ -8,6 +9,7 @@ test "lex parens identifiers numbers" {
   assert_eq(token_snapshot(tokens[4]), "RParen")
 }
 
+/// コメント/空白が無視されることを確認する。
 test "lex comments and whitespace" {
   let tokens = tokenize("; comment\n(foo ; inline\n 123)\n")
   assert_eq(tokens.length(), 4)
@@ -17,6 +19,7 @@ test "lex comments and whitespace" {
   assert_eq(token_snapshot(tokens[3]), "RParen")
 }
 
+/// トークンをスナップショット用の文字列に変換する。
 fn token_snapshot(token : Token) -> String {
   match token {
     Token::LParen => "LParen"
@@ -26,6 +29,7 @@ fn token_snapshot(token : Token) -> String {
   }
 }
 
+/// トークン列をスナップショット用の文字列に変換する。
 fn tokens_snapshot(tokens : Array[Token]) -> String {
   let builder = StringBuilder::new()
   builder.write_string("[")
@@ -42,6 +46,7 @@ fn tokens_snapshot(tokens : Array[Token]) -> String {
   builder.to_string()
 }
 
+/// レキサ結果のスナップショットを固定する。
 test "lexer snapshot" {
   let tokens = tokenize("(define x 42)")
   inspect(

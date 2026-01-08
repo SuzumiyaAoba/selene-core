@@ -1,9 +1,11 @@
+/// 単純な quote の展開を確認する。
 test "expand simple quote" {
   let expr = SExpr::Quote(SExpr::Symbol("x"))
   let expected = list2(sym("quote"), SExpr::Symbol("x"))
   assert_eq(expand_quote(expr), expected)
 }
 
+/// quasiquote と unquote の展開を確認する。
 test "expand quasiquote with unquote" {
   let expr = SExpr::Quasiquote(
     SExpr::Pair(
@@ -21,6 +23,7 @@ test "expand quasiquote with unquote" {
   assert_eq(expand_quote(expr), expected)
 }
 
+/// ベクタ内の unquote-splicing 展開を確認する。
 test "expand in vector" {
   let expr = SExpr::Vector([SExpr::UnquoteSplicing(SExpr::Symbol("xs"))])
   let expected = SExpr::Vector([
@@ -29,6 +32,7 @@ test "expand in vector" {
   assert_eq(expand_quote(expr), expected)
 }
 
+/// クォート展開のスナップショットを固定する。
 test "quote expansion snapshot" {
   let expr = SExpr::Quote(SExpr::Symbol("x"))
   let expanded = expand_quote(expr)

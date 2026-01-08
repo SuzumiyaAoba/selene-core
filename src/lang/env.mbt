@@ -1,20 +1,25 @@
-/// Lexical environment model (draft).
+/// レキシカル環境モデル（ドラフト）。
 
+/// 1 つの束縛（名前と値）。
 pub type Binding = (String, Value)
 
+/// 環境フレームと親環境の連鎖。
 pub(all) struct Env {
   parent : Env?
   frame : Array[Binding]
 }
 
+/// 空の環境を作る。
 pub fn empty_env() -> Env {
   { parent: None, frame: [] }
 }
 
+/// 親環境に新しいフレームを積む。
 pub fn extend(parent : Env, bindings : Array[Binding]) -> Env {
   { parent: Some(parent), frame: bindings }
 }
 
+/// フレームをシャローコピーする。
 fn clone_frame(frame : Array[Binding]) -> Array[Binding] {
   let copied : Array[Binding] = []
   for item in frame {
@@ -23,6 +28,7 @@ fn clone_frame(frame : Array[Binding]) -> Array[Binding] {
   copied
 }
 
+/// フレーム内で名前を検索し、インデックスを返す。
 fn find_in_frame(frame : Array[Binding], name : String) -> Int? {
   let mut i = 0
   let len = frame.length()
@@ -36,6 +42,7 @@ fn find_in_frame(frame : Array[Binding], name : String) -> Int? {
   None
 }
 
+/// 環境連鎖から値を取得する（未束縛なら None）。
 pub fn lookup(env : Env, name : String) -> Value? {
   match find_in_frame(env.frame, name) {
     Some(idx) => {
@@ -49,6 +56,7 @@ pub fn lookup(env : Env, name : String) -> Value? {
   }
 }
 
+/// 現在フレームに束縛を追加/上書きする。
 pub fn define(env : Env, name : String, value : Value) -> Env {
   let new_frame = clone_frame(env.frame)
   match find_in_frame(new_frame, name) {
@@ -63,6 +71,7 @@ pub fn define(env : Env, name : String, value : Value) -> Env {
   }
 }
 
+/// 既存束縛を更新する（成功可否を返す）。
 pub fn set_bang(env : Env, name : String, value : Value) -> (Env, Bool) {
   match find_in_frame(env.frame, name) {
     Some(idx) => {

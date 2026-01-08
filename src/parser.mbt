@@ -1,5 +1,6 @@
-/// Minimal S-expression parser for lists, identifiers, and integers.
+/// リスト/識別子/整数に対応した最小 S 式パーサ。
 
+/// 配列から連結リスト（Pair）を構築する。
 fn list_from_array(items : Array[SExpr]) -> SExpr {
   let mut acc = SExpr::Nil
   let mut i = items.length()
@@ -10,6 +11,7 @@ fn list_from_array(items : Array[SExpr]) -> SExpr {
   acc
 }
 
+/// トークン列から 1 式を読み、次の位置を返す。
 fn parse_expr(tokens : Array[Token], start : Int) -> (SExpr, Int) {
   if start >= tokens.length() {
     panic()
@@ -38,6 +40,7 @@ fn parse_expr(tokens : Array[Token], start : Int) -> (SExpr, Int) {
   }
 }
 
+/// トークン列を S 式列へ変換する。
 pub fn parse_tokens(tokens : Array[Token]) -> Array[SExpr] {
   let exprs : Array[SExpr] = []
   let mut i = 0
@@ -50,10 +53,12 @@ pub fn parse_tokens(tokens : Array[Token]) -> Array[SExpr] {
   exprs
 }
 
+/// 入力文字列を S 式列へ変換する。
 pub fn parse(input : String) -> Array[SExpr] {
   parse_tokens(tokenize(input))
 }
 
+/// 入力全体が 1 式であることを前提にパースする。
 pub fn parse_one(input : String) -> SExpr {
   let tokens = tokenize(input)
   if tokens.length() == 0 {
