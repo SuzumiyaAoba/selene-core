@@ -140,6 +140,12 @@ fn apply_builtin(name : String, args : Array[Value]) -> Result[Value, EvalError]
     "-" => builtin_sub(args)
     "*" => builtin_mul(args)
     "/" => builtin_div(args)
+    "quotient" => builtin_quotient(args)
+    "remainder" => builtin_remainder(args)
+    "modulo" => builtin_modulo(args)
+    "abs" => builtin_abs(args)
+    "max" => builtin_max(args)
+    "min" => builtin_min(args)
     _ => Err(EvalError::InvalidSyntax("unknown builtin: " + name))
   }
 }
@@ -186,6 +192,36 @@ fn div_numbers(a : Number, b : Number) -> Number {
     (Number::Real(x), Number::Real(y)) => Number::Real(x / y)
     (Number::Int(x), Number::Real(y)) => Number::Real(x.to_double() / y)
     (Number::Real(x), Number::Int(y)) => Number::Real(x / y.to_double())
+  }
+}
+
+fn max_numbers(a : Number, b : Number) -> Number {
+  match (a, b) {
+    (Number::Int(x), Number::Int(y)) => Number::Int(if x > y { x } else { y })
+    (Number::Real(x), Number::Real(y)) => Number::Real(if x > y { x } else { y })
+    (Number::Int(x), Number::Real(y)) => {
+      let x_real = x.to_double()
+      Number::Real(if x_real > y { x_real } else { y })
+    }
+    (Number::Real(x), Number::Int(y)) => {
+      let y_real = y.to_double()
+      Number::Real(if x > y_real { x } else { y_real })
+    }
+  }
+}
+
+fn min_numbers(a : Number, b : Number) -> Number {
+  match (a, b) {
+    (Number::Int(x), Number::Int(y)) => Number::Int(if x < y { x } else { y })
+    (Number::Real(x), Number::Real(y)) => Number::Real(if x < y { x } else { y })
+    (Number::Int(x), Number::Real(y)) => {
+      let x_real = x.to_double()
+      Number::Real(if x_real < y { x_real } else { y })
+    }
+    (Number::Real(x), Number::Int(y)) => {
+      let y_real = y.to_double()
+      Number::Real(if x < y_real { x } else { y_real })
+    }
   }
 }
 
@@ -297,6 +333,144 @@ fn builtin_div(args : Array[Value]) -> Result[Value, EvalError] {
   Ok(Value::Number(result))
 }
 
+/// 組み込み関数: quotient
+fn builtin_quotient(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 2 {
+    return Err(EvalError::ArityError("quotient: requires exactly 2 arguments"))
+  }
+  let a = match expect_number(args[0]) {
+    Ok(n) => n
+    Err(e) => return Err(e)
+  }
+  let b = match expect_number(args[1]) {
+    Ok(n) => n
+    Err(e) => return Err(e)
+  }
+  match (a, b) {
+    (Number::Int(x), Number::Int(y)) => {
+      if y == 0 {
+        return Err(EvalError::TypeError("quotient: division by zero"))
+      }
+      Ok(Value::Number(Number::Int(x / y)))
+    }
+    _ => Err(EvalError::TypeError("quotient: requires integer arguments"))
+  }
+}
+
+/// 組み込み関数: remainder
+fn builtin_remainder(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 2 {
+    return Err(EvalError::ArityError("remainder: requires exactly 2 arguments"))
+  }
+  let a = match expect_number(args[0]) {
+    Ok(n) => n
+    Err(e) => return Err(e)
+  }
+  let b = match expect_number(args[1]) {
+    Ok(n) => n
+    Err(e) => return Err(e)
+  }
+  match (a, b) {
+    (Number::Int(x), Number::Int(y)) => {
+      if y == 0 {
+        return Err(EvalError::TypeError("remainder: division by zero"))
+      }
+      Ok(Value::Number(Number::Int(x % y)))
+    }
+    _ => Err(EvalError::TypeError("remainder: requires integer arguments"))
+  }
+}
+
+/// 組み込み関数: modulo
+fn builtin_modulo(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 2 {
+    return Err(EvalError::ArityError("modulo: requires exactly 2 arguments"))
+  }
+  let a = match expect_number(args[0]) {
+    Ok(n) => n
+    Err(e) => return Err(e)
+  }
+  let b = match expect_number(args[1]) {
+    Ok(n) => n
+    Err(e) => return Err(e)
+  }
+  match (a, b) {
+    (Number::Int(x), Number::Int(y)) => {
+      if y == 0 {
+        return Err(EvalError::TypeError("modulo: division by zero"))
+      }
+      let r = x % y
+      // Scheme modulo: result has same sign as divisor
+      let result = if (r > 0 && y < 0) || (r < 0 && y > 0) {
+        r + y
+      } else {
+        r
+      }
+      Ok(Value::Number(Number::Int(result)))
+    }
+    _ => Err(EvalError::TypeError("modulo: requires integer arguments"))
+  }
+}
+
+/// 組み込み関数: abs
+fn builtin_abs(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 1 {
+    return Err(EvalError::ArityError("abs: requires exactly 1 argument"))
+  }
+  let num = match expect_number(args[0]) {
+    Ok(n) => n
+    Err(e) => return Err(e)
+  }
+  Ok(Value::Number(match num {
+    Number::Int(x) => Number::Int(if x < 0 { -x } else { x })
+    Number::Real(x) => Number::Real(if x < 0.0 { -x } else { x })
+  }))
+}
+
+/// 組み込み関数: max
+fn builtin_max(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() == 0 {
+    return Err(EvalError::ArityError("max: requires at least 1 argument"))
+  }
+  let mut result = match expect_number(args[0]) {
+    Ok(n) => n
+    Err(e) => return Err(e)
+  }
+  let mut i = 1
+  let len = args.length()
+  let _ = while i < len {
+    let num = match expect_number(args[i]) {
+      Ok(n) => n
+      Err(e) => return Err(e)
+    }
+    result = max_numbers(result, num)
+    i = i + 1
+  } else { () }
+  Ok(Value::Number(result))
+}
+
+/// 組み込み関数: min
+fn builtin_min(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() == 0 {
+    return Err(EvalError::ArityError("min: requires at least 1 argument"))
+  }
+  let mut result = match expect_number(args[0]) {
+    Ok(n) => n
+    Err(e) => return Err(e)
+  }
+  let mut i = 1
+  let len = args.length()
+  let _ = while i < len {
+    let num = match expect_number(args[i]) {
+      Ok(n) => n
+      Err(e) => return Err(e)
+    }
+    result = min_numbers(result, num)
+    i = i + 1
+  } else { () }
+  Ok(Value::Number(result))
+}
+
 /// if 特殊形式: (if test consequent [alternative])
 fn eval_if(args : SExpr, env : Env) -> Result[Value, EvalError] {
   match args {
@@ -395,5 +569,11 @@ pub fn initial_env() -> Env {
   let env = define_var(env, "-", Value::Procedure(Procedure::Native("-")))
   let env = define_var(env, "*", Value::Procedure(Procedure::Native("*")))
   let env = define_var(env, "/", Value::Procedure(Procedure::Native("/")))
+  let env = define_var(env, "quotient", Value::Procedure(Procedure::Native("quotient")))
+  let env = define_var(env, "remainder", Value::Procedure(Procedure::Native("remainder")))
+  let env = define_var(env, "modulo", Value::Procedure(Procedure::Native("modulo")))
+  let env = define_var(env, "abs", Value::Procedure(Procedure::Native("abs")))
+  let env = define_var(env, "max", Value::Procedure(Procedure::Native("max")))
+  let env = define_var(env, "min", Value::Procedure(Procedure::Native("min")))
   env
 }
