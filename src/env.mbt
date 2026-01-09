@@ -7,7 +7,7 @@ pub type Binding = (String, Value)
 pub(all) struct Env {
   parent : Env?
   frame : Array[Binding]
-}
+} derive(Show)
 
 /// 空の環境を作る。
 pub fn empty_env() -> Env {

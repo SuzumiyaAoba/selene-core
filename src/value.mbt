@@ -6,10 +6,10 @@ pub(all) enum Number {
   Real(Double)
 } derive(Show)
 
-/// 手続き表現（クロージャは後で追加）。
+/// 手続き表現。
 pub(all) enum Procedure {
   Native(String)
-  // TODO: Closure(params, body, env)
+  Closure(Array[String], SExpr, Env)
 } derive(Show)
 
 /// 評価器が扱う値の総和型。
