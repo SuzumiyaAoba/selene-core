@@ -60,18 +60,25 @@ pub fn run() -> Unit {
 
   // TODO: 標準入力から読み取る（現在はサンプル式で動作確認）
   let test_inputs = [
-    "(+ 1 2)",
-    "(- 10 3)",
-    "(* 4 5)",
-    "(/ 20 4)",
-    "(+ 1 (* 2 3))",
-    "((lambda (x) (+ x 1)) 5)",
-    "((lambda (x y) (* x y)) 3 4)",
-    "(begin (+ 1 2) (* 3 4))",
-    "(define x 10)",
-    "x",
-    "(define square (lambda (n) (* n n)))",
-    "(square 5)",
+    "#t",
+    "#f",
+    "(cons 1 2)",
+    "(cons 1 (cons 2 (cons 3 ())))",
+    "(car (cons 1 2))",
+    "(cdr (cons 1 2))",
+    "(null? ())",
+    "(null? (cons 1 2))",
+    "(pair? (cons 1 2))",
+    "(number? 42)",
+    "(boolean? #t)",
+    "(= 1 1)",
+    "(< 1 2)",
+    "(> 3 2)",
+    "(not #f)",
+    "(not #t)",
+    "(define lst (cons 1 (cons 2 (cons 3 ()))))",
+    "(car lst)",
+    "(car (cdr lst))",
   ]
 
   for input in test_inputs {
