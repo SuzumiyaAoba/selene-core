@@ -46,6 +46,7 @@ fn value_to_string(value : Value) -> String {
       result + ")"
     }
     Value::Procedure(Procedure::Native(name)) => "#<procedure:" + name + ">"
+    Value::Procedure(Procedure::Closure(_, _, _)) => "#<procedure:closure>"
   }
 }
 
@@ -55,7 +56,7 @@ pub fn run() -> Unit {
   println("Type expressions to evaluate. (Ctrl+D to exit)")
   println("")
 
-  let env = initial_env()
+  let mut env = initial_env()
 
   // TODO: 標準入力から読み取る（現在はサンプル式で動作確認）
   let test_inputs = [
@@ -64,15 +65,36 @@ pub fn run() -> Unit {
     "(* 4 5)",
     "(/ 20 4)",
     "(+ 1 (* 2 3))",
+    "((lambda (x) (+ x 1)) 5)",
+    "((lambda (x y) (* x y)) 3 4)",
+    "(begin (+ 1 2) (* 3 4))",
+    "(define x 10)",
+    "x",
+    "(define square (lambda (n) (* n n)))",
+    "(square 5)",
   ]
 
   for input in test_inputs {
     println("> " + input)
     match parse_one(input) {
       expr => {
-        match eval(expr, env) {
-          Ok(value) => println(value_to_string(value))
-          Err(err) => println("Error: " + err.to_string())
+        // defineの特別処理
+        match expr {
+          SExpr::Pair(SExpr::Symbol("define"), SExpr::Pair(SExpr::Symbol(name), SExpr::Pair(value_expr, SExpr::Nil))) => {
+            match eval(value_expr, env) {
+              Ok(value) => {
+                env = define_var(env, name, value)
+                println("#<void>")
+              }
+              Err(err) => println("Error: " + err.to_string())
+            }
+          }
+          _ => {
+            match eval(expr, env) {
+              Ok(value) => println(value_to_string(value))
+              Err(err) => println("Error: " + err.to_string())
+            }
+          }
         }
       }
     }
