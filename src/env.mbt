@@ -57,7 +57,7 @@ pub fn lookup(env : Env, name : String) -> Value? {
 }
 
 /// 現在フレームに束縛を追加/上書きする。
-pub fn define(env : Env, name : String, value : Value) -> Env {
+pub fn define_var(env : Env, name : String, value : Value) -> Env {
   let new_frame = clone_frame(env.frame)
   match find_in_frame(new_frame, name) {
     Some(idx) => {
