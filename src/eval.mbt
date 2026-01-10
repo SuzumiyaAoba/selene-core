@@ -142,20 +142,32 @@ fn apply_builtin(name : String, args : Array[Value]) -> Result[Value, EvalError]
     "-" => builtin_sub(args)
     "*" => builtin_mul(args)
     "/" => builtin_div(args)
+    "quotient" => builtin_quotient(args)
+    "remainder" => builtin_remainder(args)
+    "modulo" => builtin_modulo(args)
+    "abs" => builtin_abs(args)
+    "max" => builtin_max(args)
+    "min" => builtin_min(args)
+    "cons" => builtin_cons(args)
+    "car" => builtin_car(args)
+    "cdr" => builtin_cdr(args)
+    "pair?" => builtin_pair_p(args)
+    "number?" => builtin_number_p(args)
+    "boolean?" => builtin_boolean_p(args)
+    "null?" => builtin_null_p(args)
     "=" => builtin_num_eq(args)
     "<" => builtin_lt(args)
     ">" => builtin_gt(args)
     "<=" => builtin_le(args)
     ">=" => builtin_ge(args)
-    "cons" => builtin_cons(args)
-    "car" => builtin_car(args)
-    "cdr" => builtin_cdr(args)
-    "null?" => builtin_null_p(args)
-    "pair?" => builtin_pair_p(args)
-    "number?" => builtin_number_p(args)
-    "boolean?" => builtin_boolean_p(args)
     "eq?" => builtin_eq_p(args)
     "not" => builtin_not(args)
+    "list" => builtin_list(args)
+    "length" => builtin_length(args)
+    "append" => builtin_append(args)
+    "reverse" => builtin_reverse(args)
+    "list-ref" => builtin_list_ref(args)
+    "list-tail" => builtin_list_tail(args)
     _ => Err(EvalError::InvalidSyntax("unknown builtin: " + name))
   }
 }
@@ -202,6 +214,36 @@ fn div_numbers(a : Number, b : Number) -> Number {
     (Number::Real(x), Number::Real(y)) => Number::Real(x / y)
     (Number::Int(x), Number::Real(y)) => Number::Real(x.to_double() / y)
     (Number::Real(x), Number::Int(y)) => Number::Real(x / y.to_double())
+  }
+}
+
+fn max_numbers(a : Number, b : Number) -> Number {
+  match (a, b) {
+    (Number::Int(x), Number::Int(y)) => Number::Int(if x > y { x } else { y })
+    (Number::Real(x), Number::Real(y)) => Number::Real(if x > y { x } else { y })
+    (Number::Int(x), Number::Real(y)) => {
+      let x_real = x.to_double()
+      Number::Real(if x_real > y { x_real } else { y })
+    }
+    (Number::Real(x), Number::Int(y)) => {
+      let y_real = y.to_double()
+      Number::Real(if x > y_real { x } else { y_real })
+    }
+  }
+}
+
+fn min_numbers(a : Number, b : Number) -> Number {
+  match (a, b) {
+    (Number::Int(x), Number::Int(y)) => Number::Int(if x < y { x } else { y })
+    (Number::Real(x), Number::Real(y)) => Number::Real(if x < y { x } else { y })
+    (Number::Int(x), Number::Real(y)) => {
+      let x_real = x.to_double()
+      Number::Real(if x_real < y { x_real } else { y })
+    }
+    (Number::Real(x), Number::Int(y)) => {
+      let y_real = y.to_double()
+      Number::Real(if x < y_real { x } else { y_real })
+    }
   }
 }
 
@@ -311,6 +353,307 @@ fn builtin_div(args : Array[Value]) -> Result[Value, EvalError] {
     i = i + 1
   } else { () }
   Ok(Value::Number(result))
+}
+
+/// 組み込み関数: quotient
+fn builtin_quotient(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 2 {
+    return Err(EvalError::ArityError("quotient: requires exactly 2 arguments"))
+  }
+  let a = match expect_number(args[0]) {
+    Ok(n) => n
+    Err(e) => return Err(e)
+  }
+  let b = match expect_number(args[1]) {
+    Ok(n) => n
+    Err(e) => return Err(e)
+  }
+  match (a, b) {
+    (Number::Int(x), Number::Int(y)) => {
+      if y == 0 {
+        return Err(EvalError::TypeError("quotient: division by zero"))
+      }
+      Ok(Value::Number(Number::Int(x / y)))
+    }
+    _ => Err(EvalError::TypeError("quotient: requires integer arguments"))
+  }
+}
+
+/// 組み込み関数: remainder
+fn builtin_remainder(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 2 {
+    return Err(EvalError::ArityError("remainder: requires exactly 2 arguments"))
+  }
+  let a = match expect_number(args[0]) {
+    Ok(n) => n
+    Err(e) => return Err(e)
+  }
+  let b = match expect_number(args[1]) {
+    Ok(n) => n
+    Err(e) => return Err(e)
+  }
+  match (a, b) {
+    (Number::Int(x), Number::Int(y)) => {
+      if y == 0 {
+        return Err(EvalError::TypeError("remainder: division by zero"))
+      }
+      Ok(Value::Number(Number::Int(x % y)))
+    }
+    _ => Err(EvalError::TypeError("remainder: requires integer arguments"))
+  }
+}
+
+/// 組み込み関数: modulo
+fn builtin_modulo(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 2 {
+    return Err(EvalError::ArityError("modulo: requires exactly 2 arguments"))
+  }
+  let a = match expect_number(args[0]) {
+    Ok(n) => n
+    Err(e) => return Err(e)
+  }
+  let b = match expect_number(args[1]) {
+    Ok(n) => n
+    Err(e) => return Err(e)
+  }
+  match (a, b) {
+    (Number::Int(x), Number::Int(y)) => {
+      if y == 0 {
+        return Err(EvalError::TypeError("modulo: division by zero"))
+      }
+      let r = x % y
+      // Scheme modulo: result has same sign as divisor
+      let result = if (r > 0 && y < 0) || (r < 0 && y > 0) {
+        r + y
+      } else {
+        r
+      }
+      Ok(Value::Number(Number::Int(result)))
+    }
+    _ => Err(EvalError::TypeError("modulo: requires integer arguments"))
+  }
+}
+
+/// 組み込み関数: abs
+fn builtin_abs(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 1 {
+    return Err(EvalError::ArityError("abs: requires exactly 1 argument"))
+  }
+  let num = match expect_number(args[0]) {
+    Ok(n) => n
+    Err(e) => return Err(e)
+  }
+  Ok(Value::Number(match num {
+    Number::Int(x) => Number::Int(if x < 0 { -x } else { x })
+    Number::Real(x) => Number::Real(if x < 0.0 { -x } else { x })
+  }))
+}
+
+/// 組み込み関数: max
+fn builtin_max(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() == 0 {
+    return Err(EvalError::ArityError("max: requires at least 1 argument"))
+  }
+  let mut result = match expect_number(args[0]) {
+    Ok(n) => n
+    Err(e) => return Err(e)
+  }
+  let mut i = 1
+  let len = args.length()
+  let _ = while i < len {
+    let num = match expect_number(args[i]) {
+      Ok(n) => n
+      Err(e) => return Err(e)
+    }
+    result = max_numbers(result, num)
+    i = i + 1
+  } else { () }
+  Ok(Value::Number(result))
+}
+
+/// 組み込み関数: min
+fn builtin_min(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() == 0 {
+    return Err(EvalError::ArityError("min: requires at least 1 argument"))
+  }
+  let mut result = match expect_number(args[0]) {
+    Ok(n) => n
+    Err(e) => return Err(e)
+  }
+  let mut i = 1
+  let len = args.length()
+  let _ = while i < len {
+    let num = match expect_number(args[i]) {
+      Ok(n) => n
+      Err(e) => return Err(e)
+    }
+    result = min_numbers(result, num)
+    i = i + 1
+  } else { () }
+  Ok(Value::Number(result))
+}
+
+/// 組み込み関数: list
+fn builtin_list(args : Array[Value]) -> Result[Value, EvalError] {
+  let mut result = Value::Nil
+  let mut i = args.length()
+  let _ = while i > 0 {
+    i = i - 1
+    result = Value::Pair(args[i], result)
+  } else { () }
+  Ok(result)
+}
+
+/// 組み込み関数: length
+fn builtin_length(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 1 {
+    return Err(EvalError::ArityError("length: requires exactly 1 argument"))
+  }
+  let mut len = 0
+  let mut current = args[0]
+  let _ = while true {
+    match current {
+      Value::Nil => break
+      Value::Pair(_, cdr) => {
+        len = len + 1
+        current = cdr
+      }
+      _ => return Err(EvalError::TypeError("length: argument must be a proper list"))
+    }
+  } else { () }
+  Ok(Value::Number(Number::Int(len)))
+}
+
+/// 組み込み関数: append
+fn builtin_append(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() == 0 {
+    return Ok(Value::Nil)
+  }
+  if args.length() == 1 {
+    return Ok(args[0])
+  }
+
+  // 最後以外のリストを配列に集める
+  let lists : Array[Value] = []
+  let mut i = 0
+  let len = args.length() - 1
+  let _ = while i < len {
+    lists.push(args[i])
+    i = i + 1
+  } else { () }
+
+  // 最後の要素
+  let mut result = args[args.length() - 1]
+
+  // 後ろから前に向かって連結
+  let mut j = lists.length()
+  let _ = while j > 0 {
+    j = j - 1
+    result = match append_two_lists(lists[j], result) {
+      Ok(v) => v
+      Err(e) => return Err(e)
+    }
+  } else { () }
+
+  Ok(result)
+}
+
+/// 2つのリストを連結する補助関数
+fn append_two_lists(list1 : Value, list2 : Value) -> Result[Value, EvalError] {
+  match list1 {
+    Value::Nil => Ok(list2)
+    Value::Pair(car, cdr) => {
+      let rest = match append_two_lists(cdr, list2) {
+        Ok(v) => v
+        Err(e) => return Err(e)
+      }
+      Ok(Value::Pair(car, rest))
+    }
+    _ => Err(EvalError::TypeError("append: arguments must be lists"))
+  }
+}
+
+/// 組み込み関数: reverse
+fn builtin_reverse(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 1 {
+    return Err(EvalError::ArityError("reverse: requires exactly 1 argument"))
+  }
+  let mut result = Value::Nil
+  let mut current = args[0]
+  let _ = while true {
+    match current {
+      Value::Nil => break
+      Value::Pair(car, cdr) => {
+        result = Value::Pair(car, result)
+        current = cdr
+      }
+      _ => return Err(EvalError::TypeError("reverse: argument must be a proper list"))
+    }
+  } else { () }
+  Ok(result)
+}
+
+/// 組み込み関数: list-ref
+fn builtin_list_ref(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 2 {
+    return Err(EvalError::ArityError("list-ref: requires exactly 2 arguments"))
+  }
+  let index = match args[1] {
+    Value::Number(Number::Int(n)) => {
+      if n < 0 {
+        return Err(EvalError::TypeError("list-ref: index must be non-negative"))
+      }
+      n
+    }
+    _ => return Err(EvalError::TypeError("list-ref: index must be an integer"))
+  }
+
+  let mut current = args[0]
+  let mut i = 0
+  let _ = while i < index {
+    match current {
+      Value::Pair(_, cdr) => {
+        current = cdr
+        i = i + 1
+      }
+      _ => return Err(EvalError::TypeError("list-ref: index out of bounds"))
+    }
+  } else { () }
+
+  match current {
+    Value::Pair(car, _) => Ok(car)
+    _ => Err(EvalError::TypeError("list-ref: index out of bounds"))
+  }
+}
+
+/// 組み込み関数: list-tail
+fn builtin_list_tail(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 2 {
+    return Err(EvalError::ArityError("list-tail: requires exactly 2 arguments"))
+  }
+  let k = match args[1] {
+    Value::Number(Number::Int(n)) => {
+      if n < 0 {
+        return Err(EvalError::TypeError("list-tail: k must be non-negative"))
+      }
+      n
+    }
+    _ => return Err(EvalError::TypeError("list-tail: k must be an integer"))
+  }
+
+  let mut current = args[0]
+  let mut i = 0
+  let _ = while i < k {
+    match current {
+      Value::Pair(_, cdr) => {
+        current = cdr
+        i = i + 1
+      }
+      _ => return Err(EvalError::TypeError("list-tail: k exceeds list length"))
+    }
+  } else { () }
+
+  Ok(current)
 }
 
 /// if 特殊形式: (if test consequent [alternative])
@@ -686,21 +1029,33 @@ pub fn initial_env() -> Env {
   let env = define_var(env, "-", Value::Procedure(Procedure::Native("-")))
   let env = define_var(env, "*", Value::Procedure(Procedure::Native("*")))
   let env = define_var(env, "/", Value::Procedure(Procedure::Native("/")))
+  let env = define_var(env, "quotient", Value::Procedure(Procedure::Native("quotient")))
+  let env = define_var(env, "remainder", Value::Procedure(Procedure::Native("remainder")))
+  let env = define_var(env, "modulo", Value::Procedure(Procedure::Native("modulo")))
+  let env = define_var(env, "abs", Value::Procedure(Procedure::Native("abs")))
+  let env = define_var(env, "max", Value::Procedure(Procedure::Native("max")))
+  let env = define_var(env, "min", Value::Procedure(Procedure::Native("min")))
+  // リスト操作
+  let env = define_var(env, "cons", Value::Procedure(Procedure::Native("cons")))
+  let env = define_var(env, "car", Value::Procedure(Procedure::Native("car")))
+  let env = define_var(env, "cdr", Value::Procedure(Procedure::Native("cdr")))
+  let env = define_var(env, "list", Value::Procedure(Procedure::Native("list")))
+  let env = define_var(env, "length", Value::Procedure(Procedure::Native("length")))
+  let env = define_var(env, "append", Value::Procedure(Procedure::Native("append")))
+  let env = define_var(env, "reverse", Value::Procedure(Procedure::Native("reverse")))
+  let env = define_var(env, "list-ref", Value::Procedure(Procedure::Native("list-ref")))
+  let env = define_var(env, "list-tail", Value::Procedure(Procedure::Native("list-tail")))
+  // 型判定
+  let env = define_var(env, "pair?", Value::Procedure(Procedure::Native("pair?")))
+  let env = define_var(env, "number?", Value::Procedure(Procedure::Native("number?")))
+  let env = define_var(env, "boolean?", Value::Procedure(Procedure::Native("boolean?")))
+  let env = define_var(env, "null?", Value::Procedure(Procedure::Native("null?")))
   // 比較演算
   let env = define_var(env, "=", Value::Procedure(Procedure::Native("=")))
   let env = define_var(env, "<", Value::Procedure(Procedure::Native("<")))
   let env = define_var(env, ">", Value::Procedure(Procedure::Native(">")))
   let env = define_var(env, "<=", Value::Procedure(Procedure::Native("<=")))
   let env = define_var(env, ">=", Value::Procedure(Procedure::Native(">=")))
-  // リスト操作
-  let env = define_var(env, "cons", Value::Procedure(Procedure::Native("cons")))
-  let env = define_var(env, "car", Value::Procedure(Procedure::Native("car")))
-  let env = define_var(env, "cdr", Value::Procedure(Procedure::Native("cdr")))
-  // 型判定
-  let env = define_var(env, "null?", Value::Procedure(Procedure::Native("null?")))
-  let env = define_var(env, "pair?", Value::Procedure(Procedure::Native("pair?")))
-  let env = define_var(env, "number?", Value::Procedure(Procedure::Native("number?")))
-  let env = define_var(env, "boolean?", Value::Procedure(Procedure::Native("boolean?")))
   let env = define_var(env, "eq?", Value::Procedure(Procedure::Native("eq?")))
   // 論理演算
   let env = define_var(env, "not", Value::Procedure(Procedure::Native("not")))
