@@ -4,4 +4,5 @@ pub enum Token {
   RParen
   Identifier(String)
   Number(Int)
+  Boolean(Bool)
 } derive(Show, Eq)

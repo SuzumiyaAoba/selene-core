@@ -14,6 +14,7 @@ fn sexpr_to_value(sexpr : SExpr) -> Value {
     SExpr::Nil => Value::Nil
     SExpr::Symbol(name) => Value::Symbol(name)
     SExpr::Number(n) => Value::Number(Number::Int(n))
+    SExpr::Bool(b) => Value::Bool(b)
     SExpr::Pair(car, cdr) =>
       Value::Pair(sexpr_to_value(car), sexpr_to_value(cdr))
     SExpr::Vector(items) => {
@@ -34,6 +35,7 @@ pub fn eval(expr : SExpr, env : Env) -> Result[Value, EvalError] {
   match expr {
     // 自己評価式
     SExpr::Number(n) => Ok(Value::Number(Number::Int(n)))
+    SExpr::Bool(b) => Ok(Value::Bool(b))
 
     // 変数参照
     SExpr::Symbol(name) => {
@@ -56,7 +58,10 @@ pub fn eval(expr : SExpr, env : Env) -> Result[Value, EvalError] {
         SExpr::Symbol("if") => eval_if(cdr, env)
         SExpr::Symbol("lambda") => eval_lambda(cdr, env)
         SExpr::Symbol("define") => eval_define(cdr, env)
+        SExpr::Symbol("set!") => eval_set(cdr, env)
         SExpr::Symbol("begin") => eval_begin(cdr, env)
+        SExpr::Symbol("and") => eval_and(cdr, env)
+        SExpr::Symbol("or") => eval_or(cdr, env)
         SExpr::Symbol("quote") => {
           // quote特殊形式: (quote expr)
           match cdr {
@@ -146,6 +151,26 @@ fn apply_builtin(name : String, args : Array[Value]) -> Result[Value, EvalError]
     "abs" => builtin_abs(args)
     "max" => builtin_max(args)
     "min" => builtin_min(args)
+    "cons" => builtin_cons(args)
+    "car" => builtin_car(args)
+    "cdr" => builtin_cdr(args)
+    "pair?" => builtin_pair(args)
+    "number?" => builtin_number(args)
+    "boolean?" => builtin_boolean(args)
+    "symbol?" => builtin_symbol(args)
+    "null?" => builtin_null(args)
+    "not" => builtin_not(args)
+    "=" => builtin_equal(args)
+    "<" => builtin_less_than(args)
+    ">" => builtin_greater_than(args)
+    "<=" => builtin_less_than_or_equal(args)
+    ">=" => builtin_greater_than_or_equal(args)
+    "list" => builtin_list(args)
+    "length" => builtin_length(args)
+    "append" => builtin_append(args)
+    "reverse" => builtin_reverse(args)
+    "list-ref" => builtin_list_ref(args)
+    "list-tail" => builtin_list_tail(args)
     _ => Err(EvalError::InvalidSyntax("unknown builtin: " + name))
   }
 }
@@ -222,6 +247,52 @@ fn min_numbers(a : Number, b : Number) -> Number {
       let y_real = y.to_double()
       Number::Real(if x < y_real { x } else { y_real })
     }
+  }
+}
+
+/// 数値比較の補助関数
+fn compare_numbers_equal(a : Number, b : Number) -> Bool {
+  match (a, b) {
+    (Number::Int(x), Number::Int(y)) => x == y
+    (Number::Real(x), Number::Real(y)) => x == y
+    (Number::Int(x), Number::Real(y)) => x.to_double() == y
+    (Number::Real(x), Number::Int(y)) => x == y.to_double()
+  }
+}
+
+fn compare_numbers_less(a : Number, b : Number) -> Bool {
+  match (a, b) {
+    (Number::Int(x), Number::Int(y)) => x < y
+    (Number::Real(x), Number::Real(y)) => x < y
+    (Number::Int(x), Number::Real(y)) => x.to_double() < y
+    (Number::Real(x), Number::Int(y)) => x < y.to_double()
+  }
+}
+
+fn compare_numbers_greater(a : Number, b : Number) -> Bool {
+  match (a, b) {
+    (Number::Int(x), Number::Int(y)) => x > y
+    (Number::Real(x), Number::Real(y)) => x > y
+    (Number::Int(x), Number::Real(y)) => x.to_double() > y
+    (Number::Real(x), Number::Int(y)) => x > y.to_double()
+  }
+}
+
+fn compare_numbers_less_or_equal(a : Number, b : Number) -> Bool {
+  match (a, b) {
+    (Number::Int(x), Number::Int(y)) => x <= y
+    (Number::Real(x), Number::Real(y)) => x <= y
+    (Number::Int(x), Number::Real(y)) => x.to_double() <= y
+    (Number::Real(x), Number::Int(y)) => x <= y.to_double()
+  }
+}
+
+fn compare_numbers_greater_or_equal(a : Number, b : Number) -> Bool {
+  match (a, b) {
+    (Number::Int(x), Number::Int(y)) => x >= y
+    (Number::Real(x), Number::Real(y)) => x >= y
+    (Number::Int(x), Number::Real(y)) => x.to_double() >= y
+    (Number::Real(x), Number::Int(y)) => x >= y.to_double()
   }
 }
 
@@ -471,6 +542,389 @@ fn builtin_min(args : Array[Value]) -> Result[Value, EvalError] {
   Ok(Value::Number(result))
 }
 
+/// 組み込み関数: cons
+fn builtin_cons(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 2 {
+    return Err(EvalError::ArityError("cons: requires exactly 2 arguments"))
+  }
+  Ok(Value::Pair(args[0], args[1]))
+}
+
+/// 組み込み関数: car
+fn builtin_car(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 1 {
+    return Err(EvalError::ArityError("car: requires exactly 1 argument"))
+  }
+  match args[0] {
+    Value::Pair(car, _) => Ok(car)
+    _ => Err(EvalError::TypeError("car: argument must be a pair"))
+  }
+}
+
+/// 組み込み関数: cdr
+fn builtin_cdr(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 1 {
+    return Err(EvalError::ArityError("cdr: requires exactly 1 argument"))
+  }
+  match args[0] {
+    Value::Pair(_, cdr) => Ok(cdr)
+    _ => Err(EvalError::TypeError("cdr: argument must be a pair"))
+  }
+}
+
+/// 組み込み関数: pair?
+fn builtin_pair(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 1 {
+    return Err(EvalError::ArityError("pair?: requires exactly 1 argument"))
+  }
+  match args[0] {
+    Value::Pair(_, _) => Ok(Value::Bool(true))
+    _ => Ok(Value::Bool(false))
+  }
+}
+
+/// 組み込み関数: number?
+fn builtin_number(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 1 {
+    return Err(EvalError::ArityError("number?: requires exactly 1 argument"))
+  }
+  match args[0] {
+    Value::Number(_) => Ok(Value::Bool(true))
+    _ => Ok(Value::Bool(false))
+  }
+}
+
+/// 組み込み関数: boolean?
+fn builtin_boolean(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 1 {
+    return Err(EvalError::ArityError("boolean?: requires exactly 1 argument"))
+  }
+  match args[0] {
+    Value::Bool(_) => Ok(Value::Bool(true))
+    _ => Ok(Value::Bool(false))
+  }
+}
+
+/// 組み込み関数: symbol?
+fn builtin_symbol(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 1 {
+    return Err(EvalError::ArityError("symbol?: requires exactly 1 argument"))
+  }
+  match args[0] {
+    Value::Symbol(_) => Ok(Value::Bool(true))
+    _ => Ok(Value::Bool(false))
+  }
+}
+
+/// 組み込み関数: null?
+fn builtin_null(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 1 {
+    return Err(EvalError::ArityError("null?: requires exactly 1 argument"))
+  }
+  match args[0] {
+    Value::Nil => Ok(Value::Bool(true))
+    _ => Ok(Value::Bool(false))
+  }
+}
+
+/// 組み込み関数: not
+fn builtin_not(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 1 {
+    return Err(EvalError::ArityError("not: requires exactly 1 argument"))
+  }
+  match args[0] {
+    Value::Bool(false) => Ok(Value::Bool(true))
+    _ => Ok(Value::Bool(false))
+  }
+}
+
+/// 組み込み関数: =
+fn builtin_equal(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() < 2 {
+    return Err(EvalError::ArityError("=: requires at least 2 arguments"))
+  }
+  let first = match expect_number(args[0]) {
+    Ok(n) => n
+    Err(e) => return Err(e)
+  }
+  let mut i = 1
+  let len = args.length()
+  let _ = while i < len {
+    let num = match expect_number(args[i]) {
+      Ok(n) => n
+      Err(e) => return Err(e)
+    }
+    if not(compare_numbers_equal(first, num)) {
+      return Ok(Value::Bool(false))
+    }
+    i = i + 1
+  } else { () }
+  Ok(Value::Bool(true))
+}
+
+/// 組み込み関数: <
+fn builtin_less_than(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() < 2 {
+    return Err(EvalError::ArityError("<: requires at least 2 arguments"))
+  }
+  let mut prev = match expect_number(args[0]) {
+    Ok(n) => n
+    Err(e) => return Err(e)
+  }
+  let mut i = 1
+  let len = args.length()
+  let _ = while i < len {
+    let curr = match expect_number(args[i]) {
+      Ok(n) => n
+      Err(e) => return Err(e)
+    }
+    if not(compare_numbers_less(prev, curr)) {
+      return Ok(Value::Bool(false))
+    }
+    prev = curr
+    i = i + 1
+  } else { () }
+  Ok(Value::Bool(true))
+}
+
+/// 組み込み関数: >
+fn builtin_greater_than(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() < 2 {
+    return Err(EvalError::ArityError(">: requires at least 2 arguments"))
+  }
+  let mut prev = match expect_number(args[0]) {
+    Ok(n) => n
+    Err(e) => return Err(e)
+  }
+  let mut i = 1
+  let len = args.length()
+  let _ = while i < len {
+    let curr = match expect_number(args[i]) {
+      Ok(n) => n
+      Err(e) => return Err(e)
+    }
+    if not(compare_numbers_greater(prev, curr)) {
+      return Ok(Value::Bool(false))
+    }
+    prev = curr
+    i = i + 1
+  } else { () }
+  Ok(Value::Bool(true))
+}
+
+/// 組み込み関数: <=
+fn builtin_less_than_or_equal(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() < 2 {
+    return Err(EvalError::ArityError("<=: requires at least 2 arguments"))
+  }
+  let mut prev = match expect_number(args[0]) {
+    Ok(n) => n
+    Err(e) => return Err(e)
+  }
+  let mut i = 1
+  let len = args.length()
+  let _ = while i < len {
+    let curr = match expect_number(args[i]) {
+      Ok(n) => n
+      Err(e) => return Err(e)
+    }
+    if not(compare_numbers_less_or_equal(prev, curr)) {
+      return Ok(Value::Bool(false))
+    }
+    prev = curr
+    i = i + 1
+  } else { () }
+  Ok(Value::Bool(true))
+}
+
+/// 組み込み関数: >=
+fn builtin_greater_than_or_equal(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() < 2 {
+    return Err(EvalError::ArityError(">=: requires at least 2 arguments"))
+  }
+  let mut prev = match expect_number(args[0]) {
+    Ok(n) => n
+    Err(e) => return Err(e)
+  }
+  let mut i = 1
+  let len = args.length()
+  let _ = while i < len {
+    let curr = match expect_number(args[i]) {
+      Ok(n) => n
+      Err(e) => return Err(e)
+    }
+    if not(compare_numbers_greater_or_equal(prev, curr)) {
+      return Ok(Value::Bool(false))
+    }
+    prev = curr
+    i = i + 1
+  } else { () }
+  Ok(Value::Bool(true))
+}
+
+/// 組み込み関数: list
+fn builtin_list(args : Array[Value]) -> Result[Value, EvalError] {
+  let mut result = Value::Nil
+  let mut i = args.length()
+  let _ = while i > 0 {
+    i = i - 1
+    result = Value::Pair(args[i], result)
+  } else { () }
+  Ok(result)
+}
+
+/// 組み込み関数: length
+fn builtin_length(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 1 {
+    return Err(EvalError::ArityError("length: requires exactly 1 argument"))
+  }
+  let mut len = 0
+  let mut current = args[0]
+  let _ = while true {
+    match current {
+      Value::Nil => break
+      Value::Pair(_, cdr) => {
+        len = len + 1
+        current = cdr
+      }
+      _ => return Err(EvalError::TypeError("length: argument must be a proper list"))
+    }
+  } else { () }
+  Ok(Value::Number(Number::Int(len)))
+}
+
+/// 組み込み関数: append
+fn builtin_append(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() == 0 {
+    return Ok(Value::Nil)
+  }
+  if args.length() == 1 {
+    return Ok(args[0])
+  }
+
+  // 最後以外のリストを配列に集める
+  let lists : Array[Value] = []
+  let mut i = 0
+  let len = args.length() - 1
+  let _ = while i < len {
+    lists.push(args[i])
+    i = i + 1
+  } else { () }
+
+  // 最後の要素
+  let mut result = args[args.length() - 1]
+
+  // 後ろから前に向かって連結
+  let mut j = lists.length()
+  let _ = while j > 0 {
+    j = j - 1
+    result = match append_two_lists(lists[j], result) {
+      Ok(v) => v
+      Err(e) => return Err(e)
+    }
+  } else { () }
+
+  Ok(result)
+}
+
+/// 2つのリストを連結する補助関数
+fn append_two_lists(list1 : Value, list2 : Value) -> Result[Value, EvalError] {
+  match list1 {
+    Value::Nil => Ok(list2)
+    Value::Pair(car, cdr) => {
+      let rest = match append_two_lists(cdr, list2) {
+        Ok(v) => v
+        Err(e) => return Err(e)
+      }
+      Ok(Value::Pair(car, rest))
+    }
+    _ => Err(EvalError::TypeError("append: arguments must be lists"))
+  }
+}
+
+/// 組み込み関数: reverse
+fn builtin_reverse(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 1 {
+    return Err(EvalError::ArityError("reverse: requires exactly 1 argument"))
+  }
+  let mut result = Value::Nil
+  let mut current = args[0]
+  let _ = while true {
+    match current {
+      Value::Nil => break
+      Value::Pair(car, cdr) => {
+        result = Value::Pair(car, result)
+        current = cdr
+      }
+      _ => return Err(EvalError::TypeError("reverse: argument must be a proper list"))
+    }
+  } else { () }
+  Ok(result)
+}
+
+/// 組み込み関数: list-ref
+fn builtin_list_ref(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 2 {
+    return Err(EvalError::ArityError("list-ref: requires exactly 2 arguments"))
+  }
+  let index = match args[1] {
+    Value::Number(Number::Int(n)) => {
+      if n < 0 {
+        return Err(EvalError::TypeError("list-ref: index must be non-negative"))
+      }
+      n
+    }
+    _ => return Err(EvalError::TypeError("list-ref: index must be an integer"))
+  }
+
+  let mut current = args[0]
+  let mut i = 0
+  let _ = while i < index {
+    match current {
+      Value::Pair(_, cdr) => {
+        current = cdr
+        i = i + 1
+      }
+      _ => return Err(EvalError::TypeError("list-ref: index out of bounds"))
+    }
+  } else { () }
+
+  match current {
+    Value::Pair(car, _) => Ok(car)
+    _ => Err(EvalError::TypeError("list-ref: index out of bounds"))
+  }
+}
+
+/// 組み込み関数: list-tail
+fn builtin_list_tail(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 2 {
+    return Err(EvalError::ArityError("list-tail: requires exactly 2 arguments"))
+  }
+  let k = match args[1] {
+    Value::Number(Number::Int(n)) => {
+      if n < 0 {
+        return Err(EvalError::TypeError("list-tail: k must be non-negative"))
+      }
+      n
+    }
+    _ => return Err(EvalError::TypeError("list-tail: k must be an integer"))
+  }
+
+  let mut current = args[0]
+  let mut i = 0
+  let _ = while i < k {
+    match current {
+      Value::Pair(_, cdr) => {
+        current = cdr
+        i = i + 1
+      }
+      _ => return Err(EvalError::TypeError("list-tail: k exceeds list length"))
+    }
+  } else { () }
+
+  Ok(current)
+}
+
 /// if 特殊形式: (if test consequent [alternative])
 fn eval_if(args : SExpr, env : Env) -> Result[Value, EvalError] {
   match args {
@@ -542,6 +996,13 @@ fn eval_define(_args : SExpr, _env : Env) -> Result[Value, EvalError] {
   Err(EvalError::InvalidSyntax("define: not supported in expression context (use REPL)"))
 }
 
+/// set! 特殊形式: (set! name value)
+/// 注: この実装は環境を返せないため、式コンテキストでは使用できません。
+/// REPLで特別に処理される必要があります。
+fn eval_set(_args : SExpr, _env : Env) -> Result[Value, EvalError] {
+  Err(EvalError::InvalidSyntax("set!: not supported in expression context (use REPL)"))
+}
+
 /// begin 特殊形式: (begin expr...)
 fn eval_begin(args : SExpr, env : Env) -> Result[Value, EvalError] {
   let mut current = args
@@ -562,6 +1023,58 @@ fn eval_begin(args : SExpr, env : Env) -> Result[Value, EvalError] {
   Ok(last_value)
 }
 
+/// and 特殊形式: (and test...)
+/// 短絡評価を行い、最初の偽値を返すか、全て真なら最後の値を返す。
+/// 引数がない場合は #t を返す。
+fn eval_and(args : SExpr, env : Env) -> Result[Value, EvalError] {
+  let mut current = args
+  let mut last_value = Value::Bool(true)
+  let _ = while true {
+    match current {
+      SExpr::Nil => return Ok(last_value)
+      SExpr::Pair(test_expr, rest) => {
+        last_value = match eval(test_expr, env) {
+          Ok(v) => v
+          Err(e) => return Err(e)
+        }
+        // #f のみが偽、それ以外は全て真
+        match last_value {
+          Value::Bool(false) => return Ok(Value::Bool(false))
+          _ => current = rest
+        }
+      }
+      _ => return Err(EvalError::InvalidSyntax("and: invalid syntax"))
+    }
+  } else { () }
+  Ok(last_value)
+}
+
+/// or 特殊形式: (or test...)
+/// 短絡評価を行い、最初の真値を返すか、全て偽なら最後の値を返す。
+/// 引数がない場合は #f を返す。
+fn eval_or(args : SExpr, env : Env) -> Result[Value, EvalError] {
+  let mut current = args
+  let mut last_value = Value::Bool(false)
+  let _ = while true {
+    match current {
+      SExpr::Nil => return Ok(last_value)
+      SExpr::Pair(test_expr, rest) => {
+        last_value = match eval(test_expr, env) {
+          Ok(v) => v
+          Err(e) => return Err(e)
+        }
+        // #f のみが偽、それ以外は全て真
+        match last_value {
+          Value::Bool(false) => current = rest
+          _ => return Ok(last_value)
+        }
+      }
+      _ => return Err(EvalError::InvalidSyntax("or: invalid syntax"))
+    }
+  } else { () }
+  Ok(last_value)
+}
+
 /// 初期環境を構築する（組み込み手続きを登録）。
 pub fn initial_env() -> Env {
   let env = empty_env()
@@ -575,5 +1088,25 @@ pub fn initial_env() -> Env {
   let env = define_var(env, "abs", Value::Procedure(Procedure::Native("abs")))
   let env = define_var(env, "max", Value::Procedure(Procedure::Native("max")))
   let env = define_var(env, "min", Value::Procedure(Procedure::Native("min")))
+  let env = define_var(env, "cons", Value::Procedure(Procedure::Native("cons")))
+  let env = define_var(env, "car", Value::Procedure(Procedure::Native("car")))
+  let env = define_var(env, "cdr", Value::Procedure(Procedure::Native("cdr")))
+  let env = define_var(env, "pair?", Value::Procedure(Procedure::Native("pair?")))
+  let env = define_var(env, "number?", Value::Procedure(Procedure::Native("number?")))
+  let env = define_var(env, "boolean?", Value::Procedure(Procedure::Native("boolean?")))
+  let env = define_var(env, "symbol?", Value::Procedure(Procedure::Native("symbol?")))
+  let env = define_var(env, "null?", Value::Procedure(Procedure::Native("null?")))
+  let env = define_var(env, "not", Value::Procedure(Procedure::Native("not")))
+  let env = define_var(env, "=", Value::Procedure(Procedure::Native("=")))
+  let env = define_var(env, "<", Value::Procedure(Procedure::Native("<")))
+  let env = define_var(env, ">", Value::Procedure(Procedure::Native(">")))
+  let env = define_var(env, "<=", Value::Procedure(Procedure::Native("<=")))
+  let env = define_var(env, ">=", Value::Procedure(Procedure::Native(">=")))
+  let env = define_var(env, "list", Value::Procedure(Procedure::Native("list")))
+  let env = define_var(env, "length", Value::Procedure(Procedure::Native("length")))
+  let env = define_var(env, "append", Value::Procedure(Procedure::Native("append")))
+  let env = define_var(env, "reverse", Value::Procedure(Procedure::Native("reverse")))
+  let env = define_var(env, "list-ref", Value::Procedure(Procedure::Native("list-ref")))
+  let env = define_var(env, "list-tail", Value::Procedure(Procedure::Native("list-tail")))
   env
 }

@@ -3,6 +3,7 @@ pub(all) enum SExpr {
   Nil
   Symbol(String)
   Number(Int)
+  Bool(Bool)
   Pair(SExpr, SExpr)
   Vector(Array[SExpr])
   Quote(SExpr)

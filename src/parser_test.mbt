@@ -4,6 +4,7 @@ fn sexpr_snapshot(expr : SExpr) -> String {
     SExpr::Nil => "Nil"
     SExpr::Symbol(name) => "Symbol(" + name + ")"
     SExpr::Number(value) => "Number(" + value.to_string() + ")"
+    SExpr::Bool(b) => if b { "Bool(true)" } else { "Bool(false)" }
     SExpr::Pair(left, right) =>
       "Pair(" + sexpr_snapshot(left) + ", " + sexpr_snapshot(right) + ")"
     SExpr::Vector(items) => {

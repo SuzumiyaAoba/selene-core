@@ -37,6 +37,7 @@ fn parse_expr(tokens : Array[Token], start : Int) -> (SExpr, Int) {
     Token::RParen => panic()
     Token::Identifier(name) => (SExpr::Symbol(name), start + 1)
     Token::Number(value) => (SExpr::Number(value), start + 1)
+    Token::Boolean(b) => (SExpr::Bool(b), start + 1)
   }
 }
 
