@@ -154,6 +154,7 @@ fn apply_builtin(name : String, args : Array[Value]) -> Result[Value, EvalError]
     "pair?" => builtin_pair_p(args)
     "number?" => builtin_number_p(args)
     "boolean?" => builtin_boolean_p(args)
+    "symbol?" => builtin_symbol_p(args)
     "null?" => builtin_null_p(args)
     "=" => builtin_num_eq(args)
     "<" => builtin_lt(args)
@@ -244,6 +245,52 @@ fn min_numbers(a : Number, b : Number) -> Number {
       let y_real = y.to_double()
       Number::Real(if x < y_real { x } else { y_real })
     }
+  }
+}
+
+/// 数値比較の補助関数
+fn compare_numbers_equal(a : Number, b : Number) -> Bool {
+  match (a, b) {
+    (Number::Int(x), Number::Int(y)) => x == y
+    (Number::Real(x), Number::Real(y)) => x == y
+    (Number::Int(x), Number::Real(y)) => x.to_double() == y
+    (Number::Real(x), Number::Int(y)) => x == y.to_double()
+  }
+}
+
+fn compare_numbers_less(a : Number, b : Number) -> Bool {
+  match (a, b) {
+    (Number::Int(x), Number::Int(y)) => x < y
+    (Number::Real(x), Number::Real(y)) => x < y
+    (Number::Int(x), Number::Real(y)) => x.to_double() < y
+    (Number::Real(x), Number::Int(y)) => x < y.to_double()
+  }
+}
+
+fn compare_numbers_greater(a : Number, b : Number) -> Bool {
+  match (a, b) {
+    (Number::Int(x), Number::Int(y)) => x > y
+    (Number::Real(x), Number::Real(y)) => x > y
+    (Number::Int(x), Number::Real(y)) => x.to_double() > y
+    (Number::Real(x), Number::Int(y)) => x > y.to_double()
+  }
+}
+
+fn compare_numbers_less_or_equal(a : Number, b : Number) -> Bool {
+  match (a, b) {
+    (Number::Int(x), Number::Int(y)) => x <= y
+    (Number::Real(x), Number::Real(y)) => x <= y
+    (Number::Int(x), Number::Real(y)) => x.to_double() <= y
+    (Number::Real(x), Number::Int(y)) => x <= y.to_double()
+  }
+}
+
+fn compare_numbers_greater_or_equal(a : Number, b : Number) -> Bool {
+  match (a, b) {
+    (Number::Int(x), Number::Int(y)) => x >= y
+    (Number::Real(x), Number::Real(y)) => x >= y
+    (Number::Int(x), Number::Real(y)) => x.to_double() >= y
+    (Number::Real(x), Number::Int(y)) => x >= y.to_double()
   }
 }
 
@@ -491,6 +538,17 @@ fn builtin_min(args : Array[Value]) -> Result[Value, EvalError] {
     i = i + 1
   } else { () }
   Ok(Value::Number(result))
+}
+
+/// 組み込み関数: symbol?
+fn builtin_symbol_p(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 1 {
+    return Err(EvalError::ArityError("symbol?: requires exactly 1 argument"))
+  }
+  match args[0] {
+    Value::Symbol(_) => Ok(Value::Bool(true))
+    _ => Ok(Value::Bool(false))
+  }
 }
 
 /// 組み込み関数: list
@@ -1049,6 +1107,7 @@ pub fn initial_env() -> Env {
   let env = define_var(env, "pair?", Value::Procedure(Procedure::Native("pair?")))
   let env = define_var(env, "number?", Value::Procedure(Procedure::Native("number?")))
   let env = define_var(env, "boolean?", Value::Procedure(Procedure::Native("boolean?")))
+  let env = define_var(env, "symbol?", Value::Procedure(Procedure::Native("symbol?")))
   let env = define_var(env, "null?", Value::Procedure(Procedure::Native("null?")))
   // 比較演算
   let env = define_var(env, "=", Value::Procedure(Procedure::Native("=")))
