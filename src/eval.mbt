@@ -12,6 +12,7 @@ pub(all) enum EvalError {
 fn sexpr_to_value(sexpr : SExpr) -> Value {
   match sexpr {
     SExpr::Nil => Value::Nil
+    SExpr::Bool(b) => Value::Bool(b)
     SExpr::Symbol(name) => Value::Symbol(name)
     SExpr::Number(n) => Value::Number(Number::Int(n))
     SExpr::Pair(car, cdr) =>
@@ -34,6 +35,7 @@ pub fn eval(expr : SExpr, env : Env) -> Result[Value, EvalError] {
   match expr {
     // 自己評価式
     SExpr::Number(n) => Ok(Value::Number(Number::Int(n)))
+    SExpr::Bool(b) => Ok(Value::Bool(b))
 
     // 変数参照
     SExpr::Symbol(name) => {
@@ -150,16 +152,18 @@ fn apply_builtin(name : String, args : Array[Value]) -> Result[Value, EvalError]
     "cons" => builtin_cons(args)
     "car" => builtin_car(args)
     "cdr" => builtin_cdr(args)
-    "pair?" => builtin_pair(args)
-    "number?" => builtin_number(args)
-    "boolean?" => builtin_boolean(args)
-    "symbol?" => builtin_symbol(args)
-    "null?" => builtin_null(args)
-    "=" => builtin_equal(args)
-    "<" => builtin_less_than(args)
-    ">" => builtin_greater_than(args)
-    "<=" => builtin_less_than_or_equal(args)
-    ">=" => builtin_greater_than_or_equal(args)
+    "pair?" => builtin_pair_p(args)
+    "number?" => builtin_number_p(args)
+    "boolean?" => builtin_boolean_p(args)
+    "symbol?" => builtin_symbol_p(args)
+    "null?" => builtin_null_p(args)
+    "=" => builtin_num_eq(args)
+    "<" => builtin_lt(args)
+    ">" => builtin_gt(args)
+    "<=" => builtin_le(args)
+    ">=" => builtin_ge(args)
+    "eq?" => builtin_eq_p(args)
+    "not" => builtin_not(args)
     "list" => builtin_list(args)
     "length" => builtin_length(args)
     "append" => builtin_append(args)
@@ -537,71 +541,8 @@ fn builtin_min(args : Array[Value]) -> Result[Value, EvalError] {
   Ok(Value::Number(result))
 }
 
-/// 組み込み関数: cons
-fn builtin_cons(args : Array[Value]) -> Result[Value, EvalError] {
-  if args.length() != 2 {
-    return Err(EvalError::ArityError("cons: requires exactly 2 arguments"))
-  }
-  Ok(Value::Pair(args[0], args[1]))
-}
-
-/// 組み込み関数: car
-fn builtin_car(args : Array[Value]) -> Result[Value, EvalError] {
-  if args.length() != 1 {
-    return Err(EvalError::ArityError("car: requires exactly 1 argument"))
-  }
-  match args[0] {
-    Value::Pair(car, _) => Ok(car)
-    _ => Err(EvalError::TypeError("car: argument must be a pair"))
-  }
-}
-
-/// 組み込み関数: cdr
-fn builtin_cdr(args : Array[Value]) -> Result[Value, EvalError] {
-  if args.length() != 1 {
-    return Err(EvalError::ArityError("cdr: requires exactly 1 argument"))
-  }
-  match args[0] {
-    Value::Pair(_, cdr) => Ok(cdr)
-    _ => Err(EvalError::TypeError("cdr: argument must be a pair"))
-  }
-}
-
-/// 組み込み関数: pair?
-fn builtin_pair(args : Array[Value]) -> Result[Value, EvalError] {
-  if args.length() != 1 {
-    return Err(EvalError::ArityError("pair?: requires exactly 1 argument"))
-  }
-  match args[0] {
-    Value::Pair(_, _) => Ok(Value::Bool(true))
-    _ => Ok(Value::Bool(false))
-  }
-}
-
-/// 組み込み関数: number?
-fn builtin_number(args : Array[Value]) -> Result[Value, EvalError] {
-  if args.length() != 1 {
-    return Err(EvalError::ArityError("number?: requires exactly 1 argument"))
-  }
-  match args[0] {
-    Value::Number(_) => Ok(Value::Bool(true))
-    _ => Ok(Value::Bool(false))
-  }
-}
-
-/// 組み込み関数: boolean?
-fn builtin_boolean(args : Array[Value]) -> Result[Value, EvalError] {
-  if args.length() != 1 {
-    return Err(EvalError::ArityError("boolean?: requires exactly 1 argument"))
-  }
-  match args[0] {
-    Value::Bool(_) => Ok(Value::Bool(true))
-    _ => Ok(Value::Bool(false))
-  }
-}
-
 /// 組み込み関数: symbol?
-fn builtin_symbol(args : Array[Value]) -> Result[Value, EvalError] {
+fn builtin_symbol_p(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("symbol?: requires exactly 1 argument"))
   }
@@ -609,141 +550,6 @@ fn builtin_symbol(args : Array[Value]) -> Result[Value, EvalError] {
     Value::Symbol(_) => Ok(Value::Bool(true))
     _ => Ok(Value::Bool(false))
   }
-}
-
-/// 組み込み関数: null?
-fn builtin_null(args : Array[Value]) -> Result[Value, EvalError] {
-  if args.length() != 1 {
-    return Err(EvalError::ArityError("null?: requires exactly 1 argument"))
-  }
-  match args[0] {
-    Value::Nil => Ok(Value::Bool(true))
-    _ => Ok(Value::Bool(false))
-  }
-}
-
-/// 組み込み関数: =
-fn builtin_equal(args : Array[Value]) -> Result[Value, EvalError] {
-  if args.length() < 2 {
-    return Err(EvalError::ArityError("=: requires at least 2 arguments"))
-  }
-  let first = match expect_number(args[0]) {
-    Ok(n) => n
-    Err(e) => return Err(e)
-  }
-  let mut i = 1
-  let len = args.length()
-  let _ = while i < len {
-    let num = match expect_number(args[i]) {
-      Ok(n) => n
-      Err(e) => return Err(e)
-    }
-    if not(compare_numbers_equal(first, num)) {
-      return Ok(Value::Bool(false))
-    }
-    i = i + 1
-  } else { () }
-  Ok(Value::Bool(true))
-}
-
-/// 組み込み関数: <
-fn builtin_less_than(args : Array[Value]) -> Result[Value, EvalError] {
-  if args.length() < 2 {
-    return Err(EvalError::ArityError("<: requires at least 2 arguments"))
-  }
-  let mut prev = match expect_number(args[0]) {
-    Ok(n) => n
-    Err(e) => return Err(e)
-  }
-  let mut i = 1
-  let len = args.length()
-  let _ = while i < len {
-    let curr = match expect_number(args[i]) {
-      Ok(n) => n
-      Err(e) => return Err(e)
-    }
-    if not(compare_numbers_less(prev, curr)) {
-      return Ok(Value::Bool(false))
-    }
-    prev = curr
-    i = i + 1
-  } else { () }
-  Ok(Value::Bool(true))
-}
-
-/// 組み込み関数: >
-fn builtin_greater_than(args : Array[Value]) -> Result[Value, EvalError] {
-  if args.length() < 2 {
-    return Err(EvalError::ArityError(">: requires at least 2 arguments"))
-  }
-  let mut prev = match expect_number(args[0]) {
-    Ok(n) => n
-    Err(e) => return Err(e)
-  }
-  let mut i = 1
-  let len = args.length()
-  let _ = while i < len {
-    let curr = match expect_number(args[i]) {
-      Ok(n) => n
-      Err(e) => return Err(e)
-    }
-    if not(compare_numbers_greater(prev, curr)) {
-      return Ok(Value::Bool(false))
-    }
-    prev = curr
-    i = i + 1
-  } else { () }
-  Ok(Value::Bool(true))
-}
-
-/// 組み込み関数: <=
-fn builtin_less_than_or_equal(args : Array[Value]) -> Result[Value, EvalError] {
-  if args.length() < 2 {
-    return Err(EvalError::ArityError("<=: requires at least 2 arguments"))
-  }
-  let mut prev = match expect_number(args[0]) {
-    Ok(n) => n
-    Err(e) => return Err(e)
-  }
-  let mut i = 1
-  let len = args.length()
-  let _ = while i < len {
-    let curr = match expect_number(args[i]) {
-      Ok(n) => n
-      Err(e) => return Err(e)
-    }
-    if not(compare_numbers_less_or_equal(prev, curr)) {
-      return Ok(Value::Bool(false))
-    }
-    prev = curr
-    i = i + 1
-  } else { () }
-  Ok(Value::Bool(true))
-}
-
-/// 組み込み関数: >=
-fn builtin_greater_than_or_equal(args : Array[Value]) -> Result[Value, EvalError] {
-  if args.length() < 2 {
-    return Err(EvalError::ArityError(">=: requires at least 2 arguments"))
-  }
-  let mut prev = match expect_number(args[0]) {
-    Ok(n) => n
-    Err(e) => return Err(e)
-  }
-  let mut i = 1
-  let len = args.length()
-  let _ = while i < len {
-    let curr = match expect_number(args[i]) {
-      Ok(n) => n
-      Err(e) => return Err(e)
-    }
-    if not(compare_numbers_greater_or_equal(prev, curr)) {
-      return Ok(Value::Bool(false))
-    }
-    prev = curr
-    i = i + 1
-  } else { () }
-  Ok(Value::Bool(true))
 }
 
 /// 組み込み関数: list
@@ -1007,9 +813,284 @@ fn eval_begin(args : SExpr, env : Env) -> Result[Value, EvalError] {
   Ok(last_value)
 }
 
+/// 組み込み関数: cons
+fn builtin_cons(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 2 {
+    return Err(EvalError::ArityError("cons: requires exactly 2 arguments"))
+  }
+  Ok(Value::Pair(args[0], args[1]))
+}
+
+/// 組み込み関数: car
+fn builtin_car(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 1 {
+    return Err(EvalError::ArityError("car: requires exactly 1 argument"))
+  }
+  match args[0] {
+    Value::Pair(car, _) => Ok(car)
+    _ => Err(EvalError::TypeError("car: expected pair"))
+  }
+}
+
+/// 組み込み関数: cdr
+fn builtin_cdr(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 1 {
+    return Err(EvalError::ArityError("cdr: requires exactly 1 argument"))
+  }
+  match args[0] {
+    Value::Pair(_, cdr) => Ok(cdr)
+    _ => Err(EvalError::TypeError("cdr: expected pair"))
+  }
+}
+
+/// 組み込み関数: null?
+fn builtin_null_p(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 1 {
+    return Err(EvalError::ArityError("null?: requires exactly 1 argument"))
+  }
+  match args[0] {
+    Value::Nil => Ok(Value::Bool(true))
+    _ => Ok(Value::Bool(false))
+  }
+}
+
+/// 組み込み関数: pair?
+fn builtin_pair_p(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 1 {
+    return Err(EvalError::ArityError("pair?: requires exactly 1 argument"))
+  }
+  match args[0] {
+    Value::Pair(_, _) => Ok(Value::Bool(true))
+    _ => Ok(Value::Bool(false))
+  }
+}
+
+/// 組み込み関数: number?
+fn builtin_number_p(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 1 {
+    return Err(EvalError::ArityError("number?: requires exactly 1 argument"))
+  }
+  match args[0] {
+    Value::Number(_) => Ok(Value::Bool(true))
+    _ => Ok(Value::Bool(false))
+  }
+}
+
+/// 組み込み関数: boolean?
+fn builtin_boolean_p(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 1 {
+    return Err(EvalError::ArityError("boolean?: requires exactly 1 argument"))
+  }
+  match args[0] {
+    Value::Bool(_) => Ok(Value::Bool(true))
+    _ => Ok(Value::Bool(false))
+  }
+}
+
+/// 数値比較の補助関数
+fn compare_numbers(op : String, a : Number, b : Number) -> Bool {
+  match (a, b) {
+    (Number::Int(x), Number::Int(y)) => {
+      match op {
+        "=" => x == y
+        "<" => x < y
+        ">" => x > y
+        "<=" => x <= y
+        ">=" => x >= y
+        _ => false
+      }
+    }
+    (Number::Real(x), Number::Real(y)) => {
+      match op {
+        "=" => x == y
+        "<" => x < y
+        ">" => x > y
+        "<=" => x <= y
+        ">=" => x >= y
+        _ => false
+      }
+    }
+    (Number::Int(x), Number::Real(y)) => {
+      let xd = x.to_double()
+      match op {
+        "=" => xd == y
+        "<" => xd < y
+        ">" => xd > y
+        "<=" => xd <= y
+        ">=" => xd >= y
+        _ => false
+      }
+    }
+    (Number::Real(x), Number::Int(y)) => {
+      let yd = y.to_double()
+      match op {
+        "=" => x == yd
+        "<" => x < yd
+        ">" => x > yd
+        "<=" => x <= yd
+        ">=" => x >= yd
+        _ => false
+      }
+    }
+  }
+}
+
+/// 組み込み関数: =
+fn builtin_num_eq(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() < 2 {
+    return Err(EvalError::ArityError("=: requires at least 2 arguments"))
+  }
+  let first = match expect_number(args[0]) {
+    Ok(n) => n
+    Err(e) => return Err(e)
+  }
+  let mut i = 1
+  let len = args.length()
+  let _ = while i < len {
+    let num = match expect_number(args[i]) {
+      Ok(n) => n
+      Err(e) => return Err(e)
+    }
+    if !compare_numbers("=", first, num) {
+      return Ok(Value::Bool(false))
+    }
+    i = i + 1
+  } else { () }
+  Ok(Value::Bool(true))
+}
+
+/// 組み込み関数: <
+fn builtin_lt(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() < 2 {
+    return Err(EvalError::ArityError("<: requires at least 2 arguments"))
+  }
+  let mut prev = match expect_number(args[0]) {
+    Ok(n) => n
+    Err(e) => return Err(e)
+  }
+  let mut i = 1
+  let len = args.length()
+  let _ = while i < len {
+    let curr = match expect_number(args[i]) {
+      Ok(n) => n
+      Err(e) => return Err(e)
+    }
+    if !compare_numbers("<", prev, curr) {
+      return Ok(Value::Bool(false))
+    }
+    prev = curr
+    i = i + 1
+  } else { () }
+  Ok(Value::Bool(true))
+}
+
+/// 組み込み関数: >
+fn builtin_gt(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() < 2 {
+    return Err(EvalError::ArityError(">: requires at least 2 arguments"))
+  }
+  let mut prev = match expect_number(args[0]) {
+    Ok(n) => n
+    Err(e) => return Err(e)
+  }
+  let mut i = 1
+  let len = args.length()
+  let _ = while i < len {
+    let curr = match expect_number(args[i]) {
+      Ok(n) => n
+      Err(e) => return Err(e)
+    }
+    if !compare_numbers(">", prev, curr) {
+      return Ok(Value::Bool(false))
+    }
+    prev = curr
+    i = i + 1
+  } else { () }
+  Ok(Value::Bool(true))
+}
+
+/// 組み込み関数: <=
+fn builtin_le(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() < 2 {
+    return Err(EvalError::ArityError("<=: requires at least 2 arguments"))
+  }
+  let mut prev = match expect_number(args[0]) {
+    Ok(n) => n
+    Err(e) => return Err(e)
+  }
+  let mut i = 1
+  let len = args.length()
+  let _ = while i < len {
+    let curr = match expect_number(args[i]) {
+      Ok(n) => n
+      Err(e) => return Err(e)
+    }
+    if !compare_numbers("<=", prev, curr) {
+      return Ok(Value::Bool(false))
+    }
+    prev = curr
+    i = i + 1
+  } else { () }
+  Ok(Value::Bool(true))
+}
+
+/// 組み込み関数: >=
+fn builtin_ge(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() < 2 {
+    return Err(EvalError::ArityError(">=: requires at least 2 arguments"))
+  }
+  let mut prev = match expect_number(args[0]) {
+    Ok(n) => n
+    Err(e) => return Err(e)
+  }
+  let mut i = 1
+  let len = args.length()
+  let _ = while i < len {
+    let curr = match expect_number(args[i]) {
+      Ok(n) => n
+      Err(e) => return Err(e)
+    }
+    if !compare_numbers(">=", prev, curr) {
+      return Ok(Value::Bool(false))
+    }
+    prev = curr
+    i = i + 1
+  } else { () }
+  Ok(Value::Bool(true))
+}
+
+/// 組み込み関数: eq?
+fn builtin_eq_p(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 2 {
+    return Err(EvalError::ArityError("eq?: requires exactly 2 arguments"))
+  }
+  // 簡易実装: 数値とブール値の等価性チェック
+  let result = match (args[0], args[1]) {
+    (Value::Nil, Value::Nil) => true
+    (Value::Bool(a), Value::Bool(b)) => a == b
+    (Value::Number(Number::Int(a)), Value::Number(Number::Int(b))) => a == b
+    (Value::Symbol(a), Value::Symbol(b)) => a == b
+    _ => false
+  }
+  Ok(Value::Bool(result))
+}
+
+/// 組み込み関数: not
+fn builtin_not(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 1 {
+    return Err(EvalError::ArityError("not: requires exactly 1 argument"))
+  }
+  let result = match args[0] {
+    Value::Bool(false) => true
+    _ => false
+  }
+  Ok(Value::Bool(result))
+}
+
 /// 初期環境を構築する（組み込み手続きを登録）。
 pub fn initial_env() -> Env {
   let env = empty_env()
+  // 算術演算
   let env = define_var(env, "+", Value::Procedure(Procedure::Native("+")))
   let env = define_var(env, "-", Value::Procedure(Procedure::Native("-")))
   let env = define_var(env, "*", Value::Procedure(Procedure::Native("*")))
@@ -1020,24 +1101,30 @@ pub fn initial_env() -> Env {
   let env = define_var(env, "abs", Value::Procedure(Procedure::Native("abs")))
   let env = define_var(env, "max", Value::Procedure(Procedure::Native("max")))
   let env = define_var(env, "min", Value::Procedure(Procedure::Native("min")))
+  // リスト操作
   let env = define_var(env, "cons", Value::Procedure(Procedure::Native("cons")))
   let env = define_var(env, "car", Value::Procedure(Procedure::Native("car")))
   let env = define_var(env, "cdr", Value::Procedure(Procedure::Native("cdr")))
-  let env = define_var(env, "pair?", Value::Procedure(Procedure::Native("pair?")))
-  let env = define_var(env, "number?", Value::Procedure(Procedure::Native("number?")))
-  let env = define_var(env, "boolean?", Value::Procedure(Procedure::Native("boolean?")))
-  let env = define_var(env, "symbol?", Value::Procedure(Procedure::Native("symbol?")))
-  let env = define_var(env, "null?", Value::Procedure(Procedure::Native("null?")))
-  let env = define_var(env, "=", Value::Procedure(Procedure::Native("=")))
-  let env = define_var(env, "<", Value::Procedure(Procedure::Native("<")))
-  let env = define_var(env, ">", Value::Procedure(Procedure::Native(">")))
-  let env = define_var(env, "<=", Value::Procedure(Procedure::Native("<=")))
-  let env = define_var(env, ">=", Value::Procedure(Procedure::Native(">=")))
   let env = define_var(env, "list", Value::Procedure(Procedure::Native("list")))
   let env = define_var(env, "length", Value::Procedure(Procedure::Native("length")))
   let env = define_var(env, "append", Value::Procedure(Procedure::Native("append")))
   let env = define_var(env, "reverse", Value::Procedure(Procedure::Native("reverse")))
   let env = define_var(env, "list-ref", Value::Procedure(Procedure::Native("list-ref")))
   let env = define_var(env, "list-tail", Value::Procedure(Procedure::Native("list-tail")))
+  // 型判定
+  let env = define_var(env, "pair?", Value::Procedure(Procedure::Native("pair?")))
+  let env = define_var(env, "number?", Value::Procedure(Procedure::Native("number?")))
+  let env = define_var(env, "boolean?", Value::Procedure(Procedure::Native("boolean?")))
+  let env = define_var(env, "symbol?", Value::Procedure(Procedure::Native("symbol?")))
+  let env = define_var(env, "null?", Value::Procedure(Procedure::Native("null?")))
+  // 比較演算
+  let env = define_var(env, "=", Value::Procedure(Procedure::Native("=")))
+  let env = define_var(env, "<", Value::Procedure(Procedure::Native("<")))
+  let env = define_var(env, ">", Value::Procedure(Procedure::Native(">")))
+  let env = define_var(env, "<=", Value::Procedure(Procedure::Native("<=")))
+  let env = define_var(env, ">=", Value::Procedure(Procedure::Native(">=")))
+  let env = define_var(env, "eq?", Value::Procedure(Procedure::Native("eq?")))
+  // 論理演算
+  let env = define_var(env, "not", Value::Procedure(Procedure::Native("not")))
   env
 }
