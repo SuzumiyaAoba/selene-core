@@ -1,9 +1,9 @@
 /// リーダ/パーサ段階の S 式表現。
 pub(all) enum SExpr {
   Nil
+  Bool(Bool)
   Symbol(String)
   Number(Int)
-  Bool(Bool)
   Pair(SExpr, SExpr)
   Vector(Array[SExpr])
   Quote(SExpr)

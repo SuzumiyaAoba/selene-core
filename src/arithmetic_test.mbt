@@ -209,3 +209,148 @@ test "nested arithmetic" {
     _ => fail("expected 14 for (+ (* 2 3) (- 10 5) (abs (- 3)))")
   }
 }
+
+/// =演算のテスト。
+test "builtin =" {
+  let env = initial_env()
+  let expr1 = parse_one("(= 1 1)")
+  let expr2 = parse_one("(= 1 2)")
+  let expr3 = parse_one("(= 1 1 1)")
+  let expr4 = parse_one("(= 1 1 2)")
+  match eval(expr1, env) {
+    Ok(Value::Bool(true)) => ()
+    _ => fail("expected #t")
+  }
+  match eval(expr2, env) {
+    Ok(Value::Bool(false)) => ()
+    _ => fail("expected #f")
+  }
+  match eval(expr3, env) {
+    Ok(Value::Bool(true)) => ()
+    _ => fail("expected #t")
+  }
+  match eval(expr4, env) {
+    Ok(Value::Bool(false)) => ()
+    _ => fail("expected #f")
+  }
+}
+
+/// <演算のテスト。
+test "builtin <" {
+  let env = initial_env()
+  let expr1 = parse_one("(< 1 2)")
+  let expr2 = parse_one("(< 2 1)")
+  let expr3 = parse_one("(< 1 1)")
+  let expr4 = parse_one("(< 1 2 3)")
+  let expr5 = parse_one("(< 1 3 2)")
+  match eval(expr1, env) {
+    Ok(Value::Bool(true)) => ()
+    _ => fail("expected #t")
+  }
+  match eval(expr2, env) {
+    Ok(Value::Bool(false)) => ()
+    _ => fail("expected #f")
+  }
+  match eval(expr3, env) {
+    Ok(Value::Bool(false)) => ()
+    _ => fail("expected #f")
+  }
+  match eval(expr4, env) {
+    Ok(Value::Bool(true)) => ()
+    _ => fail("expected #t")
+  }
+  match eval(expr5, env) {
+    Ok(Value::Bool(false)) => ()
+    _ => fail("expected #f")
+  }
+}
+
+/// >演算のテスト。
+test "builtin >" {
+  let env = initial_env()
+  let expr1 = parse_one("(> 2 1)")
+  let expr2 = parse_one("(> 1 2)")
+  let expr3 = parse_one("(> 1 1)")
+  let expr4 = parse_one("(> 3 2 1)")
+  let expr5 = parse_one("(> 3 1 2)")
+  match eval(expr1, env) {
+    Ok(Value::Bool(true)) => ()
+    _ => fail("expected #t")
+  }
+  match eval(expr2, env) {
+    Ok(Value::Bool(false)) => ()
+    _ => fail("expected #f")
+  }
+  match eval(expr3, env) {
+    Ok(Value::Bool(false)) => ()
+    _ => fail("expected #f")
+  }
+  match eval(expr4, env) {
+    Ok(Value::Bool(true)) => ()
+    _ => fail("expected #t")
+  }
+  match eval(expr5, env) {
+    Ok(Value::Bool(false)) => ()
+    _ => fail("expected #f")
+  }
+}
+
+/// <=演算のテスト。
+test "builtin <=" {
+  let env = initial_env()
+  let expr1 = parse_one("(<= 1 2)")
+  let expr2 = parse_one("(<= 2 1)")
+  let expr3 = parse_one("(<= 1 1)")
+  let expr4 = parse_one("(<= 1 2 2)")
+  let expr5 = parse_one("(<= 1 3 2)")
+  match eval(expr1, env) {
+    Ok(Value::Bool(true)) => ()
+    _ => fail("expected #t")
+  }
+  match eval(expr2, env) {
+    Ok(Value::Bool(false)) => ()
+    _ => fail("expected #f")
+  }
+  match eval(expr3, env) {
+    Ok(Value::Bool(true)) => ()
+    _ => fail("expected #t")
+  }
+  match eval(expr4, env) {
+    Ok(Value::Bool(true)) => ()
+    _ => fail("expected #t")
+  }
+  match eval(expr5, env) {
+    Ok(Value::Bool(false)) => ()
+    _ => fail("expected #f")
+  }
+}
+
+/// >=演算のテスト。
+test "builtin >=" {
+  let env = initial_env()
+  let expr1 = parse_one("(>= 2 1)")
+  let expr2 = parse_one("(>= 1 2)")
+  let expr3 = parse_one("(>= 1 1)")
+  let expr4 = parse_one("(>= 3 2 2)")
+  let expr5 = parse_one("(>= 3 1 2)")
+  match eval(expr1, env) {
+    Ok(Value::Bool(true)) => ()
+    _ => fail("expected #t")
+  }
+  match eval(expr2, env) {
+    Ok(Value::Bool(false)) => ()
+    _ => fail("expected #f")
+  }
+  match eval(expr3, env) {
+    Ok(Value::Bool(true)) => ()
+    _ => fail("expected #t")
+  }
+  match eval(expr4, env) {
+    Ok(Value::Bool(true)) => ()
+    _ => fail("expected #t")
+  }
+  match eval(expr5, env) {
+    Ok(Value::Bool(false)) => ()
+    _ => fail("expected #f")
+  }
+}

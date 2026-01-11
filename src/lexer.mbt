@@ -80,20 +80,24 @@ pub fn tokenize(input : String) -> Array[Token] {
       continue
     }
     if ch == '#' {
-      // Boolean literal: #t or #f
-      if i + 1 < len {
-        let next_ch = chars[i + 1]
-        if next_ch == 't' {
-          tokens.push(Token::Boolean(true))
-          i = i + 2
-          continue
-        } else if next_ch == 'f' {
-          tokens.push(Token::Boolean(false))
-          i = i + 2
-          continue
+      i = i + 1
+      if i < len {
+        match chars[i] {
+          't' | 'T' => {
+            tokens.push(Token::Boolean(true))
+            i = i + 1
+            continue
+          }
+          'f' | 'F' => {
+            tokens.push(Token::Boolean(false))
+            i = i + 1
+            continue
+          }
+          _ => panic()  // 未対応の # リテラル
         }
+      } else {
+        panic()  // # の後に何もない
       }
-      panic()
     }
     if is_digit(ch) {
       let mut value = 0
