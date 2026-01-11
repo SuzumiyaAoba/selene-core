@@ -170,6 +170,7 @@ fn apply_builtin(name : String, args : Array[Value]) -> Result[Value, EvalError]
     ">=" => builtin_ge(args)
     "eq?" => builtin_eq_p(args)
     "not" => builtin_not(args)
+    "apply" => builtin_apply(args)
     "list" => builtin_list(args)
     "length" => builtin_length(args)
     "append" => builtin_append(args)
@@ -1093,6 +1094,62 @@ fn builtin_not(args : Array[Value]) -> Result[Value, EvalError] {
   Ok(Value::Bool(result))
 }
 
+/// Value のリストを配列に変換する。
+fn list_to_array(list : Value) -> Result[Array[Value], EvalError] {
+  let items : Array[Value] = []
+  let mut current = list
+  let _ = while true {
+    match current {
+      Value::Nil => return Ok(items)
+      Value::Pair(car, cdr) => {
+        items.push(car)
+        current = cdr
+      }
+      _ => return Err(EvalError::TypeError("not a proper list"))
+    }
+  } else { () }
+  Ok(items)
+}
+
+/// 組み込み関数: apply
+/// (apply proc arg1 ... argN args) - args はリストでなければならない
+fn builtin_apply(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() < 2 {
+    return Err(EvalError::ArityError("apply: requires at least 2 arguments"))
+  }
+
+  // 最初の引数は手続きでなければならない
+  let proc = args[0]
+  match proc {
+    Value::Procedure(_) => ()
+    _ => return Err(EvalError::TypeError("apply: first argument must be a procedure"))
+  }
+
+  // 最後の引数はリストでなければならない
+  let last_arg = args[args.length() - 1]
+  let last_list_items = match list_to_array(last_arg) {
+    Ok(items) => items
+    Err(e) => return Err(e)
+  }
+
+  // 中間の引数と最後のリストの要素を結合
+  let combined_args : Array[Value] = []
+  // 中間の引数（args[1] から args[length-2]）を追加
+  let mut i = 1
+  let last_idx = args.length() - 1
+  let _ = while i < last_idx {
+    combined_args.push(args[i])
+    i = i + 1
+  } else { () }
+  // 最後のリストの要素を追加
+  for item in last_list_items {
+    combined_args.push(item)
+  }
+
+  // 手続きを適用
+  apply(proc, combined_args)
+}
+
 /// and 特殊形式: (and test...)
 /// 短絡評価を行い、最初の偽値を返すか、全て真なら最後の値を返す。
 /// 引数がない場合は #t を返す。
@@ -1371,5 +1428,7 @@ pub fn initial_env() -> Env {
   let env = define_var(env, "eq?", Value::Procedure(Procedure::Native("eq?")))
   // 論理演算
   let env = define_var(env, "not", Value::Procedure(Procedure::Native("not")))
+  // 高階関数
+  let env = define_var(env, "apply", Value::Procedure(Procedure::Native("apply")))
   env
 }

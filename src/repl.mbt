@@ -121,6 +121,11 @@ pub fn run() -> Unit {
     "(cond ((= 5 5) 100) (else 0))",
     "(cond ((< 3 5) 1) ((> 3 5) 2) (else 3))",
     "(let ((x 10)) (cond ((< x 5) 1) ((< x 15) 2) (else 3)))",
+    "(apply + (list 1 2 3))",
+    "(apply + 1 2 (list 3 4 5))",
+    "(apply max (list 1 5 3 2))",
+    "(apply (lambda (x y) (+ x y)) (list 3 4))",
+    "(let ((nums (list 10 20 30))) (apply + nums))",
   ]
 
   for input in test_inputs {
