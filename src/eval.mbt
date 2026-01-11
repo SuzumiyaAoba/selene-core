@@ -58,6 +58,7 @@ pub fn eval(expr : SExpr, env : Env) -> Result[Value, EvalError] {
         SExpr::Symbol("if") => eval_if(cdr, env)
         SExpr::Symbol("lambda") => eval_lambda(cdr, env)
         SExpr::Symbol("define") => eval_define(cdr, env)
+        SExpr::Symbol("set!") => eval_set(cdr, env)
         SExpr::Symbol("begin") => eval_begin(cdr, env)
         SExpr::Symbol("quote") => {
           // quote特殊形式: (quote expr)
@@ -783,6 +784,13 @@ fn extract_param_names(params : SExpr) -> Result[Array[String], EvalError] {
 /// REPLで特別に処理される必要があります。
 fn eval_define(_args : SExpr, _env : Env) -> Result[Value, EvalError] {
   Err(EvalError::InvalidSyntax("define: not supported in expression context (use REPL)"))
+}
+
+/// set! 特殊形式: (set! name value)
+/// 注: この実装は環境を返せないため、式コンテキストでは使用できません。
+/// REPLで特別に処理される必要があります。
+fn eval_set(_args : SExpr, _env : Env) -> Result[Value, EvalError] {
+  Err(EvalError::InvalidSyntax("set!: not supported in expression context (use REPL)"))
 }
 
 /// begin 特殊形式: (begin expr...)

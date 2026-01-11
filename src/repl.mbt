@@ -98,11 +98,18 @@ pub fn run() -> Unit {
     "(begin (+ 1 2) (* 3 4))",
     "(define x 10)",
     "x",
+    "(set! x 20)",
+    "x",
     "(define square (lambda (n) (* n n)))",
     "(square 5)",
     "(define lst (cons 1 (cons 2 (cons 3 ()))))",
     "(car lst)",
     "(car (cdr lst))",
+    "(define counter 0)",
+    "(set! counter (+ counter 1))",
+    "counter",
+    "(set! counter (+ counter 1))",
+    "counter",
   ]
 
   for input in test_inputs {
@@ -116,6 +123,21 @@ pub fn run() -> Unit {
               Ok(value) => {
                 env = define_var(env, name, value)
                 println("#<void>")
+              }
+              Err(err) => println("Error: " + err.to_string())
+            }
+          }
+          // set!の特別処理
+          SExpr::Pair(SExpr::Symbol("set!"), SExpr::Pair(SExpr::Symbol(name), SExpr::Pair(value_expr, SExpr::Nil))) => {
+            match eval(value_expr, env) {
+              Ok(value) => {
+                let (new_env, ok) = set_bang(env, name, value)
+                if ok {
+                  env = new_env
+                  println("#<void>")
+                } else {
+                  println("Error: set!: unbound variable: " + name)
+                }
               }
               Err(err) => println("Error: " + err.to_string())
             }
