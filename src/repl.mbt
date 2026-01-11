@@ -116,6 +116,11 @@ pub fn run() -> Unit {
     "(let* ((x 1) (x (+ x 1)) (x (+ x 1))) x)",
     "(letrec ((x 10) (y 20)) (+ x y))",
     "(let ((x 10)) (let ((y 5)) (+ x y)))",
+    "(cond (#t 42) (else 0))",
+    "(cond (#f 1) (#t 2) (else 3))",
+    "(cond ((= 5 5) 100) (else 0))",
+    "(cond ((< 3 5) 1) ((> 3 5) 2) (else 3))",
+    "(let ((x 10)) (cond ((< x 5) 1) ((< x 15) 2) (else 3)))",
   ]
 
   for input in test_inputs {

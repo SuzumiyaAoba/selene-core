@@ -65,6 +65,7 @@ pub fn eval(expr : SExpr, env : Env) -> Result[Value, EvalError] {
         SExpr::Symbol("let") => eval_let(cdr, env)
         SExpr::Symbol("let*") => eval_let_star(cdr, env)
         SExpr::Symbol("letrec") => eval_letrec(cdr, env)
+        SExpr::Symbol("cond") => eval_cond(cdr, env)
         SExpr::Symbol("quote") => {
           // quote特殊形式: (quote expr)
           match cdr {
@@ -1279,6 +1280,56 @@ fn eval_letrec(args : SExpr, env : Env) -> Result[Value, EvalError] {
     }
     _ => Err(EvalError::InvalidSyntax("letrec: invalid syntax"))
   }
+}
+
+/// cond 特殊形式を評価する。
+/// (cond (test1 expr1 ...) (test2 expr2 ...) ... [(else exprN ...)])
+fn eval_cond(clauses : SExpr, env : Env) -> Result[Value, EvalError] {
+  let mut current = clauses
+  let _ = while true {
+    match current {
+      SExpr::Nil => {
+        // すべての節が偽で、else もない場合
+        // R5RS では未定義だが、ここでは未定義値（Nil）を返す
+        return Ok(Value::Nil)
+      }
+      SExpr::Pair(clause, rest) => {
+        match clause {
+          // else 節: (else expr ...)
+          SExpr::Pair(SExpr::Symbol("else"), body) => {
+            // else 節は最後でなければならない（ただし、ここでは厳密にチェックしない）
+            return eval_begin(body, env)
+          }
+          // 通常の節: (test expr ...)
+          SExpr::Pair(test_expr, body) => {
+            // test を評価
+            let test_value = match eval(test_expr, env) {
+              Ok(v) => v
+              Err(e) => return Err(e)
+            }
+            // test が真（#f 以外）かどうかを判定
+            let is_true = match test_value {
+              Value::Bool(false) => false
+              _ => true
+            }
+            if is_true {
+              // body が空の場合、test の値を返す
+              match body {
+                SExpr::Nil => return Ok(test_value)
+                _ => return eval_begin(body, env)
+              }
+            } else {
+              // 次の節へ
+              current = rest
+            }
+          }
+          _ => return Err(EvalError::InvalidSyntax("cond: invalid clause"))
+        }
+      }
+      _ => return Err(EvalError::InvalidSyntax("cond: clauses must be a list"))
+    }
+  } else { () }
+  Ok(Value::Nil)
 }
 
 /// 初期環境を構築する（組み込み手続きを登録）。
