@@ -1,0 +1,108 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "SuzumiyaAoba/selene_core"
+
+// Values
+pub fn apply(Value, Array[Value]) -> Result[Value, EvalError]
+
+pub fn define_var(Env, String, Value) -> Env
+
+pub fn empty_env() -> Env
+
+pub fn eval(SExpr, Env) -> Result[Value, EvalError]
+
+pub fn expand_quote(SExpr) -> SExpr
+
+pub fn extend(Env, Array[(String, Value)]) -> Env
+
+pub fn initial_env() -> Env
+
+pub fn list2(SExpr, SExpr) -> SExpr
+
+pub fn lookup(Env, String) -> Value?
+
+pub fn parse(String) -> Array[SExpr]
+
+pub fn parse_one(String) -> SExpr
+
+pub fn parse_tokens(Array[Token]) -> Array[SExpr]
+
+pub fn run() -> Unit
+
+pub fn set_bang(Env, String, Value) -> (Env, Bool)
+
+pub fn sym(String) -> SExpr
+
+pub fn tokenize(String) -> Array[Token]
+
+// Errors
+
+// Types and methods
+pub(all) struct Env {
+  parent : Env?
+  frame : Array[(String, Value)]
+}
+pub impl Show for Env
+
+pub(all) enum EvalError {
+  UnboundVariable(String)
+  InvalidSyntax(String)
+  TypeError(String)
+  ArityError(String)
+}
+pub impl Show for EvalError
+
+pub(all) enum Number {
+  Int(Int)
+  Real(Double)
+}
+pub impl Show for Number
+
+pub(all) enum Procedure {
+  Native(String)
+  Closure(Array[String], SExpr, Env)
+}
+pub impl Show for Procedure
+
+pub(all) enum SExpr {
+  Nil
+  Symbol(String)
+  Number(Int)
+  Bool(Bool)
+  Pair(SExpr, SExpr)
+  Vector(Array[SExpr])
+  Quote(SExpr)
+  Quasiquote(SExpr)
+  Unquote(SExpr)
+  UnquoteSplicing(SExpr)
+}
+pub impl Eq for SExpr
+pub impl Show for SExpr
+
+pub enum Token {
+  LParen
+  RParen
+  Identifier(String)
+  Number(Int)
+  Boolean(Bool)
+}
+pub impl Eq for Token
+pub impl Show for Token
+
+pub(all) enum Value {
+  Nil
+  Bool(Bool)
+  Number(Number)
+  Char(Char)
+  String(String)
+  Symbol(String)
+  Pair(Value, Value)
+  Vector(Array[Value])
+  Procedure(Procedure)
+}
+pub impl Show for Value
+
+// Type aliases
+pub type Binding = (String, Value)
+
+// Traits
+

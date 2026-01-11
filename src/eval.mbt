@@ -62,6 +62,9 @@ pub fn eval(expr : SExpr, env : Env) -> Result[Value, EvalError] {
         SExpr::Symbol("begin") => eval_begin(cdr, env)
         SExpr::Symbol("and") => eval_and(cdr, env)
         SExpr::Symbol("or") => eval_or(cdr, env)
+        SExpr::Symbol("let") => eval_let(cdr, env)
+        SExpr::Symbol("let*") => eval_let_star(cdr, env)
+        SExpr::Symbol("letrec") => eval_letrec(cdr, env)
         SExpr::Symbol("quote") => {
           // quote特殊形式: (quote expr)
           match cdr {
@@ -1139,6 +1142,143 @@ fn eval_or(args : SExpr, env : Env) -> Result[Value, EvalError] {
     }
   } else { () }
   Ok(last_value)
+}
+
+/// let 特殊形式を評価する。
+/// (let ((var1 val1) (var2 val2) ...) body ...)
+fn eval_let(args : SExpr, env : Env) -> Result[Value, EvalError] {
+  match args {
+    SExpr::Pair(bindings_expr, body) => {
+      // バインディングリストを解析
+      let bindings : Array[Binding] = []
+      let mut current = bindings_expr
+      let _ = while true {
+        match current {
+          SExpr::Nil => break
+          SExpr::Pair(binding, rest) => {
+            // 各バインディングは (var val) の形式
+            match binding {
+              SExpr::Pair(SExpr::Symbol(name), SExpr::Pair(val_expr, SExpr::Nil)) => {
+                // 値を現在の環境で評価
+                let value = match eval(val_expr, env) {
+                  Ok(v) => v
+                  Err(e) => return Err(e)
+                }
+                bindings.push((name, value))
+                current = rest
+              }
+              _ => return Err(EvalError::InvalidSyntax("let: invalid binding form"))
+            }
+          }
+          _ => return Err(EvalError::InvalidSyntax("let: bindings must be a list"))
+        }
+      } else { () }
+
+      // 新しい環境を作成
+      let new_env = extend(env, bindings)
+
+      // ボディを評価
+      eval_begin(body, new_env)
+    }
+    _ => Err(EvalError::InvalidSyntax("let: invalid syntax"))
+  }
+}
+
+/// let* 特殊形式を評価する。
+/// (let* ((var1 val1) (var2 val2) ...) body ...)
+fn eval_let_star(args : SExpr, env : Env) -> Result[Value, EvalError] {
+  match args {
+    SExpr::Pair(bindings_expr, body) => {
+      // バインディングを順次評価し、環境を拡張
+      let mut current_env = env
+      let mut current = bindings_expr
+      let _ = while true {
+        match current {
+          SExpr::Nil => break
+          SExpr::Pair(binding, rest) => {
+            // 各バインディングは (var val) の形式
+            match binding {
+              SExpr::Pair(SExpr::Symbol(name), SExpr::Pair(val_expr, SExpr::Nil)) => {
+                // 値を現在の環境で評価
+                let value = match eval(val_expr, current_env) {
+                  Ok(v) => v
+                  Err(e) => return Err(e)
+                }
+                // 環境を拡張（1つずつ）
+                current_env = extend(current_env, [(name, value)])
+                current = rest
+              }
+              _ => return Err(EvalError::InvalidSyntax("let*: invalid binding form"))
+            }
+          }
+          _ => return Err(EvalError::InvalidSyntax("let*: bindings must be a list"))
+        }
+      } else { () }
+
+      // ボディを評価
+      eval_begin(body, current_env)
+    }
+    _ => Err(EvalError::InvalidSyntax("let*: invalid syntax"))
+  }
+}
+
+/// letrec 特殊形式を評価する。
+/// (letrec ((var1 val1) (var2 val2) ...) body ...)
+///
+/// 注: 不変環境での letrec の完全な実装は困難です。
+/// この実装では、各バインディングを順次評価し、その時点での環境を次の評価に使用します。
+/// これにより、後のバインディングが前のバインディングを参照できます。
+fn eval_letrec(args : SExpr, env : Env) -> Result[Value, EvalError] {
+  match args {
+    SExpr::Pair(bindings_expr, body) => {
+      // バインディングリストを解析
+      let names : Array[String] = []
+      let val_exprs : Array[SExpr] = []
+
+      let mut current = bindings_expr
+      let _ = while true {
+        match current {
+          SExpr::Nil => break
+          SExpr::Pair(binding, rest) => {
+            match binding {
+              SExpr::Pair(SExpr::Symbol(name), SExpr::Pair(val_expr, SExpr::Nil)) => {
+                names.push(name)
+                val_exprs.push(val_expr)
+                current = rest
+              }
+              _ => return Err(EvalError::InvalidSyntax("letrec: invalid binding form"))
+            }
+          }
+          _ => return Err(EvalError::InvalidSyntax("letrec: bindings must be a list"))
+        }
+      } else { () }
+
+      // すべての変数を未定義値（Nil）で束縛
+      let initial_bindings : Array[Binding] = []
+      for name in names {
+        initial_bindings.push((name, Value::Nil))
+      }
+      let mut recursive_env = extend(env, initial_bindings)
+
+      // 各値を順次評価し、環境を更新
+      // これにより、クロージャが現在の環境をキャプチャできる
+      let mut i = 0
+      let len = names.length()
+      let _ = while i < len {
+        let value = match eval(val_exprs[i], recursive_env) {
+          Ok(v) => v
+          Err(e) => return Err(e)
+        }
+        // 環境を更新（この更新された環境が次の評価で使用される）
+        recursive_env = define_var(recursive_env, names[i], value)
+        i = i + 1
+      } else { () }
+
+      // ボディを評価
+      eval_begin(body, recursive_env)
+    }
+    _ => Err(EvalError::InvalidSyntax("letrec: invalid syntax"))
+  }
 }
 
 /// 初期環境を構築する（組み込み手続きを登録）。
