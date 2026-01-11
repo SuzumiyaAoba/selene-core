@@ -126,6 +126,11 @@ pub fn run() -> Unit {
     "(apply max (list 1 5 3 2))",
     "(apply (lambda (x y) (+ x y)) (list 3 4))",
     "(let ((nums (list 10 20 30))) (apply + nums))",
+    "(map (lambda (x) (* x 2)) (list 1 2 3 4))",
+    "(map + (list 1 2 3) (list 10 20 30))",
+    "(map abs (list (- 0 1) 2 (- 0 3)))",
+    "(for-each (lambda (x) (* x 2)) (list 1 2 3))",
+    "(let ((double (lambda (x) (* x 2)))) (map double (list 1 2 3)))",
   ]
 
   for input in test_inputs {

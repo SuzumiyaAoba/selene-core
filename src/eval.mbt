@@ -171,6 +171,8 @@ fn apply_builtin(name : String, args : Array[Value]) -> Result[Value, EvalError]
     "eq?" => builtin_eq_p(args)
     "not" => builtin_not(args)
     "apply" => builtin_apply(args)
+    "map" => builtin_map(args)
+    "for-each" => builtin_for_each(args)
     "list" => builtin_list(args)
     "length" => builtin_length(args)
     "append" => builtin_append(args)
@@ -1150,6 +1152,137 @@ fn builtin_apply(args : Array[Value]) -> Result[Value, EvalError] {
   apply(proc, combined_args)
 }
 
+/// 組み込み関数: map
+/// (map proc list1 list2 ...) - 各リストの対応する要素に proc を適用し、結果のリストを返す
+fn builtin_map(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() < 2 {
+    return Err(EvalError::ArityError("map: requires at least 2 arguments"))
+  }
+
+  // 最初の引数は手続きでなければならない
+  let proc = args[0]
+  match proc {
+    Value::Procedure(_) => ()
+    _ => return Err(EvalError::TypeError("map: first argument must be a procedure"))
+  }
+
+  // 残りの引数はすべてリストでなければならない
+  let lists : Array[Array[Value]] = []
+  let mut i = 1
+  let len = args.length()
+  let _ = while i < len {
+    let list_items = match list_to_array(args[i]) {
+      Ok(items) => items
+      Err(e) => return Err(e)
+    }
+    lists.push(list_items)
+    i = i + 1
+  } else { () }
+
+  // すべてのリストが同じ長さかチェック（簡易版：最初のリストの長さを使用）
+  if lists.length() == 0 {
+    return Ok(Value::Nil)
+  }
+  let list_len = lists[0].length()
+
+  // 結果リストを構築
+  let results : Array[Value] = []
+  let mut idx = 0
+  let _ = while idx < list_len {
+    // 各リストから idx 番目の要素を取得
+    let proc_args : Array[Value] = []
+    let mut list_idx = 0
+    let _ = while list_idx < lists.length() {
+      if idx >= lists[list_idx].length() {
+        return Err(EvalError::InvalidSyntax("map: lists must have the same length"))
+      }
+      proc_args.push(lists[list_idx][idx])
+      list_idx = list_idx + 1
+    } else { () }
+
+    // 手続きを適用
+    let result = match apply(proc, proc_args) {
+      Ok(v) => v
+      Err(e) => return Err(e)
+    }
+    results.push(result)
+    idx = idx + 1
+  } else { () }
+
+  // 配列をリストに変換
+  array_to_list(results)
+}
+
+/// 配列を Value のリストに変換する。
+fn array_to_list(items : Array[Value]) -> Result[Value, EvalError] {
+  let mut result = Value::Nil
+  let mut i = items.length()
+  let _ = while i > 0 {
+    i = i - 1
+    result = Value::Pair(items[i], result)
+  } else { () }
+  Ok(result)
+}
+
+/// 組み込み関数: for-each
+/// (for-each proc list1 list2 ...) - 各リストの対応する要素に proc を適用（副作用のため）
+fn builtin_for_each(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() < 2 {
+    return Err(EvalError::ArityError("for-each: requires at least 2 arguments"))
+  }
+
+  // 最初の引数は手続きでなければならない
+  let proc = args[0]
+  match proc {
+    Value::Procedure(_) => ()
+    _ => return Err(EvalError::TypeError("for-each: first argument must be a procedure"))
+  }
+
+  // 残りの引数はすべてリストでなければならない
+  let lists : Array[Array[Value]] = []
+  let mut i = 1
+  let len = args.length()
+  let _ = while i < len {
+    let list_items = match list_to_array(args[i]) {
+      Ok(items) => items
+      Err(e) => return Err(e)
+    }
+    lists.push(list_items)
+    i = i + 1
+  } else { () }
+
+  // すべてのリストが同じ長さかチェック
+  if lists.length() == 0 {
+    return Ok(Value::Nil)
+  }
+  let list_len = lists[0].length()
+
+  // 各要素に手続きを適用（結果は捨てる）
+  let mut idx = 0
+  let _ = while idx < list_len {
+    // 各リストから idx 番目の要素を取得
+    let proc_args : Array[Value] = []
+    let mut list_idx = 0
+    let _ = while list_idx < lists.length() {
+      if idx >= lists[list_idx].length() {
+        return Err(EvalError::InvalidSyntax("for-each: lists must have the same length"))
+      }
+      proc_args.push(lists[list_idx][idx])
+      list_idx = list_idx + 1
+    } else { () }
+
+    // 手続きを適用（結果は無視）
+    let _ = match apply(proc, proc_args) {
+      Ok(_) => ()
+      Err(e) => return Err(e)
+    }
+    idx = idx + 1
+  } else { () }
+
+  // for-each は未定義値を返す
+  Ok(Value::Nil)
+}
+
 /// and 特殊形式: (and test...)
 /// 短絡評価を行い、最初の偽値を返すか、全て真なら最後の値を返す。
 /// 引数がない場合は #t を返す。
@@ -1430,5 +1563,7 @@ pub fn initial_env() -> Env {
   let env = define_var(env, "not", Value::Procedure(Procedure::Native("not")))
   // 高階関数
   let env = define_var(env, "apply", Value::Procedure(Procedure::Native("apply")))
+  let env = define_var(env, "map", Value::Procedure(Procedure::Native("map")))
+  let env = define_var(env, "for-each", Value::Procedure(Procedure::Native("for-each")))
   env
 }
