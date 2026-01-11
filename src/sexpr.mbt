@@ -4,6 +4,8 @@ pub(all) enum SExpr {
   Bool(Bool)
   Symbol(String)
   Number(Int)
+  Char(Char)
+  String(String)
   Pair(SExpr, SExpr)
   Vector(Array[SExpr])
   Quote(SExpr)

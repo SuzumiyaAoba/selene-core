@@ -93,11 +93,86 @@ pub fn tokenize(input : String) -> Array[Token] {
             i = i + 1
             continue
           }
+          '\\' => {
+            // 文字リテラル #\x
+            i = i + 1
+            if i < len {
+              let char_value = chars[i]
+              // 特殊文字名のチェック
+              if is_letter(char_value) {
+                let builder = StringBuilder::new()
+                let _ = while i < len && is_letter(chars[i]) {
+                  builder.write_char(chars[i])
+                  i = i + 1
+                } else { () }
+                let char_name = builder.to_string()
+                let result_char = match char_name {
+                  "space" => ' '
+                  "newline" => '\n'
+                  "tab" => '\t'
+                  "return" => '\r'
+                  _ => {
+                    // 単一文字として扱う（最初の文字のみ）
+                    let name_chars : Array[Char] = char_name.iter().collect()
+                    if name_chars.length() == 1 {
+                      name_chars[0]
+                    } else {
+                      panic()  // 未対応の文字名
+                    }
+                  }
+                }
+                tokens.push(Token::Char(result_char))
+                continue
+              } else {
+                tokens.push(Token::Char(char_value))
+                i = i + 1
+                continue
+              }
+            } else {
+              panic()  // #\ の後に何もない
+            }
+          }
           _ => panic()  // 未対応の # リテラル
         }
       } else {
         panic()  // # の後に何もない
       }
+    }
+    if ch == '"' {
+      // 文字列リテラル
+      i = i + 1
+      let builder = StringBuilder::new()
+      let _ = while i < len {
+        let str_ch = chars[i]
+        if str_ch == '"' {
+          i = i + 1
+          tokens.push(Token::String(builder.to_string()))
+          break
+        } else if str_ch == '\\' {
+          // エスケープシーケンス
+          i = i + 1
+          if i < len {
+            match chars[i] {
+              '"' => builder.write_char('"')
+              '\\' => builder.write_char('\\')
+              'n' => builder.write_char('\n')
+              't' => builder.write_char('\t')
+              'r' => builder.write_char('\r')
+              _ => {
+                builder.write_char('\\')
+                builder.write_char(chars[i])
+              }
+            }
+            i = i + 1
+          } else {
+            panic()  // エスケープの後に何もない
+          }
+        } else {
+          builder.write_char(str_ch)
+          i = i + 1
+        }
+      } else { () }
+      continue
     }
     if is_digit(ch) {
       let mut value = 0

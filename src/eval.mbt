@@ -15,6 +15,8 @@ fn sexpr_to_value(sexpr : SExpr) -> Value {
     SExpr::Bool(b) => Value::Bool(b)
     SExpr::Symbol(name) => Value::Symbol(name)
     SExpr::Number(n) => Value::Number(Number::Int(n))
+    SExpr::Char(c) => Value::Char(c)
+    SExpr::String(s) => Value::String(s)
     SExpr::Pair(car, cdr) =>
       Value::Pair(sexpr_to_value(car), sexpr_to_value(cdr))
     SExpr::Vector(items) => {
@@ -36,6 +38,8 @@ pub fn eval(expr : SExpr, env : Env) -> Result[Value, EvalError] {
     // 自己評価式
     SExpr::Number(n) => Ok(Value::Number(Number::Int(n)))
     SExpr::Bool(b) => Ok(Value::Bool(b))
+    SExpr::Char(c) => Ok(Value::Char(c))
+    SExpr::String(s) => Ok(Value::String(s))
 
     // 変数参照
     SExpr::Symbol(name) => {
@@ -179,6 +183,14 @@ fn apply_builtin(name : String, args : Array[Value]) -> Result[Value, EvalError]
     "reverse" => builtin_reverse(args)
     "list-ref" => builtin_list_ref(args)
     "list-tail" => builtin_list_tail(args)
+    "string?" => builtin_string_p(args)
+    "char?" => builtin_char_p(args)
+    "string-length" => builtin_string_length(args)
+    "string-ref" => builtin_string_ref(args)
+    "string-append" => builtin_string_append(args)
+    "string=?" => builtin_string_eq(args)
+    "make-string" => builtin_make_string(args)
+    "substring" => builtin_substring(args)
     _ => Err(EvalError::InvalidSyntax("unknown builtin: " + name))
   }
 }
@@ -1522,6 +1534,142 @@ fn eval_cond(clauses : SExpr, env : Env) -> Result[Value, EvalError] {
   Ok(Value::Nil)
 }
 
+/// 組み込み関数: string?
+/// (string? obj) - obj が文字列かどうかを判定
+fn builtin_string_p(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 1 {
+    return Err(EvalError::ArityError("string?: requires exactly 1 argument"))
+  }
+  match args[0] {
+    Value::String(_) => Ok(Value::Bool(true))
+    _ => Ok(Value::Bool(false))
+  }
+}
+
+/// 組み込み関数: char?
+/// (char? obj) - obj が文字かどうかを判定
+fn builtin_char_p(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 1 {
+    return Err(EvalError::ArityError("char?: requires exactly 1 argument"))
+  }
+  match args[0] {
+    Value::Char(_) => Ok(Value::Bool(true))
+    _ => Ok(Value::Bool(false))
+  }
+}
+
+/// 組み込み関数: string-length
+/// (string-length str) - 文字列の長さを返す
+fn builtin_string_length(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 1 {
+    return Err(EvalError::ArityError("string-length: requires exactly 1 argument"))
+  }
+  match args[0] {
+    Value::String(s) => Ok(Value::Number(Number::Int(s.length())))
+    _ => Err(EvalError::TypeError("string-length: argument must be a string"))
+  }
+}
+
+/// 組み込み関数: string-ref
+/// (string-ref str k) - 文字列の k 番目の文字を返す
+fn builtin_string_ref(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 2 {
+    return Err(EvalError::ArityError("string-ref: requires exactly 2 arguments"))
+  }
+  match (args[0], args[1]) {
+    (Value::String(s), Value::Number(Number::Int(k))) => {
+      let chars : Array[Char] = s.iter().collect()
+      if k < 0 || k >= chars.length() {
+        return Err(EvalError::InvalidSyntax("string-ref: index out of bounds"))
+      }
+      Ok(Value::Char(chars[k]))
+    }
+    (Value::String(_), _) => Err(EvalError::TypeError("string-ref: second argument must be an integer"))
+    _ => Err(EvalError::TypeError("string-ref: first argument must be a string"))
+  }
+}
+
+/// 組み込み関数: string-append
+/// (string-append str1 str2 ...) - 文字列を連結する
+fn builtin_string_append(args : Array[Value]) -> Result[Value, EvalError] {
+  let builder = StringBuilder::new()
+  for arg in args {
+    match arg {
+      Value::String(s) => builder.write_string(s)
+      _ => return Err(EvalError::TypeError("string-append: all arguments must be strings"))
+    }
+  }
+  Ok(Value::String(builder.to_string()))
+}
+
+/// 組み込み関数: string=?
+/// (string=? str1 str2) - 文字列が等しいかを判定
+fn builtin_string_eq(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 2 {
+    return Err(EvalError::ArityError("string=?: requires exactly 2 arguments"))
+  }
+  match (args[0], args[1]) {
+    (Value::String(s1), Value::String(s2)) => Ok(Value::Bool(s1 == s2))
+    _ => Err(EvalError::TypeError("string=?: both arguments must be strings"))
+  }
+}
+
+/// 組み込み関数: make-string
+/// (make-string k [char]) - 長さ k の文字列を作成（オプションで文字を指定）
+fn builtin_make_string(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() < 1 || args.length() > 2 {
+    return Err(EvalError::ArityError("make-string: requires 1 or 2 arguments"))
+  }
+  match args[0] {
+    Value::Number(Number::Int(k)) => {
+      if k < 0 {
+        return Err(EvalError::InvalidSyntax("make-string: length must be non-negative"))
+      }
+      let ch = if args.length() == 2 {
+        match args[1] {
+          Value::Char(c) => c
+          _ => return Err(EvalError::TypeError("make-string: second argument must be a character"))
+        }
+      } else {
+        ' '  // デフォルトはスペース
+      }
+      let builder = StringBuilder::new()
+      let mut i = 0
+      let _ = while i < k {
+        builder.write_char(ch)
+        i = i + 1
+      } else { () }
+      Ok(Value::String(builder.to_string()))
+    }
+    _ => Err(EvalError::TypeError("make-string: first argument must be an integer"))
+  }
+}
+
+/// 組み込み関数: substring
+/// (substring str start end) - 文字列の部分文字列を返す
+fn builtin_substring(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 3 {
+    return Err(EvalError::ArityError("substring: requires exactly 3 arguments"))
+  }
+  match (args[0], args[1], args[2]) {
+    (Value::String(s), Value::Number(Number::Int(start)), Value::Number(Number::Int(end))) => {
+      if start < 0 || end < start || end > s.length() {
+        return Err(EvalError::InvalidSyntax("substring: invalid range"))
+      }
+      let chars : Array[Char] = s.iter().collect()
+      let builder = StringBuilder::new()
+      let mut i = start
+      let _ = while i < end {
+        builder.write_char(chars[i])
+        i = i + 1
+      } else { () }
+      Ok(Value::String(builder.to_string()))
+    }
+    (Value::String(_), _, _) => Err(EvalError::TypeError("substring: second and third arguments must be integers"))
+    _ => Err(EvalError::TypeError("substring: first argument must be a string"))
+  }
+}
+
 /// 初期環境を構築する（組み込み手続きを登録）。
 pub fn initial_env() -> Env {
   let env = empty_env()
@@ -1565,5 +1713,14 @@ pub fn initial_env() -> Env {
   let env = define_var(env, "apply", Value::Procedure(Procedure::Native("apply")))
   let env = define_var(env, "map", Value::Procedure(Procedure::Native("map")))
   let env = define_var(env, "for-each", Value::Procedure(Procedure::Native("for-each")))
+  // 文字列操作
+  let env = define_var(env, "string?", Value::Procedure(Procedure::Native("string?")))
+  let env = define_var(env, "char?", Value::Procedure(Procedure::Native("char?")))
+  let env = define_var(env, "string-length", Value::Procedure(Procedure::Native("string-length")))
+  let env = define_var(env, "string-ref", Value::Procedure(Procedure::Native("string-ref")))
+  let env = define_var(env, "string-append", Value::Procedure(Procedure::Native("string-append")))
+  let env = define_var(env, "string=?", Value::Procedure(Procedure::Native("string=?")))
+  let env = define_var(env, "make-string", Value::Procedure(Procedure::Native("make-string")))
+  let env = define_var(env, "substring", Value::Procedure(Procedure::Native("substring")))
   env
 }
