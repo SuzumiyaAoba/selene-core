@@ -150,6 +150,22 @@ pub fn run() -> Unit {
     "#\\newline",
     "\"hello\"",
     "\"hello\\nworld\"",
+    "(vector? (vector 1 2 3))",
+    "(vector? (list 1 2 3))",
+    "(make-vector 5 0)",
+    "(make-vector 3)",
+    "(vector 1 2 3 4 5)",
+    "(vector)",
+    "(vector-length (vector 1 2 3 4 5))",
+    "(vector-ref (vector 10 20 30) 0)",
+    "(vector-ref (vector 10 20 30) 2)",
+    "(vector-set! (vector 1 2 3) 1 99)",
+    "(vector->list (vector 1 2 3))",
+    "(list->vector (list 1 2 3))",
+    "(vector->list (list->vector (list 4 5 6)))",
+    "(define v (vector 1 2 3))",
+    "(vector-ref v 1)",
+    "(vector-length v)",
   ]
 
   for input in test_inputs {
