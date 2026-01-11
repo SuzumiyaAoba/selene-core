@@ -5,4 +5,6 @@ pub enum Token {
   Identifier(String)
   Number(Int)
   Boolean(Bool)
+  String(String)
+  Char(Char)
 } derive(Show, Eq)
