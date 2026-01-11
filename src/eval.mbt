@@ -199,6 +199,15 @@ fn apply_builtin(name : String, args : Array[Value]) -> Result[Value, EvalError]
     "vector-set!" => builtin_vector_set(args)
     "vector->list" => builtin_vector_to_list(args)
     "list->vector" => builtin_list_to_vector(args)
+    "floor" => builtin_floor(args)
+    "ceiling" => builtin_ceiling(args)
+    "truncate" => builtin_truncate(args)
+    "round" => builtin_round(args)
+    "sqrt" => builtin_sqrt(args)
+    "expt" => builtin_expt(args)
+    "exact?" => builtin_exact_p(args)
+    "inexact?" => builtin_inexact_p(args)
+    "number->string" => builtin_number_to_string(args)
     _ => Err(EvalError::InvalidSyntax("unknown builtin: " + name))
   }
 }
@@ -1822,6 +1831,166 @@ fn builtin_list_to_vector(args : Array[Value]) -> Result[Value, EvalError] {
   Ok(Value::Vector(list_items))
 }
 
+/// 組み込み関数: floor
+/// (floor x) - x 以下の最大の整数を返す
+fn builtin_floor(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 1 {
+    return Err(EvalError::ArityError("floor: requires exactly 1 argument"))
+  }
+  match args[0] {
+    Value::Number(Number::Int(n)) => Ok(Value::Number(Number::Int(n)))
+    Value::Number(Number::Real(r)) => Ok(Value::Number(Number::Int(r.floor().to_int())))
+    _ => Err(EvalError::TypeError("floor: argument must be a number"))
+  }
+}
+
+/// 組み込み関数: ceiling
+/// (ceiling x) - x 以上の最小の整数を返す
+fn builtin_ceiling(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 1 {
+    return Err(EvalError::ArityError("ceiling: requires exactly 1 argument"))
+  }
+  match args[0] {
+    Value::Number(Number::Int(n)) => Ok(Value::Number(Number::Int(n)))
+    Value::Number(Number::Real(r)) => Ok(Value::Number(Number::Int(r.ceil().to_int())))
+    _ => Err(EvalError::TypeError("ceiling: argument must be a number"))
+  }
+}
+
+/// 組み込み関数: truncate
+/// (truncate x) - x を 0 に向かって丸める
+fn builtin_truncate(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 1 {
+    return Err(EvalError::ArityError("truncate: requires exactly 1 argument"))
+  }
+  match args[0] {
+    Value::Number(Number::Int(n)) => Ok(Value::Number(Number::Int(n)))
+    Value::Number(Number::Real(r)) => Ok(Value::Number(Number::Int(r.to_int())))
+    _ => Err(EvalError::TypeError("truncate: argument must be a number"))
+  }
+}
+
+/// 組み込み関数: round
+/// (round x) - x を最も近い整数に丸める（.5 の場合は偶数に丸める）
+fn builtin_round(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 1 {
+    return Err(EvalError::ArityError("round: requires exactly 1 argument"))
+  }
+  match args[0] {
+    Value::Number(Number::Int(n)) => Ok(Value::Number(Number::Int(n)))
+    Value::Number(Number::Real(r)) => {
+      // 四捨五入（.5の場合は最も近い偶数に丸める）
+      let rounded = r.round()
+      Ok(Value::Number(Number::Int(rounded.to_int())))
+    }
+    _ => Err(EvalError::TypeError("round: argument must be a number"))
+  }
+}
+
+/// 組み込み関数: sqrt
+/// (sqrt x) - x の平方根を返す
+fn builtin_sqrt(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 1 {
+    return Err(EvalError::ArityError("sqrt: requires exactly 1 argument"))
+  }
+  match args[0] {
+    Value::Number(Number::Int(n)) => {
+      let r = n.to_double().sqrt()
+      Ok(Value::Number(Number::Real(r)))
+    }
+    Value::Number(Number::Real(r)) => Ok(Value::Number(Number::Real(r.sqrt())))
+    _ => Err(EvalError::TypeError("sqrt: argument must be a number"))
+  }
+}
+
+/// 組み込み関数: expt
+/// (expt x y) - x の y 乗を返す
+fn builtin_expt(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 2 {
+    return Err(EvalError::ArityError("expt: requires exactly 2 arguments"))
+  }
+  let base = match expect_number(args[0]) {
+    Ok(n) => n
+    Err(e) => return Err(e)
+  }
+  let exp = match expect_number(args[1]) {
+    Ok(n) => n
+    Err(e) => return Err(e)
+  }
+  match (base, exp) {
+    (Number::Int(b), Number::Int(e)) => {
+      if e >= 0 {
+        // 整数のべき乗（非負の指数）
+        let result = b.to_double().pow(e.to_double())
+        if result.floor() == result && result.to_int() != 0 {
+          Ok(Value::Number(Number::Int(result.to_int())))
+        } else {
+          Ok(Value::Number(Number::Real(result)))
+        }
+      } else {
+        // 負の指数は実数になる
+        Ok(Value::Number(Number::Real(b.to_double().pow(e.to_double()))))
+      }
+    }
+    _ => {
+      let b_real = match base {
+        Number::Int(n) => n.to_double()
+        Number::Real(r) => r
+      }
+      let e_real = match exp {
+        Number::Int(n) => n.to_double()
+        Number::Real(r) => r
+      }
+      Ok(Value::Number(Number::Real(b_real.pow(e_real))))
+    }
+  }
+}
+
+// 注: MoonBit の Double 型は三角関数や対数関数のメソッドをサポートしていないため、
+// sin, cos, tan, asin, acos, atan, exp, log は実装できません
+
+/// 組み込み関数: exact?
+/// (exact? z) - z が正確な数（整数）かどうかを判定
+fn builtin_exact_p(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 1 {
+    return Err(EvalError::ArityError("exact?: requires exactly 1 argument"))
+  }
+  match args[0] {
+    Value::Number(Number::Int(_)) => Ok(Value::Bool(true))
+    Value::Number(Number::Real(_)) => Ok(Value::Bool(false))
+    _ => Err(EvalError::TypeError("exact?: argument must be a number"))
+  }
+}
+
+/// 組み込み関数: inexact?
+/// (inexact? z) - z が不正確な数（実数）かどうかを判定
+fn builtin_inexact_p(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 1 {
+    return Err(EvalError::ArityError("inexact?: requires exactly 1 argument"))
+  }
+  match args[0] {
+    Value::Number(Number::Int(_)) => Ok(Value::Bool(false))
+    Value::Number(Number::Real(_)) => Ok(Value::Bool(true))
+    _ => Err(EvalError::TypeError("inexact?: argument must be a number"))
+  }
+}
+
+/// 組み込み関数: number->string
+/// (number->string z) - 数値を文字列に変換
+fn builtin_number_to_string(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 1 {
+    return Err(EvalError::ArityError("number->string: requires exactly 1 argument"))
+  }
+  match args[0] {
+    Value::Number(Number::Int(n)) => Ok(Value::String(n.to_string()))
+    Value::Number(Number::Real(r)) => Ok(Value::String(r.to_string()))
+    _ => Err(EvalError::TypeError("number->string: argument must be a number"))
+  }
+}
+
+// 注: MoonBit の String 型は to_int/to_double メソッドをサポートしていないため、
+// string->number は実装できません
+
 /// 初期環境を構築する（組み込み手続きを登録）。
 pub fn initial_env() -> Env {
   let env = empty_env()
@@ -1883,5 +2052,15 @@ pub fn initial_env() -> Env {
   let env = define_var(env, "vector-set!", Value::Procedure(Procedure::Native("vector-set!")))
   let env = define_var(env, "vector->list", Value::Procedure(Procedure::Native("vector->list")))
   let env = define_var(env, "list->vector", Value::Procedure(Procedure::Native("list->vector")))
+  // 数値関数
+  let env = define_var(env, "floor", Value::Procedure(Procedure::Native("floor")))
+  let env = define_var(env, "ceiling", Value::Procedure(Procedure::Native("ceiling")))
+  let env = define_var(env, "truncate", Value::Procedure(Procedure::Native("truncate")))
+  let env = define_var(env, "round", Value::Procedure(Procedure::Native("round")))
+  let env = define_var(env, "sqrt", Value::Procedure(Procedure::Native("sqrt")))
+  let env = define_var(env, "expt", Value::Procedure(Procedure::Native("expt")))
+  let env = define_var(env, "exact?", Value::Procedure(Procedure::Native("exact?")))
+  let env = define_var(env, "inexact?", Value::Procedure(Procedure::Native("inexact?")))
+  let env = define_var(env, "number->string", Value::Procedure(Procedure::Native("number->string")))
   env
 }
