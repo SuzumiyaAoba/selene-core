@@ -116,6 +116,11 @@ pub fn run() -> Unit {
     "(let* ((x 1) (x (+ x 1)) (x (+ x 1))) x)",
     "(letrec ((x 10) (y 20)) (+ x y))",
     "(let ((x 10)) (let ((y 5)) (+ x y)))",
+    "(apply + (list 1 2 3))",
+    "(apply + 1 2 (list 3 4 5))",
+    "(apply max (list 1 5 3 2))",
+    "(apply (lambda (x y) (+ x y)) (list 3 4))",
+    "(let ((nums (list 10 20 30))) (apply + nums))",
   ]
 
   for input in test_inputs {
