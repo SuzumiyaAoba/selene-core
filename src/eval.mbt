@@ -60,6 +60,8 @@ pub fn eval(expr : SExpr, env : Env) -> Result[Value, EvalError] {
         SExpr::Symbol("define") => eval_define(cdr, env)
         SExpr::Symbol("set!") => eval_set(cdr, env)
         SExpr::Symbol("begin") => eval_begin(cdr, env)
+        SExpr::Symbol("and") => eval_and(cdr, env)
+        SExpr::Symbol("or") => eval_or(cdr, env)
         SExpr::Symbol("quote") => {
           // quote特殊形式: (quote expr)
           match cdr {
@@ -1085,6 +1087,58 @@ fn builtin_not(args : Array[Value]) -> Result[Value, EvalError] {
     _ => false
   }
   Ok(Value::Bool(result))
+}
+
+/// and 特殊形式: (and test...)
+/// 短絡評価を行い、最初の偽値を返すか、全て真なら最後の値を返す。
+/// 引数がない場合は #t を返す。
+fn eval_and(args : SExpr, env : Env) -> Result[Value, EvalError] {
+  let mut current = args
+  let mut last_value = Value::Bool(true)
+  let _ = while true {
+    match current {
+      SExpr::Nil => return Ok(last_value)
+      SExpr::Pair(test_expr, rest) => {
+        last_value = match eval(test_expr, env) {
+          Ok(v) => v
+          Err(e) => return Err(e)
+        }
+        // #f のみが偽、それ以外は全て真
+        match last_value {
+          Value::Bool(false) => return Ok(Value::Bool(false))
+          _ => current = rest
+        }
+      }
+      _ => return Err(EvalError::InvalidSyntax("and: invalid syntax"))
+    }
+  } else { () }
+  Ok(last_value)
+}
+
+/// or 特殊形式: (or test...)
+/// 短絡評価を行い、最初の真値を返すか、全て偽なら最後の値を返す。
+/// 引数がない場合は #f を返す。
+fn eval_or(args : SExpr, env : Env) -> Result[Value, EvalError] {
+  let mut current = args
+  let mut last_value = Value::Bool(false)
+  let _ = while true {
+    match current {
+      SExpr::Nil => return Ok(last_value)
+      SExpr::Pair(test_expr, rest) => {
+        last_value = match eval(test_expr, env) {
+          Ok(v) => v
+          Err(e) => return Err(e)
+        }
+        // #f のみが偽、それ以外は全て真
+        match last_value {
+          Value::Bool(false) => current = rest
+          _ => return Ok(last_value)
+        }
+      }
+      _ => return Err(EvalError::InvalidSyntax("or: invalid syntax"))
+    }
+  } else { () }
+  Ok(last_value)
 }
 
 /// 初期環境を構築する（組み込み手続きを登録）。
