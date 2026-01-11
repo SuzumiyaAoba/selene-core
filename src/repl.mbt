@@ -110,6 +110,12 @@ pub fn run() -> Unit {
     "counter",
     "(set! counter (+ counter 1))",
     "counter",
+    "(let ((x 10) (y 20)) (+ x y))",
+    "(let ((a 5)) (* a a))",
+    "(let* ((x 5) (y (* x 2))) y)",
+    "(let* ((x 1) (x (+ x 1)) (x (+ x 1))) x)",
+    "(letrec ((x 10) (y 20)) (+ x y))",
+    "(let ((x 10)) (let ((y 5)) (+ x y)))",
   ]
 
   for input in test_inputs {
