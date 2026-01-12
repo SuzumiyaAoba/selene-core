@@ -189,6 +189,18 @@ pub fn run() -> Unit {
     "(number->string 0)",
     "(number->string (- 0 123))",
     "(number->string (sqrt 4))",
+    "(sin 0)",
+    "(cos 0)",
+    "(tan 0)",
+    "(asin 0)",
+    "(acos 1)",
+    "(atan 0)",
+    "(atan 1 1)",
+    "(exp 0)",
+    "(exp 1)",
+    "(log 1)",
+    "(log (exp 2))",
+    "(+ (expt (sin 1) 2) (expt (cos 1) 2))",
   ]
 
   for input in test_inputs {

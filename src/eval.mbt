@@ -208,6 +208,14 @@ fn apply_builtin(name : String, args : Array[Value]) -> Result[Value, EvalError]
     "exact?" => builtin_exact_p(args)
     "inexact?" => builtin_inexact_p(args)
     "number->string" => builtin_number_to_string(args)
+    "sin" => builtin_sin(args)
+    "cos" => builtin_cos(args)
+    "tan" => builtin_tan(args)
+    "asin" => builtin_asin(args)
+    "acos" => builtin_acos(args)
+    "atan" => builtin_atan(args)
+    "exp" => builtin_exp(args)
+    "log" => builtin_log(args)
     _ => Err(EvalError::InvalidSyntax("unknown builtin: " + name))
   }
 }
@@ -1991,6 +1999,155 @@ fn builtin_number_to_string(args : Array[Value]) -> Result[Value, EvalError] {
 // 注: MoonBit の String 型は to_int/to_double メソッドをサポートしていないため、
 // string->number は実装できません
 
+/// 組み込み関数: sin
+/// (sin x) - x のサイン（正弦）を返す（ラジアン）
+fn builtin_sin(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 1 {
+    return Err(EvalError::ArityError("sin: requires exactly 1 argument"))
+  }
+  match args[0] {
+    Value::Number(Number::Int(n)) => {
+      let r = @math.sin(n.to_double())
+      Ok(Value::Number(Number::Real(r)))
+    }
+    Value::Number(Number::Real(r)) => Ok(Value::Number(Number::Real(@math.sin(r))))
+    _ => Err(EvalError::TypeError("sin: argument must be a number"))
+  }
+}
+
+/// 組み込み関数: cos
+/// (cos x) - x のコサイン（余弦）を返す（ラジアン）
+fn builtin_cos(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 1 {
+    return Err(EvalError::ArityError("cos: requires exactly 1 argument"))
+  }
+  match args[0] {
+    Value::Number(Number::Int(n)) => {
+      let r = @math.cos(n.to_double())
+      Ok(Value::Number(Number::Real(r)))
+    }
+    Value::Number(Number::Real(r)) => Ok(Value::Number(Number::Real(@math.cos(r))))
+    _ => Err(EvalError::TypeError("cos: argument must be a number"))
+  }
+}
+
+/// 組み込み関数: tan
+/// (tan x) - x のタンジェント（正接）を返す（ラジアン）
+fn builtin_tan(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 1 {
+    return Err(EvalError::ArityError("tan: requires exactly 1 argument"))
+  }
+  match args[0] {
+    Value::Number(Number::Int(n)) => {
+      let r = @math.tan(n.to_double())
+      Ok(Value::Number(Number::Real(r)))
+    }
+    Value::Number(Number::Real(r)) => Ok(Value::Number(Number::Real(@math.tan(r))))
+    _ => Err(EvalError::TypeError("tan: argument must be a number"))
+  }
+}
+
+/// 組み込み関数: asin
+/// (asin x) - x のアークサイン（逆正弦）を返す（ラジアン）
+fn builtin_asin(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 1 {
+    return Err(EvalError::ArityError("asin: requires exactly 1 argument"))
+  }
+  match args[0] {
+    Value::Number(Number::Int(n)) => {
+      let r = @math.asin(n.to_double())
+      Ok(Value::Number(Number::Real(r)))
+    }
+    Value::Number(Number::Real(r)) => Ok(Value::Number(Number::Real(@math.asin(r))))
+    _ => Err(EvalError::TypeError("asin: argument must be a number"))
+  }
+}
+
+/// 組み込み関数: acos
+/// (acos x) - x のアークコサイン（逆余弦）を返す（ラジアン）
+fn builtin_acos(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 1 {
+    return Err(EvalError::ArityError("acos: requires exactly 1 argument"))
+  }
+  match args[0] {
+    Value::Number(Number::Int(n)) => {
+      let r = @math.acos(n.to_double())
+      Ok(Value::Number(Number::Real(r)))
+    }
+    Value::Number(Number::Real(r)) => Ok(Value::Number(Number::Real(@math.acos(r))))
+    _ => Err(EvalError::TypeError("acos: argument must be a number"))
+  }
+}
+
+/// 組み込み関数: atan
+/// (atan x) または (atan y x) - アークタンジェント（逆正接）を返す（ラジアン）
+/// 1引数の場合: atan(x)
+/// 2引数の場合: atan2(y, x)
+fn builtin_atan(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() == 1 {
+    match args[0] {
+      Value::Number(Number::Int(n)) => {
+        let r = @math.atan(n.to_double())
+        Ok(Value::Number(Number::Real(r)))
+      }
+      Value::Number(Number::Real(r)) => Ok(Value::Number(Number::Real(@math.atan(r))))
+      _ => Err(EvalError::TypeError("atan: argument must be a number"))
+    }
+  } else if args.length() == 2 {
+    let y = match expect_number(args[0]) {
+      Ok(n) => n
+      Err(e) => return Err(e)
+    }
+    let x = match expect_number(args[1]) {
+      Ok(n) => n
+      Err(e) => return Err(e)
+    }
+    let y_real = match y {
+      Number::Int(n) => n.to_double()
+      Number::Real(r) => r
+    }
+    let x_real = match x {
+      Number::Int(n) => n.to_double()
+      Number::Real(r) => r
+    }
+    Ok(Value::Number(Number::Real(@math.atan2(y_real, x_real))))
+  } else {
+    Err(EvalError::ArityError("atan: requires 1 or 2 arguments"))
+  }
+}
+
+/// 組み込み関数: exp
+/// (exp x) - e の x 乗を返す
+fn builtin_exp(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 1 {
+    return Err(EvalError::ArityError("exp: requires exactly 1 argument"))
+  }
+  match args[0] {
+    Value::Number(Number::Int(n)) => {
+      let r = @math.exp(n.to_double())
+      Ok(Value::Number(Number::Real(r)))
+    }
+    Value::Number(Number::Real(r)) => Ok(Value::Number(Number::Real(@math.exp(r))))
+    _ => Err(EvalError::TypeError("exp: argument must be a number"))
+  }
+}
+
+/// 組み込み関数: log
+/// (log x) - x の自然対数を返す
+fn builtin_log(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 1 {
+    return Err(EvalError::ArityError("log: requires exactly 1 argument"))
+  }
+  match args[0] {
+    Value::Number(Number::Int(n)) => {
+      let r = @math.ln(n.to_double())
+      Ok(Value::Number(Number::Real(r)))
+    }
+    Value::Number(Number::Real(r)) => Ok(Value::Number(Number::Real(@math.ln(r))))
+    _ => Err(EvalError::TypeError("log: argument must be a number"))
+  }
+}
+
 /// 初期環境を構築する（組み込み手続きを登録）。
 pub fn initial_env() -> Env {
   let env = empty_env()
@@ -2062,5 +2219,15 @@ pub fn initial_env() -> Env {
   let env = define_var(env, "exact?", Value::Procedure(Procedure::Native("exact?")))
   let env = define_var(env, "inexact?", Value::Procedure(Procedure::Native("inexact?")))
   let env = define_var(env, "number->string", Value::Procedure(Procedure::Native("number->string")))
+  // 三角関数
+  let env = define_var(env, "sin", Value::Procedure(Procedure::Native("sin")))
+  let env = define_var(env, "cos", Value::Procedure(Procedure::Native("cos")))
+  let env = define_var(env, "tan", Value::Procedure(Procedure::Native("tan")))
+  let env = define_var(env, "asin", Value::Procedure(Procedure::Native("asin")))
+  let env = define_var(env, "acos", Value::Procedure(Procedure::Native("acos")))
+  let env = define_var(env, "atan", Value::Procedure(Procedure::Native("atan")))
+  // 指数・対数関数
+  let env = define_var(env, "exp", Value::Procedure(Procedure::Native("exp")))
+  let env = define_var(env, "log", Value::Procedure(Procedure::Native("log")))
   env
 }
