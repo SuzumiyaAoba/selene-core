@@ -201,6 +201,15 @@ pub fn run() -> Unit {
     "(log 1)",
     "(log (exp 2))",
     "(+ (expt (sin 1) 2) (expt (cos 1) 2))",
+    "(display 42)",
+    "(display \"hello\")",
+    "(display (list 1 2 3))",
+    "(display #t)",
+    "(newline)",
+    "(write 42)",
+    "(write \"hello\")",
+    "(write (list 1 2 3))",
+    "(begin (display \"Hello\") (newline) (display \"World\"))",
   ]
 
   for input in test_inputs {
