@@ -201,6 +201,13 @@ pub fn run() -> Unit {
     "(log 1)",
     "(log (exp 2))",
     "(+ (expt (sin 1) 2) (expt (cos 1) 2))",
+    "(string->number \"42\")",
+    "(string->number \"-123\")",
+    "(string->number \"3.14\")",
+    "(string->number \"1.5e2\")",
+    "(string->number \"not a number\")",
+    "(+ (string->number \"10\") (string->number \"32\"))",
+    "(string->number (number->string 99))",
   ]
 
   for input in test_inputs {
