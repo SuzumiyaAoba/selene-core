@@ -219,6 +219,7 @@ fn apply_builtin(name : String, args : Array[Value]) -> Result[Value, EvalError]
     "display" => builtin_display(args)
     "newline" => builtin_newline(args)
     "write" => builtin_write(args)
+    "read" => builtin_read(args)
     _ => Err(EvalError::InvalidSyntax("unknown builtin: " + name))
   }
 }
@@ -2285,6 +2286,21 @@ fn builtin_write(args : Array[Value]) -> Result[Value, EvalError] {
   Ok(Value::Nil)  // writeは未定義値を返す（Nilで代用）
 }
 
+/// 組み込み関数: read
+/// (read) - 標準入力から1つのS式を読み取って返す
+/// 注: このバージョンはJS バックエンド専用です
+fn builtin_read(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 0 {
+    return Err(EvalError::ArityError("read: requires exactly 0 arguments"))
+  }
+  // JS FFI経由で標準入力から一行読み取る
+  let line = read_line()
+  // パースしてS式に変換
+  let sexpr = parse_one(line)
+  // S式をValueに変換（評価せずにデータとして返す）
+  Ok(sexpr_to_value(sexpr))
+}
+
 /// 初期環境を構築する（組み込み手続きを登録）。
 pub fn initial_env() -> Env {
   let env = empty_env()
@@ -2370,5 +2386,6 @@ pub fn initial_env() -> Env {
   let env = define_var(env, "display", Value::Procedure(Procedure::Native("display")))
   let env = define_var(env, "newline", Value::Procedure(Procedure::Native("newline")))
   let env = define_var(env, "write", Value::Procedure(Procedure::Native("write")))
+  let env = define_var(env, "read", Value::Procedure(Procedure::Native("read")))
   env
 }
