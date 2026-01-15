@@ -210,6 +210,13 @@ pub fn run() -> Unit {
     "(write \"hello\")",
     "(write (list 1 2 3))",
     "(begin (display \"Hello\") (newline) (display \"World\"))",
+    "(string->number \"42\")",
+    "(string->number \"-123\")",
+    "(string->number \"3.14\")",
+    "(string->number \"1.5e2\")",
+    "(string->number \"not a number\")",
+    "(+ (string->number \"10\") (string->number \"32\"))",
+    "(string->number (number->string 99))",
   ]
 
   for input in test_inputs {

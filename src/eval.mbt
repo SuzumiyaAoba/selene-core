@@ -219,6 +219,7 @@ fn apply_builtin(name : String, args : Array[Value]) -> Result[Value, EvalError]
     "display" => builtin_display(args)
     "newline" => builtin_newline(args)
     "write" => builtin_write(args)
+    "string->number" => builtin_string_to_number(args)
     _ => Err(EvalError::InvalidSyntax("unknown builtin: " + name))
   }
 }
@@ -2285,6 +2286,34 @@ fn builtin_write(args : Array[Value]) -> Result[Value, EvalError] {
   Ok(Value::Nil)  // writeは未定義値を返す（Nilで代用）
 }
 
+/// 組み込み関数: string->number
+/// (string->number str) - 文字列を数値に変換する（失敗時は#fを返す）
+fn builtin_string_to_number(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 1 {
+    return Err(EvalError::ArityError("string->number: requires exactly 1 argument"))
+  }
+  match args[0] {
+    Value::String(s) => {
+      // まず整数としてパースを試みる
+      // try?を使ってResult型に変換
+      let int_result = try? @strconv.parse_int(s)
+      match int_result {
+        Ok(n) => return Ok(Value::Number(Number::Int(n)))
+        Err(_) => ()
+      }
+      // 整数でなければ実数としてパースを試みる
+      let double_result = try? @strconv.parse_double(s)
+      match double_result {
+        Ok(d) => return Ok(Value::Number(Number::Real(d)))
+        Err(_) => ()
+      }
+      // どちらも失敗したら#fを返す
+      Ok(Value::Bool(false))
+    }
+    _ => Err(EvalError::TypeError("string->number: argument must be a string"))
+  }
+}
+
 /// 初期環境を構築する（組み込み手続きを登録）。
 pub fn initial_env() -> Env {
   let env = empty_env()
@@ -2370,5 +2399,7 @@ pub fn initial_env() -> Env {
   let env = define_var(env, "display", Value::Procedure(Procedure::Native("display")))
   let env = define_var(env, "newline", Value::Procedure(Procedure::Native("newline")))
   let env = define_var(env, "write", Value::Procedure(Procedure::Native("write")))
+  // 文字列変換
+  let env = define_var(env, "string->number", Value::Procedure(Procedure::Native("string->number")))
   env
 }
