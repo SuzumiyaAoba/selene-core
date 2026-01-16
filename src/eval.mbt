@@ -295,52 +295,6 @@ fn min_numbers(a : Number, b : Number) -> Number {
   }
 }
 
-/// 数値比較の補助関数
-fn compare_numbers_equal(a : Number, b : Number) -> Bool {
-  match (a, b) {
-    (Number::Int(x), Number::Int(y)) => x == y
-    (Number::Real(x), Number::Real(y)) => x == y
-    (Number::Int(x), Number::Real(y)) => x.to_double() == y
-    (Number::Real(x), Number::Int(y)) => x == y.to_double()
-  }
-}
-
-fn compare_numbers_less(a : Number, b : Number) -> Bool {
-  match (a, b) {
-    (Number::Int(x), Number::Int(y)) => x < y
-    (Number::Real(x), Number::Real(y)) => x < y
-    (Number::Int(x), Number::Real(y)) => x.to_double() < y
-    (Number::Real(x), Number::Int(y)) => x < y.to_double()
-  }
-}
-
-fn compare_numbers_greater(a : Number, b : Number) -> Bool {
-  match (a, b) {
-    (Number::Int(x), Number::Int(y)) => x > y
-    (Number::Real(x), Number::Real(y)) => x > y
-    (Number::Int(x), Number::Real(y)) => x.to_double() > y
-    (Number::Real(x), Number::Int(y)) => x > y.to_double()
-  }
-}
-
-fn compare_numbers_less_or_equal(a : Number, b : Number) -> Bool {
-  match (a, b) {
-    (Number::Int(x), Number::Int(y)) => x <= y
-    (Number::Real(x), Number::Real(y)) => x <= y
-    (Number::Int(x), Number::Real(y)) => x.to_double() <= y
-    (Number::Real(x), Number::Int(y)) => x <= y.to_double()
-  }
-}
-
-fn compare_numbers_greater_or_equal(a : Number, b : Number) -> Bool {
-  match (a, b) {
-    (Number::Int(x), Number::Int(y)) => x >= y
-    (Number::Real(x), Number::Real(y)) => x >= y
-    (Number::Int(x), Number::Real(y)) => x.to_double() >= y
-    (Number::Real(x), Number::Int(y)) => x >= y.to_double()
-  }
-}
-
 /// 組み込み関数: +
 fn builtin_add(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() == 0 {
