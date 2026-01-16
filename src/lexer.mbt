@@ -79,6 +79,27 @@ pub fn tokenize(input : String) -> Array[Token] {
       i = i + 1
       continue
     }
+    // クォート系トークン
+    if ch == '\'' {
+      tokens.push(Token::Quote)
+      i = i + 1
+      continue
+    }
+    if ch == '`' {
+      tokens.push(Token::Quasiquote)
+      i = i + 1
+      continue
+    }
+    if ch == ',' {
+      i = i + 1
+      if i < len && chars[i] == '@' {
+        tokens.push(Token::UnquoteSplicing)
+        i = i + 1
+      } else {
+        tokens.push(Token::Unquote)
+      }
+      continue
+    }
     if ch == '#' {
       i = i + 1
       if i < len {

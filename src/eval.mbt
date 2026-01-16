@@ -27,8 +27,138 @@ fn sexpr_to_value(sexpr : SExpr) -> Value {
       Value::Vector(values)
     }
     SExpr::Quote(expr) => sexpr_to_value(expr)
-    SExpr::Quasiquote(_) | SExpr::Unquote(_) | SExpr::UnquoteSplicing(_) =>
-      panic()  // quasiquote 展開は別途実装予定
+    SExpr::Quasiquote(expr) => Value::Pair(
+      Value::Symbol("quasiquote"),
+      Value::Pair(sexpr_to_value(expr), Value::Nil)
+    )
+    SExpr::Unquote(expr) => Value::Pair(
+      Value::Symbol("unquote"),
+      Value::Pair(sexpr_to_value(expr), Value::Nil)
+    )
+    SExpr::UnquoteSplicing(expr) => Value::Pair(
+      Value::Symbol("unquote-splicing"),
+      Value::Pair(sexpr_to_value(expr), Value::Nil)
+    )
+  }
+}
+
+/// quasiquote 式を展開する。
+/// depth はネストレベルを表す（0 = トップレベル）
+fn expand_quasiquote(
+  sexpr : SExpr,
+  env : Env,
+  depth : Int
+) -> Result[Value, EvalError] {
+  match sexpr {
+    // unquote: depth が 0 なら評価、そうでなければ再帰
+    SExpr::Unquote(inner) =>
+      if depth == 0 {
+        eval(inner, env)
+      } else {
+        match expand_quasiquote(inner, env, depth - 1) {
+          Ok(expanded) =>
+            Ok(Value::Pair(Value::Symbol("unquote"), Value::Pair(expanded, Value::Nil)))
+          Err(e) => Err(e)
+        }
+      }
+    // unquote-splicing: depth が 0 ならエラー（リストコンテキスト外）
+    SExpr::UnquoteSplicing(_) =>
+      if depth == 0 {
+        Err(EvalError::InvalidSyntax("unquote-splicing: not in list context"))
+      } else {
+        match sexpr {
+          SExpr::UnquoteSplicing(inner) => {
+            match expand_quasiquote(inner, env, depth - 1) {
+              Ok(expanded) =>
+                Ok(Value::Pair(Value::Symbol("unquote-splicing"), Value::Pair(expanded, Value::Nil)))
+              Err(e) => Err(e)
+            }
+          }
+          _ => panic()
+        }
+      }
+    // ネストした quasiquote
+    SExpr::Quasiquote(inner) => {
+      match expand_quasiquote(inner, env, depth + 1) {
+        Ok(expanded) =>
+          Ok(Value::Pair(Value::Symbol("quasiquote"), Value::Pair(expanded, Value::Nil)))
+        Err(e) => Err(e)
+      }
+    }
+    // リスト: 各要素を処理
+    SExpr::Pair(car, cdr) => expand_quasiquote_list(car, cdr, env, depth)
+    // quote: 中身を変換
+    SExpr::Quote(inner) =>
+      Ok(Value::Pair(Value::Symbol("quote"), Value::Pair(sexpr_to_value(inner), Value::Nil)))
+    // アトム: そのまま変換
+    _ => Ok(sexpr_to_value(sexpr))
+  }
+}
+
+/// リストの quasiquote 展開（unquote-splicing 対応）
+fn expand_quasiquote_list(
+  car : SExpr,
+  cdr : SExpr,
+  env : Env,
+  depth : Int
+) -> Result[Value, EvalError] {
+  // car が unquote-splicing の場合
+  match car {
+    SExpr::UnquoteSplicing(inner) =>
+      if depth == 0 {
+        // 評価してスプライス
+        let spliced = match eval(inner, env) {
+          Ok(v) => v
+          Err(e) => return Err(e)
+        }
+        // cdr を展開
+        let rest = match expand_quasiquote(cdr, env, depth) {
+          Ok(v) => v
+          Err(e) => return Err(e)
+        }
+        // spliced を rest の前に追加
+        append_values(spliced, rest)
+      } else {
+        // depth > 0 の場合は構造を保持
+        let expanded_inner = match expand_quasiquote(inner, env, depth - 1) {
+          Ok(v) => v
+          Err(e) => return Err(e)
+        }
+        let expanded_cdr = match expand_quasiquote(cdr, env, depth) {
+          Ok(v) => v
+          Err(e) => return Err(e)
+        }
+        Ok(Value::Pair(
+          Value::Pair(Value::Symbol("unquote-splicing"), Value::Pair(expanded_inner, Value::Nil)),
+          expanded_cdr
+        ))
+      }
+    _ => {
+      // 通常の要素
+      let expanded_car = match expand_quasiquote(car, env, depth) {
+        Ok(v) => v
+        Err(e) => return Err(e)
+      }
+      let expanded_cdr = match expand_quasiquote(cdr, env, depth) {
+        Ok(v) => v
+        Err(e) => return Err(e)
+      }
+      Ok(Value::Pair(expanded_car, expanded_cdr))
+    }
+  }
+}
+
+/// 2 つの Value リストを連結する。
+fn append_values(list1 : Value, list2 : Value) -> Result[Value, EvalError] {
+  match list1 {
+    Value::Nil => Ok(list2)
+    Value::Pair(car, cdr) => {
+      match append_values(cdr, list2) {
+        Ok(rest) => Ok(Value::Pair(car, rest))
+        Err(e) => Err(e)
+      }
+    }
+    _ => Err(EvalError::TypeError("unquote-splicing: expected list"))
   }
 }
 
@@ -77,6 +207,13 @@ pub fn eval(expr : SExpr, env : Env) -> Result[Value, EvalError] {
             _ => Err(EvalError::InvalidSyntax("quote: requires exactly one argument"))
           }
         }
+        SExpr::Symbol("quasiquote") => {
+          // quasiquote特殊形式: (quasiquote expr)
+          match cdr {
+            SExpr::Pair(inner, SExpr::Nil) => expand_quasiquote(inner, env, 0)
+            _ => Err(EvalError::InvalidSyntax("quasiquote: requires exactly one argument"))
+          }
+        }
         _ => {
           // 通常の関数適用
           let op = match eval(car, env) {
@@ -111,9 +248,14 @@ pub fn eval(expr : SExpr, env : Env) -> Result[Value, EvalError] {
     // Vector（自己評価）
     SExpr::Vector(_) => Ok(sexpr_to_value(expr))
 
-    // その他の quote 系は TODO
-    SExpr::Quasiquote(_) | SExpr::Unquote(_) | SExpr::UnquoteSplicing(_) =>
-      Err(EvalError::InvalidSyntax("quasiquote: not yet implemented"))
+    // quasiquote 展開
+    SExpr::Quasiquote(inner) => expand_quasiquote(inner, env, 0)
+
+    // unquote/unquote-splicing は quasiquote 外で使用された場合エラー
+    SExpr::Unquote(_) =>
+      Err(EvalError::InvalidSyntax("unquote: not in quasiquote"))
+    SExpr::UnquoteSplicing(_) =>
+      Err(EvalError::InvalidSyntax("unquote-splicing: not in quasiquote"))
   }
 }
 

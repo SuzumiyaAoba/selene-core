@@ -7,4 +7,8 @@ pub enum Token {
   Boolean(Bool)
   String(String)
   Char(Char)
+  Quote           // '
+  Quasiquote      // `
+  Unquote         // ,
+  UnquoteSplicing // ,@
 } derive(Show, Eq)
