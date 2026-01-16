@@ -216,6 +216,9 @@ fn apply_builtin(name : String, args : Array[Value]) -> Result[Value, EvalError]
     "atan" => builtin_atan(args)
     "exp" => builtin_exp(args)
     "log" => builtin_log(args)
+    "display" => builtin_display(args)
+    "newline" => builtin_newline(args)
+    "write" => builtin_write(args)
     "string->number" => builtin_string_to_number(args)
     _ => Err(EvalError::InvalidSyntax("unknown builtin: " + name))
   }
@@ -2149,6 +2152,140 @@ fn builtin_log(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
+/// 値を表示用文字列に変換する（displayで使用）
+fn value_to_display_string(value : Value) -> String {
+  match value {
+    Value::Nil => "()"
+    Value::Bool(b) => if b { "#t" } else { "#f" }
+    Value::Number(Number::Int(n)) => n.to_string()
+    Value::Number(Number::Real(r)) => r.to_string()
+    Value::Char(c) => c.to_string()
+    Value::String(s) => s  // displayは文字列を引用符なしで出力
+    Value::Symbol(s) => s
+    Value::Pair(car, cdr) => {
+      let mut result = "("
+      result = result + value_to_display_string(car)
+      let mut current = cdr
+      let _ = while true {
+        match current {
+          Value::Nil => {
+            result = result + ")"
+            return result
+          }
+          Value::Pair(car2, cdr2) => {
+            result = result + " " + value_to_display_string(car2)
+            current = cdr2
+          }
+          _ => {
+            result = result + " . " + value_to_display_string(current) + ")"
+            return result
+          }
+        }
+      } else { () }
+      result
+    }
+    Value::Vector(items) => {
+      let mut result = "#("
+      let len = items.length()
+      let mut i = 0
+      let _ = while i < len {
+        if i > 0 {
+          result = result + " "
+        }
+        result = result + value_to_display_string(items[i])
+        i = i + 1
+      } else { () }
+      result + ")"
+    }
+    Value::Procedure(Procedure::Native(name)) => "#<procedure:" + name + ">"
+    Value::Procedure(Procedure::Closure(_, _, _)) => "#<procedure:closure>"
+  }
+}
+
+/// 値を書き込み用文字列に変換する（writeで使用）
+fn value_to_write_string(value : Value) -> String {
+  match value {
+    Value::Nil => "()"
+    Value::Bool(b) => if b { "#t" } else { "#f" }
+    Value::Number(Number::Int(n)) => n.to_string()
+    Value::Number(Number::Real(r)) => r.to_string()
+    Value::Char(c) => "#\\" + c.to_string()
+    Value::String(s) => "\"" + s + "\""  // writeは文字列を引用符付きで出力
+    Value::Symbol(s) => s
+    Value::Pair(car, cdr) => {
+      let mut result = "("
+      result = result + value_to_write_string(car)
+      let mut current = cdr
+      let _ = while true {
+        match current {
+          Value::Nil => {
+            result = result + ")"
+            return result
+          }
+          Value::Pair(car2, cdr2) => {
+            result = result + " " + value_to_write_string(car2)
+            current = cdr2
+          }
+          _ => {
+            result = result + " . " + value_to_write_string(current) + ")"
+            return result
+          }
+        }
+      } else { () }
+      result
+    }
+    Value::Vector(items) => {
+      let mut result = "#("
+      let len = items.length()
+      let mut i = 0
+      let _ = while i < len {
+        if i > 0 {
+          result = result + " "
+        }
+        result = result + value_to_write_string(items[i])
+        i = i + 1
+      } else { () }
+      result + ")"
+    }
+    Value::Procedure(Procedure::Native(name)) => "#<procedure:" + name + ">"
+    Value::Procedure(Procedure::Closure(_, _, _)) => "#<procedure:closure>"
+  }
+}
+
+/// 組み込み関数: display
+/// (display obj) - objを人間が読みやすい形式で出力する（文字列は引用符なし）
+/// 注: MoonBitではprintlnのみが利用可能なため、改行付きで出力されます
+fn builtin_display(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 1 {
+    return Err(EvalError::ArityError("display: requires exactly 1 argument"))
+  }
+  let output = value_to_display_string(args[0])
+  println(output)
+  Ok(Value::Nil)  // displayは未定義値を返す（Nilで代用）
+}
+
+/// 組み込み関数: newline
+/// (newline) - 改行を出力する
+fn builtin_newline(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 0 {
+    return Err(EvalError::ArityError("newline: requires exactly 0 arguments"))
+  }
+  println("")
+  Ok(Value::Nil)  // newlineは未定義値を返す（Nilで代用）
+}
+
+/// 組み込み関数: write
+/// (write obj) - objを機械が読める形式で出力する（文字列は引用符付き）
+/// 注: MoonBitではprintlnのみが利用可能なため、改行付きで出力されます
+fn builtin_write(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 1 {
+    return Err(EvalError::ArityError("write: requires exactly 1 argument"))
+  }
+  let output = value_to_write_string(args[0])
+  println(output)
+  Ok(Value::Nil)  // writeは未定義値を返す（Nilで代用）
+}
+
 /// 組み込み関数: string->number
 /// (string->number str) - 文字列を数値に変換する（失敗時は#fを返す）
 fn builtin_string_to_number(args : Array[Value]) -> Result[Value, EvalError] {
@@ -2258,6 +2395,10 @@ pub fn initial_env() -> Env {
   // 指数・対数関数
   let env = define_var(env, "exp", Value::Procedure(Procedure::Native("exp")))
   let env = define_var(env, "log", Value::Procedure(Procedure::Native("log")))
+  // I/O関数
+  let env = define_var(env, "display", Value::Procedure(Procedure::Native("display")))
+  let env = define_var(env, "newline", Value::Procedure(Procedure::Native("newline")))
+  let env = define_var(env, "write", Value::Procedure(Procedure::Native("write")))
   // 文字列変換
   let env = define_var(env, "string->number", Value::Procedure(Procedure::Native("string->number")))
   env
