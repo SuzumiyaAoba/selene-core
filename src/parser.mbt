@@ -40,6 +40,22 @@ fn parse_expr(tokens : Array[Token], start : Int) -> (SExpr, Int) {
     Token::Number(value) => (SExpr::Number(value), start + 1)
     Token::String(s) => (SExpr::String(s), start + 1)
     Token::Char(c) => (SExpr::Char(c), start + 1)
+    Token::Quote => {
+      let (expr, next_i) = parse_expr(tokens, start + 1)
+      (SExpr::Quote(expr), next_i)
+    }
+    Token::Quasiquote => {
+      let (expr, next_i) = parse_expr(tokens, start + 1)
+      (SExpr::Quasiquote(expr), next_i)
+    }
+    Token::Unquote => {
+      let (expr, next_i) = parse_expr(tokens, start + 1)
+      (SExpr::Unquote(expr), next_i)
+    }
+    Token::UnquoteSplicing => {
+      let (expr, next_i) = parse_expr(tokens, start + 1)
+      (SExpr::UnquoteSplicing(expr), next_i)
+    }
   }
 }
 

@@ -202,6 +202,22 @@ pub fn run() -> Unit {
     "(log 1)",
     "(log (exp 2))",
     "(+ (expt (sin 1) 2) (expt (cos 1) 2))",
+    "(display 42)",
+    "(display \"hello\")",
+    "(display (list 1 2 3))",
+    "(display #t)",
+    "(newline)",
+    "(write 42)",
+    "(write \"hello\")",
+    "(write (list 1 2 3))",
+    "(begin (display \"Hello\") (newline) (display \"World\"))",
+    "(string->number \"42\")",
+    "(string->number \"-123\")",
+    "(string->number \"3.14\")",
+    "(string->number \"1.5e2\")",
+    "(string->number \"not a number\")",
+    "(+ (string->number \"10\") (string->number \"32\"))",
+    "(string->number (number->string 99))",
   ]
 
   for input in test_inputs {
@@ -244,5 +260,65 @@ pub fn run() -> Unit {
       }
     }
     println("")
+  }
+}
+
+/// インタラクティブ REPL を起動する（標準入力から読み取り）
+/// JS バックエンド専用
+pub fn run_interactive() -> Unit {
+  println("selene-core: Interactive REPL")
+  println("Type expressions to evaluate. (Ctrl+D or empty line to exit)")
+  println("")
+
+  let mut env = initial_env()
+
+  // 標準入力から読み取りループ
+  // Note: MoonBit には print() がないため、プロンプト表示なし
+  while true {
+    let input = read_line()
+
+    // 空行またはEOFで終了
+    if input.length() == 0 {
+      println("\nBye!")
+      break
+    }
+
+    match parse_one(input) {
+      expr => {
+        // defineの特別処理
+        match expr {
+          SExpr::Pair(SExpr::Symbol("define"), SExpr::Pair(SExpr::Symbol(name), SExpr::Pair(value_expr, SExpr::Nil))) => {
+            match eval(value_expr, env) {
+              Ok(value) => {
+                env = define_var(env, name, value)
+                println("#<void>")
+              }
+              Err(err) => println("Error: " + err.to_string())
+            }
+          }
+          // set!の特別処理
+          SExpr::Pair(SExpr::Symbol("set!"), SExpr::Pair(SExpr::Symbol(name), SExpr::Pair(value_expr, SExpr::Nil))) => {
+            match eval(value_expr, env) {
+              Ok(value) => {
+                let (new_env, ok) = set_bang(env, name, value)
+                if ok {
+                  env = new_env
+                  println("#<void>")
+                } else {
+                  println("Error: set!: unbound variable: " + name)
+                }
+              }
+              Err(err) => println("Error: " + err.to_string())
+            }
+          }
+          _ => {
+            match eval(expr, env) {
+              Ok(value) => println(value_to_string(value))
+              Err(err) => println("Error: " + err.to_string())
+            }
+          }
+        }
+      }
+    }
   }
 }

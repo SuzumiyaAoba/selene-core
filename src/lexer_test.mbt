@@ -29,6 +29,10 @@ fn token_snapshot(token : Token) -> String {
     Token::Boolean(b) => "Boolean(" + b.to_string() + ")"
     Token::String(s) => "String(" + s + ")"
     Token::Char(c) => "Char(" + c.to_string() + ")"
+    Token::Quote => "Quote"
+    Token::Quasiquote => "Quasiquote"
+    Token::Unquote => "Unquote"
+    Token::UnquoteSplicing => "UnquoteSplicing"
   }
 }
 

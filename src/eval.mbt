@@ -29,8 +29,138 @@ fn sexpr_to_value(sexpr : SExpr) -> Value {
       Value::Vector(values)
     }
     SExpr::Quote(expr) => sexpr_to_value(expr)
-    SExpr::Quasiquote(_) | SExpr::Unquote(_) | SExpr::UnquoteSplicing(_) =>
-      panic()  // quasiquote 展開は別途実装予定
+    SExpr::Quasiquote(expr) => Value::Pair(
+      Value::Symbol("quasiquote"),
+      Value::Pair(sexpr_to_value(expr), Value::Nil)
+    )
+    SExpr::Unquote(expr) => Value::Pair(
+      Value::Symbol("unquote"),
+      Value::Pair(sexpr_to_value(expr), Value::Nil)
+    )
+    SExpr::UnquoteSplicing(expr) => Value::Pair(
+      Value::Symbol("unquote-splicing"),
+      Value::Pair(sexpr_to_value(expr), Value::Nil)
+    )
+  }
+}
+
+/// quasiquote 式を展開する。
+/// depth はネストレベルを表す（0 = トップレベル）
+fn expand_quasiquote(
+  sexpr : SExpr,
+  env : Env,
+  depth : Int
+) -> Result[Value, EvalError] {
+  match sexpr {
+    // unquote: depth が 0 なら評価、そうでなければ再帰
+    SExpr::Unquote(inner) =>
+      if depth == 0 {
+        eval(inner, env)
+      } else {
+        match expand_quasiquote(inner, env, depth - 1) {
+          Ok(expanded) =>
+            Ok(Value::Pair(Value::Symbol("unquote"), Value::Pair(expanded, Value::Nil)))
+          Err(e) => Err(e)
+        }
+      }
+    // unquote-splicing: depth が 0 ならエラー（リストコンテキスト外）
+    SExpr::UnquoteSplicing(_) =>
+      if depth == 0 {
+        Err(EvalError::InvalidSyntax("unquote-splicing: not in list context"))
+      } else {
+        match sexpr {
+          SExpr::UnquoteSplicing(inner) => {
+            match expand_quasiquote(inner, env, depth - 1) {
+              Ok(expanded) =>
+                Ok(Value::Pair(Value::Symbol("unquote-splicing"), Value::Pair(expanded, Value::Nil)))
+              Err(e) => Err(e)
+            }
+          }
+          _ => panic()
+        }
+      }
+    // ネストした quasiquote
+    SExpr::Quasiquote(inner) => {
+      match expand_quasiquote(inner, env, depth + 1) {
+        Ok(expanded) =>
+          Ok(Value::Pair(Value::Symbol("quasiquote"), Value::Pair(expanded, Value::Nil)))
+        Err(e) => Err(e)
+      }
+    }
+    // リスト: 各要素を処理
+    SExpr::Pair(car, cdr) => expand_quasiquote_list(car, cdr, env, depth)
+    // quote: 中身を変換
+    SExpr::Quote(inner) =>
+      Ok(Value::Pair(Value::Symbol("quote"), Value::Pair(sexpr_to_value(inner), Value::Nil)))
+    // アトム: そのまま変換
+    _ => Ok(sexpr_to_value(sexpr))
+  }
+}
+
+/// リストの quasiquote 展開（unquote-splicing 対応）
+fn expand_quasiquote_list(
+  car : SExpr,
+  cdr : SExpr,
+  env : Env,
+  depth : Int
+) -> Result[Value, EvalError] {
+  // car が unquote-splicing の場合
+  match car {
+    SExpr::UnquoteSplicing(inner) =>
+      if depth == 0 {
+        // 評価してスプライス
+        let spliced = match eval(inner, env) {
+          Ok(v) => v
+          Err(e) => return Err(e)
+        }
+        // cdr を展開
+        let rest = match expand_quasiquote(cdr, env, depth) {
+          Ok(v) => v
+          Err(e) => return Err(e)
+        }
+        // spliced を rest の前に追加
+        append_values(spliced, rest)
+      } else {
+        // depth > 0 の場合は構造を保持
+        let expanded_inner = match expand_quasiquote(inner, env, depth - 1) {
+          Ok(v) => v
+          Err(e) => return Err(e)
+        }
+        let expanded_cdr = match expand_quasiquote(cdr, env, depth) {
+          Ok(v) => v
+          Err(e) => return Err(e)
+        }
+        Ok(Value::Pair(
+          Value::Pair(Value::Symbol("unquote-splicing"), Value::Pair(expanded_inner, Value::Nil)),
+          expanded_cdr
+        ))
+      }
+    _ => {
+      // 通常の要素
+      let expanded_car = match expand_quasiquote(car, env, depth) {
+        Ok(v) => v
+        Err(e) => return Err(e)
+      }
+      let expanded_cdr = match expand_quasiquote(cdr, env, depth) {
+        Ok(v) => v
+        Err(e) => return Err(e)
+      }
+      Ok(Value::Pair(expanded_car, expanded_cdr))
+    }
+  }
+}
+
+/// 2 つの Value リストを連結する。
+fn append_values(list1 : Value, list2 : Value) -> Result[Value, EvalError] {
+  match list1 {
+    Value::Nil => Ok(list2)
+    Value::Pair(car, cdr) => {
+      match append_values(cdr, list2) {
+        Ok(rest) => Ok(Value::Pair(car, rest))
+        Err(e) => Err(e)
+      }
+    }
+    _ => Err(EvalError::TypeError("unquote-splicing: expected list"))
   }
 }
 
@@ -79,6 +209,13 @@ pub fn eval(expr : SExpr, env : Env) -> Result[Value, EvalError] {
             _ => Err(EvalError::InvalidSyntax("quote: requires exactly one argument"))
           }
         }
+        SExpr::Symbol("quasiquote") => {
+          // quasiquote特殊形式: (quasiquote expr)
+          match cdr {
+            SExpr::Pair(inner, SExpr::Nil) => expand_quasiquote(inner, env, 0)
+            _ => Err(EvalError::InvalidSyntax("quasiquote: requires exactly one argument"))
+          }
+        }
         _ => {
           // 通常の関数適用
           let op = match eval(car, env) {
@@ -113,9 +250,14 @@ pub fn eval(expr : SExpr, env : Env) -> Result[Value, EvalError] {
     // Vector（自己評価）
     SExpr::Vector(_) => Ok(sexpr_to_value(expr))
 
-    // その他の quote 系は TODO
-    SExpr::Quasiquote(_) | SExpr::Unquote(_) | SExpr::UnquoteSplicing(_) =>
-      Err(EvalError::InvalidSyntax("quasiquote: not yet implemented"))
+    // quasiquote 展開
+    SExpr::Quasiquote(inner) => expand_quasiquote(inner, env, 0)
+
+    // unquote/unquote-splicing は quasiquote 外で使用された場合エラー
+    SExpr::Unquote(_) =>
+      Err(EvalError::InvalidSyntax("unquote: not in quasiquote"))
+    SExpr::UnquoteSplicing(_) =>
+      Err(EvalError::InvalidSyntax("unquote-splicing: not in quasiquote"))
   }
 }
 
@@ -228,6 +370,11 @@ fn apply_builtin(name : String, args : Array[Value]) -> Result[Value, EvalError]
     "atan" => builtin_atan(args)
     "exp" => builtin_exp(args)
     "log" => builtin_log(args)
+    "display" => builtin_display(args)
+    "newline" => builtin_newline(args)
+    "write" => builtin_write(args)
+    "read" => builtin_read(args)
+    "string->number" => builtin_string_to_number(args)
     "call/cc" | "call-with-current-continuation" => builtin_call_cc(args)
     _ => Err(EvalError::InvalidSyntax("unknown builtin: " + name))
   }
@@ -341,52 +488,6 @@ fn min_numbers(a : Number, b : Number) -> Number {
       let y_real = y.to_double()
       Number::Real(if x < y_real { x } else { y_real })
     }
-  }
-}
-
-/// 数値比較の補助関数
-fn compare_numbers_equal(a : Number, b : Number) -> Bool {
-  match (a, b) {
-    (Number::Int(x), Number::Int(y)) => x == y
-    (Number::Real(x), Number::Real(y)) => x == y
-    (Number::Int(x), Number::Real(y)) => x.to_double() == y
-    (Number::Real(x), Number::Int(y)) => x == y.to_double()
-  }
-}
-
-fn compare_numbers_less(a : Number, b : Number) -> Bool {
-  match (a, b) {
-    (Number::Int(x), Number::Int(y)) => x < y
-    (Number::Real(x), Number::Real(y)) => x < y
-    (Number::Int(x), Number::Real(y)) => x.to_double() < y
-    (Number::Real(x), Number::Int(y)) => x < y.to_double()
-  }
-}
-
-fn compare_numbers_greater(a : Number, b : Number) -> Bool {
-  match (a, b) {
-    (Number::Int(x), Number::Int(y)) => x > y
-    (Number::Real(x), Number::Real(y)) => x > y
-    (Number::Int(x), Number::Real(y)) => x.to_double() > y
-    (Number::Real(x), Number::Int(y)) => x > y.to_double()
-  }
-}
-
-fn compare_numbers_less_or_equal(a : Number, b : Number) -> Bool {
-  match (a, b) {
-    (Number::Int(x), Number::Int(y)) => x <= y
-    (Number::Real(x), Number::Real(y)) => x <= y
-    (Number::Int(x), Number::Real(y)) => x.to_double() <= y
-    (Number::Real(x), Number::Int(y)) => x <= y.to_double()
-  }
-}
-
-fn compare_numbers_greater_or_equal(a : Number, b : Number) -> Bool {
-  match (a, b) {
-    (Number::Int(x), Number::Int(y)) => x >= y
-    (Number::Real(x), Number::Real(y)) => x >= y
-    (Number::Int(x), Number::Real(y)) => x.to_double() >= y
-    (Number::Real(x), Number::Int(y)) => x >= y.to_double()
   }
 }
 
@@ -2223,6 +2324,185 @@ fn builtin_log(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
+/// 値を表示用文字列に変換する（displayで使用）
+fn value_to_display_string(value : Value) -> String {
+  match value {
+    Value::Nil => "()"
+    Value::Bool(b) => if b { "#t" } else { "#f" }
+    Value::Number(Number::Int(n)) => n.to_string()
+    Value::Number(Number::Real(r)) => r.to_string()
+    Value::Char(c) => c.to_string()
+    Value::String(s) => s  // displayは文字列を引用符なしで出力
+    Value::Symbol(s) => s
+    Value::Pair(car, cdr) => {
+      let mut result = "("
+      result = result + value_to_display_string(car)
+      let mut current = cdr
+      let _ = while true {
+        match current {
+          Value::Nil => {
+            result = result + ")"
+            return result
+          }
+          Value::Pair(car2, cdr2) => {
+            result = result + " " + value_to_display_string(car2)
+            current = cdr2
+          }
+          _ => {
+            result = result + " . " + value_to_display_string(current) + ")"
+            return result
+          }
+        }
+      } else { () }
+      result
+    }
+    Value::Vector(items) => {
+      let mut result = "#("
+      let len = items.length()
+      let mut i = 0
+      let _ = while i < len {
+        if i > 0 {
+          result = result + " "
+        }
+        result = result + value_to_display_string(items[i])
+        i = i + 1
+      } else { () }
+      result + ")"
+    }
+    Value::Procedure(Procedure::Native(name)) => "#<procedure:" + name + ">"
+    Value::Procedure(Procedure::Closure(_, _, _)) => "#<procedure:closure>"
+    Value::Procedure(Procedure::Cont(cont)) => "#<continuation:" + cont.id.to_string() + ">"
+  }
+}
+
+/// 値を書き込み用文字列に変換する（writeで使用）
+fn value_to_write_string(value : Value) -> String {
+  match value {
+    Value::Nil => "()"
+    Value::Bool(b) => if b { "#t" } else { "#f" }
+    Value::Number(Number::Int(n)) => n.to_string()
+    Value::Number(Number::Real(r)) => r.to_string()
+    Value::Char(c) => "#\\" + c.to_string()
+    Value::String(s) => "\"" + s + "\""  // writeは文字列を引用符付きで出力
+    Value::Symbol(s) => s
+    Value::Pair(car, cdr) => {
+      let mut result = "("
+      result = result + value_to_write_string(car)
+      let mut current = cdr
+      let _ = while true {
+        match current {
+          Value::Nil => {
+            result = result + ")"
+            return result
+          }
+          Value::Pair(car2, cdr2) => {
+            result = result + " " + value_to_write_string(car2)
+            current = cdr2
+          }
+          _ => {
+            result = result + " . " + value_to_write_string(current) + ")"
+            return result
+          }
+        }
+      } else { () }
+      result
+    }
+    Value::Vector(items) => {
+      let mut result = "#("
+      let len = items.length()
+      let mut i = 0
+      let _ = while i < len {
+        if i > 0 {
+          result = result + " "
+        }
+        result = result + value_to_write_string(items[i])
+        i = i + 1
+      } else { () }
+      result + ")"
+    }
+    Value::Procedure(Procedure::Native(name)) => "#<procedure:" + name + ">"
+    Value::Procedure(Procedure::Closure(_, _, _)) => "#<procedure:closure>"
+    Value::Procedure(Procedure::Cont(cont)) => "#<continuation:" + cont.id.to_string() + ">"
+  }
+}
+
+/// 組み込み関数: display
+/// (display obj) - objを人間が読みやすい形式で出力する（文字列は引用符なし）
+/// 注: MoonBitではprintlnのみが利用可能なため、改行付きで出力されます
+fn builtin_display(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 1 {
+    return Err(EvalError::ArityError("display: requires exactly 1 argument"))
+  }
+  let output = value_to_display_string(args[0])
+  println(output)
+  Ok(Value::Nil)  // displayは未定義値を返す（Nilで代用）
+}
+
+/// 組み込み関数: newline
+/// (newline) - 改行を出力する
+fn builtin_newline(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 0 {
+    return Err(EvalError::ArityError("newline: requires exactly 0 arguments"))
+  }
+  println("")
+  Ok(Value::Nil)  // newlineは未定義値を返す（Nilで代用）
+}
+
+/// 組み込み関数: write
+/// (write obj) - objを機械が読める形式で出力する（文字列は引用符付き）
+/// 注: MoonBitではprintlnのみが利用可能なため、改行付きで出力されます
+fn builtin_write(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 1 {
+    return Err(EvalError::ArityError("write: requires exactly 1 argument"))
+  }
+  let output = value_to_write_string(args[0])
+  println(output)
+  Ok(Value::Nil)  // writeは未定義値を返す（Nilで代用）
+}
+
+/// 組み込み関数: read
+/// (read) - 標準入力から1つのS式を読み取って返す
+/// 注: このバージョンはJS バックエンド専用です
+fn builtin_read(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 0 {
+    return Err(EvalError::ArityError("read: requires exactly 0 arguments"))
+  }
+  // JS FFI経由で標準入力から一行読み取る
+  let line = read_line()
+  // パースしてS式に変換
+  let sexpr = parse_one(line)
+  // S式をValueに変換（評価せずにデータとして返す）
+  Ok(sexpr_to_value(sexpr))
+}
+
+/// 組み込み関数: string->number
+/// (string->number str) - 文字列を数値に変換する（失敗時は#fを返す）
+fn builtin_string_to_number(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 1 {
+    return Err(EvalError::ArityError("string->number: requires exactly 1 argument"))
+  }
+  match args[0] {
+    Value::String(s) => {
+      // まず整数としてパースを試みる
+      // try?を使ってResult型に変換
+      let int_result = try? @strconv.parse_int(s)
+      match int_result {
+        Ok(n) => return Ok(Value::Number(Number::Int(n)))
+        Err(_) => ()
+      }
+      // 整数でなければ実数としてパースを試みる
+      let double_result = try? @strconv.parse_double(s)
+      match double_result {
+        Ok(d) => return Ok(Value::Number(Number::Real(d)))
+        Err(_) => ()
+      }
+      // どちらも失敗したら#fを返す
+      Ok(Value::Bool(false))
+    }
+    _ => Err(EvalError::TypeError("string->number: argument must be a string"))
+  }
+}
+
 /// 初期環境を構築する（組み込み手続きを登録）。
 pub fn initial_env() -> Env {
   let env = empty_env()
@@ -2306,6 +2586,13 @@ pub fn initial_env() -> Env {
   // 指数・対数関数
   let env = define_var(env, "exp", Value::Procedure(Procedure::Native("exp")))
   let env = define_var(env, "log", Value::Procedure(Procedure::Native("log")))
+  // I/O関数
+  let env = define_var(env, "display", Value::Procedure(Procedure::Native("display")))
+  let env = define_var(env, "newline", Value::Procedure(Procedure::Native("newline")))
+  let env = define_var(env, "write", Value::Procedure(Procedure::Native("write")))
+  let env = define_var(env, "read", Value::Procedure(Procedure::Native("read")))
+  // 文字列変換
+  let env = define_var(env, "string->number", Value::Procedure(Procedure::Native("string->number")))
   // 継続
   let env = define_var(env, "call/cc", Value::Procedure(Procedure::Native("call/cc")))
   let env = define_var(env, "call-with-current-continuation", Value::Procedure(Procedure::Native("call-with-current-continuation")))
