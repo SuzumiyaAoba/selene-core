@@ -369,6 +369,24 @@ fn apply_builtin(name : String, args : Array[Value]) -> Result[Value, EvalError]
     "string->symbol" => builtin_string_to_symbol(args)
     "string?" => builtin_string_p(args)
     "char?" => builtin_char_p(args)
+    "char=?" => builtin_char_eq(args)
+    "char<?" => builtin_char_lt(args)
+    "char>?" => builtin_char_gt(args)
+    "char<=?" => builtin_char_le(args)
+    "char>=?" => builtin_char_ge(args)
+    "char-alphabetic?" => builtin_char_alphabetic_p(args)
+    "char-numeric?" => builtin_char_numeric_p(args)
+    "char-whitespace?" => builtin_char_whitespace_p(args)
+    "char-upper-case?" => builtin_char_upper_case_p(args)
+    "char-lower-case?" => builtin_char_lower_case_p(args)
+    "char-upcase" => builtin_char_upcase(args)
+    "char-downcase" => builtin_char_downcase(args)
+    "char->integer" => builtin_char_to_integer(args)
+    "integer->char" => builtin_integer_to_char(args)
+    "string->list" => builtin_string_to_list(args)
+    "list->string" => builtin_list_to_string(args)
+    "gcd" => builtin_gcd(args)
+    "lcm" => builtin_lcm(args)
     "string-length" => builtin_string_length(args)
     "string-ref" => builtin_string_ref(args)
     "string-append" => builtin_string_append(args)
@@ -2375,6 +2393,343 @@ fn builtin_char_p(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
+/// 組み込み関数: char=?
+/// (char=? char1 char2) - 文字が等しいかを判定
+fn builtin_char_eq(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 2 {
+    return Err(EvalError::ArityError("char=?: requires exactly 2 arguments"))
+  }
+  match (args[0], args[1]) {
+    (Value::Char(a), Value::Char(b)) => Ok(Value::Bool(a == b))
+    _ => Err(EvalError::TypeError("char=?: arguments must be characters"))
+  }
+}
+
+/// 組み込み関数: char<?
+/// (char<? char1 char2) - char1 が char2 より小さいかを判定
+fn builtin_char_lt(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 2 {
+    return Err(EvalError::ArityError("char<?: requires exactly 2 arguments"))
+  }
+  match (args[0], args[1]) {
+    (Value::Char(a), Value::Char(b)) => Ok(Value::Bool(a.to_int() < b.to_int()))
+    _ => Err(EvalError::TypeError("char<?: arguments must be characters"))
+  }
+}
+
+/// 組み込み関数: char>?
+/// (char>? char1 char2) - char1 が char2 より大きいかを判定
+fn builtin_char_gt(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 2 {
+    return Err(EvalError::ArityError("char>?: requires exactly 2 arguments"))
+  }
+  match (args[0], args[1]) {
+    (Value::Char(a), Value::Char(b)) => Ok(Value::Bool(a.to_int() > b.to_int()))
+    _ => Err(EvalError::TypeError("char>?: arguments must be characters"))
+  }
+}
+
+/// 組み込み関数: char<=?
+/// (char<=? char1 char2) - char1 が char2 以下かを判定
+fn builtin_char_le(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 2 {
+    return Err(EvalError::ArityError("char<=?: requires exactly 2 arguments"))
+  }
+  match (args[0], args[1]) {
+    (Value::Char(a), Value::Char(b)) => Ok(Value::Bool(a.to_int() <= b.to_int()))
+    _ => Err(EvalError::TypeError("char<=?: arguments must be characters"))
+  }
+}
+
+/// 組み込み関数: char>=?
+/// (char>=? char1 char2) - char1 が char2 以上かを判定
+fn builtin_char_ge(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 2 {
+    return Err(EvalError::ArityError("char>=?: requires exactly 2 arguments"))
+  }
+  match (args[0], args[1]) {
+    (Value::Char(a), Value::Char(b)) => Ok(Value::Bool(a.to_int() >= b.to_int()))
+    _ => Err(EvalError::TypeError("char>=?: arguments must be characters"))
+  }
+}
+
+/// 組み込み関数: char-alphabetic?
+/// (char-alphabetic? char) - 文字がアルファベットかを判定
+fn builtin_char_alphabetic_p(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 1 {
+    return Err(EvalError::ArityError("char-alphabetic?: requires exactly 1 argument"))
+  }
+  match args[0] {
+    Value::Char(c) => {
+      let code = c.to_int()
+      let is_alpha = (code >= 65 && code <= 90) || (code >= 97 && code <= 122)
+      Ok(Value::Bool(is_alpha))
+    }
+    _ => Err(EvalError::TypeError("char-alphabetic?: argument must be a character"))
+  }
+}
+
+/// 組み込み関数: char-numeric?
+/// (char-numeric? char) - 文字が数字かを判定
+fn builtin_char_numeric_p(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 1 {
+    return Err(EvalError::ArityError("char-numeric?: requires exactly 1 argument"))
+  }
+  match args[0] {
+    Value::Char(c) => {
+      let code = c.to_int()
+      let is_numeric = code >= 48 && code <= 57
+      Ok(Value::Bool(is_numeric))
+    }
+    _ => Err(EvalError::TypeError("char-numeric?: argument must be a character"))
+  }
+}
+
+/// 組み込み関数: char-whitespace?
+/// (char-whitespace? char) - 文字が空白文字かを判定
+fn builtin_char_whitespace_p(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 1 {
+    return Err(EvalError::ArityError("char-whitespace?: requires exactly 1 argument"))
+  }
+  match args[0] {
+    Value::Char(c) => {
+      let is_whitespace = c == ' ' || c == '\t' || c == '\n' || c == '\r'
+      Ok(Value::Bool(is_whitespace))
+    }
+    _ => Err(EvalError::TypeError("char-whitespace?: argument must be a character"))
+  }
+}
+
+/// 組み込み関数: char-upper-case?
+/// (char-upper-case? char) - 文字が大文字かを判定
+fn builtin_char_upper_case_p(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 1 {
+    return Err(EvalError::ArityError("char-upper-case?: requires exactly 1 argument"))
+  }
+  match args[0] {
+    Value::Char(c) => {
+      let code = c.to_int()
+      let is_upper = code >= 65 && code <= 90
+      Ok(Value::Bool(is_upper))
+    }
+    _ => Err(EvalError::TypeError("char-upper-case?: argument must be a character"))
+  }
+}
+
+/// 組み込み関数: char-lower-case?
+/// (char-lower-case? char) - 文字が小文字かを判定
+fn builtin_char_lower_case_p(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 1 {
+    return Err(EvalError::ArityError("char-lower-case?: requires exactly 1 argument"))
+  }
+  match args[0] {
+    Value::Char(c) => {
+      let code = c.to_int()
+      let is_lower = code >= 97 && code <= 122
+      Ok(Value::Bool(is_lower))
+    }
+    _ => Err(EvalError::TypeError("char-lower-case?: argument must be a character"))
+  }
+}
+
+/// 組み込み関数: char-upcase
+/// (char-upcase char) - 文字を大文字に変換
+fn builtin_char_upcase(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 1 {
+    return Err(EvalError::ArityError("char-upcase: requires exactly 1 argument"))
+  }
+  match args[0] {
+    Value::Char(c) => {
+      let code = c.to_int()
+      if code >= 97 && code <= 122 {
+        // 小文字 -> 大文字
+        Ok(Value::Char(Char::from_int(code - 32)))
+      } else {
+        Ok(Value::Char(c))
+      }
+    }
+    _ => Err(EvalError::TypeError("char-upcase: argument must be a character"))
+  }
+}
+
+/// 組み込み関数: char-downcase
+/// (char-downcase char) - 文字を小文字に変換
+fn builtin_char_downcase(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 1 {
+    return Err(EvalError::ArityError("char-downcase: requires exactly 1 argument"))
+  }
+  match args[0] {
+    Value::Char(c) => {
+      let code = c.to_int()
+      if code >= 65 && code <= 90 {
+        // 大文字 -> 小文字
+        Ok(Value::Char(Char::from_int(code + 32)))
+      } else {
+        Ok(Value::Char(c))
+      }
+    }
+    _ => Err(EvalError::TypeError("char-downcase: argument must be a character"))
+  }
+}
+
+/// 組み込み関数: char->integer
+/// (char->integer char) - 文字を整数（文字コード）に変換
+fn builtin_char_to_integer(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 1 {
+    return Err(EvalError::ArityError("char->integer: requires exactly 1 argument"))
+  }
+  match args[0] {
+    Value::Char(c) => Ok(Value::Number(Number::Int(c.to_int())))
+    _ => Err(EvalError::TypeError("char->integer: argument must be a character"))
+  }
+}
+
+/// 組み込み関数: integer->char
+/// (integer->char n) - 整数（文字コード）を文字に変換
+fn builtin_integer_to_char(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 1 {
+    return Err(EvalError::ArityError("integer->char: requires exactly 1 argument"))
+  }
+  match args[0] {
+    Value::Number(Number::Int(n)) => {
+      if n >= 0 && n <= 1114111 {
+        Ok(Value::Char(Char::from_int(n)))
+      } else {
+        Err(EvalError::TypeError("integer->char: integer out of valid Unicode range"))
+      }
+    }
+    _ => Err(EvalError::TypeError("integer->char: argument must be an integer"))
+  }
+}
+
+/// 組み込み関数: string->list
+/// (string->list str) - 文字列を文字のリストに変換
+fn builtin_string_to_list(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 1 {
+    return Err(EvalError::ArityError("string->list: requires exactly 1 argument"))
+  }
+  match args[0] {
+    Value::String(s) => {
+      let chars = s.to_array()
+      let mut result = Value::Nil
+      let mut i = chars.length()
+      let _ = while i > 0 {
+        i = i - 1
+        result = Value::Pair(Value::Char(chars[i]), result)
+      } else { () }
+      Ok(result)
+    }
+    _ => Err(EvalError::TypeError("string->list: argument must be a string"))
+  }
+}
+
+/// 組み込み関数: list->string
+/// (list->string list) - 文字のリストを文字列に変換
+fn builtin_list_to_string(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 1 {
+    return Err(EvalError::ArityError("list->string: requires exactly 1 argument"))
+  }
+  let chars : Array[Char] = []
+  let mut current = args[0]
+  let _ = while true {
+    match current {
+      Value::Nil => break
+      Value::Pair(Value::Char(c), rest) => {
+        chars.push(c)
+        current = rest
+      }
+      Value::Pair(_, _) => return Err(EvalError::TypeError("list->string: list must contain only characters"))
+      _ => return Err(EvalError::TypeError("list->string: argument must be a proper list"))
+    }
+  } else { () }
+
+  let mut result = ""
+  for c in chars {
+    result = result + c.to_string()
+  }
+  Ok(Value::String(result))
+}
+
+/// 組み込み関数: gcd
+/// (gcd n1 n2 ...) - 最大公約数を計算
+fn builtin_gcd(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() == 0 {
+    return Ok(Value::Number(Number::Int(0)))
+  }
+
+  fn gcd_two(a : Int, b : Int) -> Int {
+    let a_abs = if a < 0 { -a } else { a }
+    let b_abs = if b < 0 { -b } else { b }
+    if b_abs == 0 {
+      a_abs
+    } else {
+      gcd_two(b_abs, a_abs % b_abs)
+    }
+  }
+
+  let mut result = match args[0] {
+    Value::Number(Number::Int(n)) => n
+    _ => return Err(EvalError::TypeError("gcd: arguments must be integers"))
+  }
+
+  let mut i = 1
+  let _ = while i < args.length() {
+    let n = match args[i] {
+      Value::Number(Number::Int(n)) => n
+      _ => return Err(EvalError::TypeError("gcd: arguments must be integers"))
+    }
+    result = gcd_two(result, n)
+    i = i + 1
+  } else { () }
+
+  Ok(Value::Number(Number::Int(result)))
+}
+
+/// 組み込み関数: lcm
+/// (lcm n1 n2 ...) - 最小公倍数を計算
+fn builtin_lcm(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() == 0 {
+    return Ok(Value::Number(Number::Int(1)))
+  }
+
+  fn gcd_two(a : Int, b : Int) -> Int {
+    let a_abs = if a < 0 { -a } else { a }
+    let b_abs = if b < 0 { -b } else { b }
+    if b_abs == 0 {
+      a_abs
+    } else {
+      gcd_two(b_abs, a_abs % b_abs)
+    }
+  }
+
+  fn lcm_two(a : Int, b : Int) -> Int {
+    let a_abs = if a < 0 { -a } else { a }
+    let b_abs = if b < 0 { -b } else { b }
+    if a_abs == 0 || b_abs == 0 {
+      0
+    } else {
+      (a_abs / gcd_two(a_abs, b_abs)) * b_abs
+    }
+  }
+
+  let mut result = match args[0] {
+    Value::Number(Number::Int(n)) => if n < 0 { -n } else { n }
+    _ => return Err(EvalError::TypeError("lcm: arguments must be integers"))
+  }
+
+  let mut i = 1
+  let _ = while i < args.length() {
+    let n = match args[i] {
+      Value::Number(Number::Int(n)) => n
+      _ => return Err(EvalError::TypeError("lcm: arguments must be integers"))
+    }
+    result = lcm_two(result, n)
+    i = i + 1
+  } else { () }
+
+  Ok(Value::Number(Number::Int(result)))
+}
+
 /// 組み込み関数: string-length
 /// (string-length str) - 文字列の長さを返す
 fn builtin_string_length(args : Array[Value]) -> Result[Value, EvalError] {
@@ -3133,6 +3488,8 @@ pub fn initial_env() -> Env {
   let env = define_var(env, "abs", Value::Procedure(Procedure::Native("abs")))
   let env = define_var(env, "max", Value::Procedure(Procedure::Native("max")))
   let env = define_var(env, "min", Value::Procedure(Procedure::Native("min")))
+  let env = define_var(env, "gcd", Value::Procedure(Procedure::Native("gcd")))
+  let env = define_var(env, "lcm", Value::Procedure(Procedure::Native("lcm")))
   // リスト操作
   let env = define_var(env, "cons", Value::Procedure(Procedure::Native("cons")))
   let env = define_var(env, "car", Value::Procedure(Procedure::Native("car")))
@@ -3200,6 +3557,26 @@ pub fn initial_env() -> Env {
   // 文字列操作
   let env = define_var(env, "string?", Value::Procedure(Procedure::Native("string?")))
   let env = define_var(env, "char?", Value::Procedure(Procedure::Native("char?")))
+  // 文字比較
+  let env = define_var(env, "char=?", Value::Procedure(Procedure::Native("char=?")))
+  let env = define_var(env, "char<?", Value::Procedure(Procedure::Native("char<?")))
+  let env = define_var(env, "char>?", Value::Procedure(Procedure::Native("char>?")))
+  let env = define_var(env, "char<=?", Value::Procedure(Procedure::Native("char<=?")))
+  let env = define_var(env, "char>=?", Value::Procedure(Procedure::Native("char>=?")))
+  // 文字分類
+  let env = define_var(env, "char-alphabetic?", Value::Procedure(Procedure::Native("char-alphabetic?")))
+  let env = define_var(env, "char-numeric?", Value::Procedure(Procedure::Native("char-numeric?")))
+  let env = define_var(env, "char-whitespace?", Value::Procedure(Procedure::Native("char-whitespace?")))
+  let env = define_var(env, "char-upper-case?", Value::Procedure(Procedure::Native("char-upper-case?")))
+  let env = define_var(env, "char-lower-case?", Value::Procedure(Procedure::Native("char-lower-case?")))
+  // 文字変換
+  let env = define_var(env, "char-upcase", Value::Procedure(Procedure::Native("char-upcase")))
+  let env = define_var(env, "char-downcase", Value::Procedure(Procedure::Native("char-downcase")))
+  let env = define_var(env, "char->integer", Value::Procedure(Procedure::Native("char->integer")))
+  let env = define_var(env, "integer->char", Value::Procedure(Procedure::Native("integer->char")))
+  // 文字列/リスト変換
+  let env = define_var(env, "string->list", Value::Procedure(Procedure::Native("string->list")))
+  let env = define_var(env, "list->string", Value::Procedure(Procedure::Native("list->string")))
   let env = define_var(env, "string-length", Value::Procedure(Procedure::Native("string-length")))
   let env = define_var(env, "string-ref", Value::Procedure(Procedure::Native("string-ref")))
   let env = define_var(env, "string-append", Value::Procedure(Procedure::Native("string-append")))
