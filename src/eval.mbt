@@ -202,6 +202,7 @@ pub fn eval(expr : SExpr, env : Env) -> Result[Value, EvalError] {
         SExpr::Symbol("let*") => eval_let_star(cdr, env)
         SExpr::Symbol("letrec") => eval_letrec(cdr, env)
         SExpr::Symbol("cond") => eval_cond(cdr, env)
+        SExpr::Symbol("case") => eval_case(cdr, env)
         SExpr::Symbol("quote") => {
           // quote特殊形式: (quote expr)
           match cdr {
@@ -358,6 +359,14 @@ fn apply_builtin(name : String, args : Array[Value]) -> Result[Value, EvalError]
     "reverse" => builtin_reverse(args)
     "list-ref" => builtin_list_ref(args)
     "list-tail" => builtin_list_tail(args)
+    "assq" => builtin_assq(args)
+    "assv" => builtin_assv(args)
+    "assoc" => builtin_assoc(args)
+    "memq" => builtin_memq(args)
+    "memv" => builtin_memv(args)
+    "member" => builtin_member(args)
+    "symbol->string" => builtin_symbol_to_string(args)
+    "string->symbol" => builtin_string_to_symbol(args)
     "string?" => builtin_string_p(args)
     "char?" => builtin_char_p(args)
     "string-length" => builtin_string_length(args)
@@ -930,6 +939,197 @@ fn builtin_list_tail(args : Array[Value]) -> Result[Value, EvalError] {
   } else { () }
 
   Ok(current)
+}
+
+/// 組み込み関数: assq
+/// (assq obj alist) - alist から obj を eq? で検索
+fn builtin_assq(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 2 {
+    return Err(EvalError::ArityError("assq: requires exactly 2 arguments"))
+  }
+  let obj = args[0]
+  let mut current = args[1]
+  let _ = while true {
+    match current {
+      Value::Nil => return Ok(Value::Bool(false))
+      Value::Pair(pair, rest) => {
+        match pair {
+          Value::Pair(key, _) => {
+            // eq? による比較
+            if values_eq(obj, key) {
+              return Ok(pair)
+            }
+            current = rest
+          }
+          _ => return Err(EvalError::TypeError("assq: alist element must be a pair"))
+        }
+      }
+      _ => return Err(EvalError::TypeError("assq: second argument must be a list"))
+    }
+  } else { () }
+  Ok(Value::Bool(false))
+}
+
+/// 組み込み関数: assv
+/// (assv obj alist) - alist から obj を eqv? で検索
+fn builtin_assv(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 2 {
+    return Err(EvalError::ArityError("assv: requires exactly 2 arguments"))
+  }
+  let obj = args[0]
+  let mut current = args[1]
+  let _ = while true {
+    match current {
+      Value::Nil => return Ok(Value::Bool(false))
+      Value::Pair(pair, rest) => {
+        match pair {
+          Value::Pair(key, _) => {
+            // eqv? による比較
+            if values_eqv(obj, key) {
+              return Ok(pair)
+            }
+            current = rest
+          }
+          _ => return Err(EvalError::TypeError("assv: alist element must be a pair"))
+        }
+      }
+      _ => return Err(EvalError::TypeError("assv: second argument must be a list"))
+    }
+  } else { () }
+  Ok(Value::Bool(false))
+}
+
+/// 組み込み関数: assoc
+/// (assoc obj alist) - alist から obj を equal? で検索
+fn builtin_assoc(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 2 {
+    return Err(EvalError::ArityError("assoc: requires exactly 2 arguments"))
+  }
+  let obj = args[0]
+  let mut current = args[1]
+  let _ = while true {
+    match current {
+      Value::Nil => return Ok(Value::Bool(false))
+      Value::Pair(pair, rest) => {
+        match pair {
+          Value::Pair(key, _) => {
+            // equal? による比較
+            if values_equal(obj, key) {
+              return Ok(pair)
+            }
+            current = rest
+          }
+          _ => return Err(EvalError::TypeError("assoc: alist element must be a pair"))
+        }
+      }
+      _ => return Err(EvalError::TypeError("assoc: second argument must be a list"))
+    }
+  } else { () }
+  Ok(Value::Bool(false))
+}
+
+/// 組み込み関数: memq
+/// (memq obj list) - list から obj を eq? で検索し、見つかった位置から始まるリストを返す
+fn builtin_memq(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 2 {
+    return Err(EvalError::ArityError("memq: requires exactly 2 arguments"))
+  }
+  let obj = args[0]
+  let mut current = args[1]
+  let _ = while true {
+    match current {
+      Value::Nil => return Ok(Value::Bool(false))
+      Value::Pair(head, tail) => {
+        if values_eq(obj, head) {
+          return Ok(current)
+        }
+        current = tail
+      }
+      _ => return Err(EvalError::TypeError("memq: second argument must be a list"))
+    }
+  } else { () }
+  Ok(Value::Bool(false))
+}
+
+/// 組み込み関数: memv
+/// (memv obj list) - list から obj を eqv? で検索し、見つかった位置から始まるリストを返す
+fn builtin_memv(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 2 {
+    return Err(EvalError::ArityError("memv: requires exactly 2 arguments"))
+  }
+  let obj = args[0]
+  let mut current = args[1]
+  let _ = while true {
+    match current {
+      Value::Nil => return Ok(Value::Bool(false))
+      Value::Pair(head, tail) => {
+        if values_eqv(obj, head) {
+          return Ok(current)
+        }
+        current = tail
+      }
+      _ => return Err(EvalError::TypeError("memv: second argument must be a list"))
+    }
+  } else { () }
+  Ok(Value::Bool(false))
+}
+
+/// 組み込み関数: member
+/// (member obj list) - list から obj を equal? で検索し、見つかった位置から始まるリストを返す
+fn builtin_member(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 2 {
+    return Err(EvalError::ArityError("member: requires exactly 2 arguments"))
+  }
+  let obj = args[0]
+  let mut current = args[1]
+  let _ = while true {
+    match current {
+      Value::Nil => return Ok(Value::Bool(false))
+      Value::Pair(head, tail) => {
+        if values_equal(obj, head) {
+          return Ok(current)
+        }
+        current = tail
+      }
+      _ => return Err(EvalError::TypeError("member: second argument must be a list"))
+    }
+  } else { () }
+  Ok(Value::Bool(false))
+}
+
+/// eq? による値の比較（最も厳密）
+fn values_eq(a : Value, b : Value) -> Bool {
+  match (a, b) {
+    (Value::Nil, Value::Nil) => true
+    (Value::Bool(x), Value::Bool(y)) => x == y
+    (Value::Number(Number::Int(x)), Value::Number(Number::Int(y))) => x == y
+    (Value::Symbol(x), Value::Symbol(y)) => x == y
+    _ => false
+  }
+}
+
+/// 組み込み関数: symbol->string
+/// (symbol->string sym) - シンボルを文字列に変換
+fn builtin_symbol_to_string(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 1 {
+    return Err(EvalError::ArityError("symbol->string: requires exactly 1 argument"))
+  }
+  match args[0] {
+    Value::Symbol(s) => Ok(Value::String(s))
+    _ => Err(EvalError::TypeError("symbol->string: argument must be a symbol"))
+  }
+}
+
+/// 組み込み関数: string->symbol
+/// (string->symbol str) - 文字列をシンボルに変換
+fn builtin_string_to_symbol(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 1 {
+    return Err(EvalError::ArityError("string->symbol: requires exactly 1 argument"))
+  }
+  match args[0] {
+    Value::String(s) => Ok(Value::Symbol(s))
+    _ => Err(EvalError::TypeError("string->symbol: argument must be a string"))
+  }
 }
 
 /// if 特殊形式: (if test consequent [alternative])
@@ -2063,6 +2263,94 @@ fn eval_cond(clauses : SExpr, env : Env) -> Result[Value, EvalError] {
   Ok(Value::Nil)
 }
 
+/// case 特殊形式を評価する。
+/// (case key
+///   ((datum1 ...) expr1 ...)
+///   ((datum2 ...) expr2 ...)
+///   (else expr ...))
+/// key を評価し、その値を各節の datum リストと eqv? で比較する。
+fn eval_case(args : SExpr, env : Env) -> Result[Value, EvalError] {
+  match args {
+    SExpr::Pair(key_expr, clauses) => {
+      // key を評価
+      let key_value = match eval(key_expr, env) {
+        Ok(v) => v
+        Err(e) => return Err(e)
+      }
+
+      // 各節を順番に処理
+      let mut current = clauses
+      let _ = while true {
+        match current {
+          SExpr::Nil => {
+            // すべての節がマッチせず、else もない場合
+            return Ok(Value::Nil)
+          }
+          SExpr::Pair(clause, rest) => {
+            match clause {
+              // else 節: (else expr ...)
+              SExpr::Pair(SExpr::Symbol("else"), body) => {
+                return eval_begin(body, env)
+              }
+              // 通常の節: ((datum1 datum2 ...) expr ...)
+              SExpr::Pair(datums, body) => {
+                // datums リストと key_value を比較
+                let matched = match check_case_datums(key_value, datums) {
+                  Ok(m) => m
+                  Err(e) => return Err(e)
+                }
+                if matched {
+                  return eval_begin(body, env)
+                } else {
+                  current = rest
+                }
+              }
+              _ => return Err(EvalError::InvalidSyntax("case: invalid clause"))
+            }
+          }
+          _ => return Err(EvalError::InvalidSyntax("case: clauses must be a list"))
+        }
+      } else { () }
+      Ok(Value::Nil)
+    }
+    _ => Err(EvalError::InvalidSyntax("case: requires key and clauses"))
+  }
+}
+
+/// case の datum リストに key が含まれているかチェックする（eqv? で比較）
+fn check_case_datums(key : Value, datums : SExpr) -> Result[Bool, EvalError] {
+  let mut current = datums
+  let _ = while true {
+    match current {
+      SExpr::Nil => return Ok(false)
+      SExpr::Pair(datum_expr, rest) => {
+        // datum は評価せずにそのまま値に変換
+        let datum_value = sexpr_to_value(datum_expr)
+        // eqv? による比較
+        if values_eqv(key, datum_value) {
+          return Ok(true)
+        }
+        current = rest
+      }
+      _ => return Err(EvalError::InvalidSyntax("case: datums must be a list"))
+    }
+  } else { () }
+  Ok(false)
+}
+
+/// eqv? による値の比較
+fn values_eqv(a : Value, b : Value) -> Bool {
+  match (a, b) {
+    (Value::Nil, Value::Nil) => true
+    (Value::Bool(x), Value::Bool(y)) => x == y
+    (Value::Number(Number::Int(x)), Value::Number(Number::Int(y))) => x == y
+    (Value::Number(Number::Real(x)), Value::Number(Number::Real(y))) => x == y
+    (Value::Char(x), Value::Char(y)) => x == y
+    (Value::Symbol(x), Value::Symbol(y)) => x == y
+    _ => false
+  }
+}
+
 /// 組み込み関数: string?
 /// (string? obj) - obj が文字列かどうかを判定
 fn builtin_string_p(args : Array[Value]) -> Result[Value, EvalError] {
@@ -2867,6 +3155,17 @@ pub fn initial_env() -> Env {
   let env = define_var(env, "reverse", Value::Procedure(Procedure::Native("reverse")))
   let env = define_var(env, "list-ref", Value::Procedure(Procedure::Native("list-ref")))
   let env = define_var(env, "list-tail", Value::Procedure(Procedure::Native("list-tail")))
+  // 連想リスト
+  let env = define_var(env, "assq", Value::Procedure(Procedure::Native("assq")))
+  let env = define_var(env, "assv", Value::Procedure(Procedure::Native("assv")))
+  let env = define_var(env, "assoc", Value::Procedure(Procedure::Native("assoc")))
+  // メンバーシップ
+  let env = define_var(env, "memq", Value::Procedure(Procedure::Native("memq")))
+  let env = define_var(env, "memv", Value::Procedure(Procedure::Native("memv")))
+  let env = define_var(env, "member", Value::Procedure(Procedure::Native("member")))
+  // シンボル変換
+  let env = define_var(env, "symbol->string", Value::Procedure(Procedure::Native("symbol->string")))
+  let env = define_var(env, "string->symbol", Value::Procedure(Procedure::Native("string->symbol")))
   // 型判定
   let env = define_var(env, "pair?", Value::Procedure(Procedure::Native("pair?")))
   let env = define_var(env, "number?", Value::Procedure(Procedure::Native("number?")))
