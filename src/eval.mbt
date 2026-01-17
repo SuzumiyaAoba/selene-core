@@ -6,6 +6,8 @@ pub(all) enum EvalError {
   InvalidSyntax(String)
   TypeError(String)
   ArityError(String)
+  /// 継続が呼び出されたことを示す（エスケープ継続）
+  ContinuationInvoked(Int, Value)
 } derive(Show)
 
 /// SExpr を Value に変換（評価せずに変換）。
@@ -284,6 +286,14 @@ pub fn apply(proc : Value, args : Array[Value]) -> Result[Value, EvalError] {
       let new_env = extend(closure_env, bindings)
       eval(body, new_env)
     }
+    Value::Procedure(Procedure::Cont(cont)) => {
+      // 継続の呼び出し：引数は1つ
+      if args.length() != 1 {
+        return Err(EvalError::ArityError("continuation: requires exactly 1 argument"))
+      }
+      // 継続が呼び出されたことをエラーとして伝播
+      Err(EvalError::ContinuationInvoked(cont.id, args[0]))
+    }
     _ => Err(EvalError::TypeError("not a procedure"))
   }
 }
@@ -309,6 +319,8 @@ fn apply_builtin(name : String, args : Array[Value]) -> Result[Value, EvalError]
     "boolean?" => builtin_boolean_p(args)
     "symbol?" => builtin_symbol_p(args)
     "null?" => builtin_null_p(args)
+    "procedure?" => builtin_procedure_p(args)
+    "list?" => builtin_list_p(args)
     "=" => builtin_num_eq(args)
     "<" => builtin_lt(args)
     ">" => builtin_gt(args)
@@ -363,7 +375,44 @@ fn apply_builtin(name : String, args : Array[Value]) -> Result[Value, EvalError]
     "write" => builtin_write(args)
     "read" => builtin_read(args)
     "string->number" => builtin_string_to_number(args)
+    "call/cc" | "call-with-current-continuation" => builtin_call_cc(args)
     _ => Err(EvalError::InvalidSyntax("unknown builtin: " + name))
+  }
+}
+
+/// 組み込み関数: call/cc (call-with-current-continuation)
+fn builtin_call_cc(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 1 {
+    return Err(EvalError::ArityError("call/cc: requires exactly 1 argument"))
+  }
+
+  // 引数は1引数の手続きでなければならない
+  let proc = args[0]
+  match proc {
+    Value::Procedure(_) => {
+      // 新しい継続を作成
+      let cont_id = new_continuation_id()
+      let cont = Value::Procedure(Procedure::Cont({ id: cont_id }))
+
+      // 手続きに継続を渡して呼び出す
+      let result = apply(proc, [cont])
+
+      // 結果を処理
+      match result {
+        Ok(value) => Ok(value)
+        Err(EvalError::ContinuationInvoked(id, value)) => {
+          // この call/cc の継続が呼び出された場合
+          if id == cont_id {
+            Ok(value)
+          } else {
+            // 別の継続が呼び出された場合は伝播
+            Err(EvalError::ContinuationInvoked(id, value))
+          }
+        }
+        Err(e) => Err(e)
+      }
+    }
+    _ => Err(EvalError::TypeError("call/cc: argument must be a procedure"))
   }
 }
 
@@ -999,6 +1048,32 @@ fn builtin_null_p(args : Array[Value]) -> Result[Value, EvalError] {
     Value::Nil => Ok(Value::Bool(true))
     _ => Ok(Value::Bool(false))
   }
+}
+
+/// 組み込み関数: procedure?
+fn builtin_procedure_p(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 1 {
+    return Err(EvalError::ArityError("procedure?: requires exactly 1 argument"))
+  }
+  match args[0] {
+    Value::Procedure(_) => Ok(Value::Bool(true))
+    _ => Ok(Value::Bool(false))
+  }
+}
+
+/// 組み込み関数: list?
+fn builtin_list_p(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 1 {
+    return Err(EvalError::ArityError("list?: requires exactly 1 argument"))
+  }
+  fn is_list(v : Value) -> Bool {
+    match v {
+      Value::Nil => true
+      Value::Pair(_, cdr) => is_list(cdr)
+      _ => false
+    }
+  }
+  Ok(Value::Bool(is_list(args[0])))
 }
 
 /// 組み込み関数: pair?
@@ -2296,6 +2371,7 @@ fn value_to_display_string(value : Value) -> String {
     }
     Value::Procedure(Procedure::Native(name)) => "#<procedure:" + name + ">"
     Value::Procedure(Procedure::Closure(_, _, _)) => "#<procedure:closure>"
+    Value::Procedure(Procedure::Cont(cont)) => "#<continuation:" + cont.id.to_string() + ">"
   }
 }
 
@@ -2346,6 +2422,7 @@ fn value_to_write_string(value : Value) -> String {
     }
     Value::Procedure(Procedure::Native(name)) => "#<procedure:" + name + ">"
     Value::Procedure(Procedure::Closure(_, _, _)) => "#<procedure:closure>"
+    Value::Procedure(Procedure::Cont(cont)) => "#<continuation:" + cont.id.to_string() + ">"
   }
 }
 
@@ -2456,6 +2533,8 @@ pub fn initial_env() -> Env {
   let env = define_var(env, "boolean?", Value::Procedure(Procedure::Native("boolean?")))
   let env = define_var(env, "symbol?", Value::Procedure(Procedure::Native("symbol?")))
   let env = define_var(env, "null?", Value::Procedure(Procedure::Native("null?")))
+  let env = define_var(env, "procedure?", Value::Procedure(Procedure::Native("procedure?")))
+  let env = define_var(env, "list?", Value::Procedure(Procedure::Native("list?")))
   // 比較演算
   let env = define_var(env, "=", Value::Procedure(Procedure::Native("=")))
   let env = define_var(env, "<", Value::Procedure(Procedure::Native("<")))
@@ -2514,5 +2593,8 @@ pub fn initial_env() -> Env {
   let env = define_var(env, "read", Value::Procedure(Procedure::Native("read")))
   // 文字列変換
   let env = define_var(env, "string->number", Value::Procedure(Procedure::Native("string->number")))
+  // 継続
+  let env = define_var(env, "call/cc", Value::Procedure(Procedure::Native("call/cc")))
+  let env = define_var(env, "call-with-current-continuation", Value::Procedure(Procedure::Native("call-with-current-continuation")))
   env
 }

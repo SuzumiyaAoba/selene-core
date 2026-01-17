@@ -47,6 +47,7 @@ fn value_to_string(value : Value) -> String {
     }
     Value::Procedure(Procedure::Native(name)) => "#<procedure:" + name + ">"
     Value::Procedure(Procedure::Closure(_, _, _)) => "#<procedure:closure>"
+    Value::Procedure(Procedure::Cont(cont)) => "#<continuation:" + cont.id.to_string() + ">"
   }
 }
 
