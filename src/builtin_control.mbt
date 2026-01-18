@@ -339,3 +339,148 @@ fn builtin_fold_right(args : Array[Value]) -> Result[Value, EvalError] {
 
   Ok(acc)
 }
+
+/// 組み込み関数: force
+/// (force promise) - プロミスを強制評価し、結果を返す
+fn builtin_force(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 1 {
+    return Err(EvalError::ArityError("force: requires exactly 1 argument"))
+  }
+
+  match args[0] {
+    Value::Promise(promise) => {
+      // 既に評価済みかチェック
+      if promise.forced.val {
+        match promise.content.val {
+          PromiseContent::Forced(value) => Ok(value)
+          _ => Err(EvalError::InvalidSyntax("force: invalid promise state"))
+        }
+      } else {
+        // 未評価なので評価する
+        match promise.content.val {
+          PromiseContent::Delayed(expr, env) => {
+            let result = match eval(expr, env) {
+              Ok(v) => v
+              Err(e) => return Err(e)
+            }
+            // メモ化: 結果を保存
+            promise.forced.val = true
+            promise.content.val = PromiseContent::Forced(result)
+            Ok(result)
+          }
+          _ => Err(EvalError::InvalidSyntax("force: invalid promise state"))
+        }
+      }
+    }
+    // プロミス以外の値はそのまま返す（R5RS の動作）
+    other => Ok(other)
+  }
+}
+
+/// 組み込み関数: promise?
+/// (promise? obj) - obj がプロミスかどうか判定
+fn builtin_promise_p(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 1 {
+    return Err(EvalError::ArityError("promise?: requires exactly 1 argument"))
+  }
+
+  match args[0] {
+    Value::Promise(_) => Ok(Value::Bool(true))
+    _ => Ok(Value::Bool(false))
+  }
+}
+
+/// 組み込み関数: values
+/// (values obj ...) - 複数の値を返す
+fn builtin_values(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() == 1 {
+    // 単一の値の場合はそのまま返す
+    Ok(args[0])
+  } else {
+    // 複数の値の場合は MultipleValues でラップ
+    Ok(Value::MultipleValues(args))
+  }
+}
+
+/// 組み込み関数: dynamic-wind
+/// (dynamic-wind before thunk after) - 動的な入出処理を行う
+fn builtin_dynamic_wind(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 3 {
+    return Err(
+      EvalError::ArityError("dynamic-wind: requires exactly 3 arguments"),
+    )
+  }
+
+  // すべての引数が手続きでなければならない
+  let before = args[0]
+  let thunk = args[1]
+  let after = args[2]
+  match (before, thunk, after) {
+    (Value::Procedure(_), Value::Procedure(_), Value::Procedure(_)) => ()
+    _ =>
+      return Err(
+        EvalError::TypeError("dynamic-wind: all arguments must be procedures"),
+      )
+  }
+
+  // before を呼び出す
+  match apply(before, []) {
+    Ok(_) => ()
+    Err(e) => return Err(e)
+  }
+
+  // thunk を呼び出す
+  let result = apply(thunk, [])
+
+  // after を呼び出す（thunk が成功しても失敗しても）
+  match apply(after, []) {
+    Ok(_) => ()
+    Err(e) => {
+      // after でエラーが発生した場合、それを返す
+      // 注: R5RS では thunk のエラーが優先されるべきだが、簡易実装
+      return Err(e)
+    }
+  }
+
+  // thunk の結果を返す
+  result
+}
+
+/// 組み込み関数: call-with-values
+/// (call-with-values producer consumer) - producer の結果を consumer に渡す
+fn builtin_call_with_values(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 2 {
+    return Err(
+      EvalError::ArityError("call-with-values: requires exactly 2 arguments"),
+    )
+  }
+
+  // 両方の引数が手続きでなければならない
+  let producer = args[0]
+  let consumer = args[1]
+  match (producer, consumer) {
+    (Value::Procedure(_), Value::Procedure(_)) => ()
+    _ =>
+      return Err(
+        EvalError::TypeError("call-with-values: both arguments must be procedures"),
+      )
+  }
+
+  // producer を引数なしで呼び出す
+  let produced = match apply(producer, []) {
+    Ok(v) => v
+    Err(e) => return Err(e)
+  }
+
+  // producer の結果を consumer に渡す
+  match produced {
+    Value::MultipleValues(values) => {
+      // 複数の値を consumer の引数として渡す
+      apply(consumer, values)
+    }
+    single_value => {
+      // 単一の値を consumer に渡す
+      apply(consumer, [single_value])
+    }
+  }
+}

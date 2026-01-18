@@ -48,6 +48,20 @@ fn value_to_string(value : Value) -> String {
     Value::Procedure(Procedure::Native(name)) => "#<procedure:" + name + ">"
     Value::Procedure(Procedure::Closure(_, _, _)) => "#<procedure:closure>"
     Value::Procedure(Procedure::Cont(cont)) => "#<continuation:" + cont.id.to_string() + ">"
+    Value::Promise(_) => "#<promise>"
+    Value::MultipleValues(values) => {
+      let mut result = "#<values:"
+      let len = values.length()
+      let mut i = 0
+      while i < len {
+        if i > 0 {
+          result = result + " "
+        }
+        result = result + value_to_string(values[i])
+        i = i + 1
+      }
+      result + ">"
+    }
   }
 }
 
@@ -218,6 +232,18 @@ pub fn run() -> Unit {
     "(string->number \"not a number\")",
     "(+ (string->number \"10\") (string->number \"32\"))",
     "(string->number (number->string 99))",
+    // Phase 4: do loop
+    "(do ((i 0 (+ i 1))) ((= i 5) i))",
+    "(do ((i 0 (+ i 1)) (sum 0 (+ sum i))) ((= i 5) sum))",
+    // Phase 4: delay/force
+    "(force (delay (+ 1 2 3)))",
+    "(promise? (delay 42))",
+    "(promise? 42)",
+    // Phase 4: values/call-with-values
+    "(call-with-values (lambda () (values 1 2 3)) (lambda (a b c) (+ a b c)))",
+    "(call-with-values (lambda () 10) (lambda (x) (* x 2)))",
+    // Phase 4: dynamic-wind
+    "(dynamic-wind (lambda () #f) (lambda () 42) (lambda () #f))",
   ]
 
   for input in test_inputs {
