@@ -217,3 +217,125 @@ fn builtin_for_each(args : Array[Value]) -> Result[Value, EvalError] {
 
   Ok(Value::Nil)
 }
+
+/// 組み込み関数: filter
+/// (filter proc list) - proc が真を返す要素のみを含むリストを返す
+fn builtin_filter(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 2 {
+    return Err(EvalError::ArityError("filter: requires exactly 2 arguments"))
+  }
+
+  // 最初の引数は手続きでなければならない
+  let proc = args[0]
+  match proc {
+    Value::Procedure(_) => ()
+    _ =>
+      return Err(
+        EvalError::TypeError("filter: first argument must be a procedure"),
+      )
+  }
+
+  // 2番目の引数はリストでなければならない
+  let list_items = match list_to_array(args[1]) {
+    Ok(items) => items
+    Err(e) => return Err(e)
+  }
+
+  // 結果リストを構築
+  let results : Array[Value] = []
+  for item in list_items {
+    // 手続きを各要素に適用
+    let result = match apply(proc, [item]) {
+      Ok(v) => v
+      Err(e) => return Err(e)
+    }
+    // 真値の場合のみ結果に追加（#f 以外はすべて真）
+    match result {
+      Value::Bool(false) => ()
+      _ => results.push(item)
+    }
+  }
+
+  // 配列をリストに変換
+  array_to_list(results)
+}
+
+/// 組み込み関数: fold-left
+/// (fold-left proc init list) - リストを左から畳み込む
+fn builtin_fold_left(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 3 {
+    return Err(EvalError::ArityError("fold-left: requires exactly 3 arguments"))
+  }
+
+  // 最初の引数は手続きでなければならない
+  let proc = args[0]
+  match proc {
+    Value::Procedure(_) => ()
+    _ =>
+      return Err(
+        EvalError::TypeError("fold-left: first argument must be a procedure"),
+      )
+  }
+
+  let init = args[1]
+
+  // 3番目の引数はリストでなければならない
+  let list_items = match list_to_array(args[2]) {
+    Ok(items) => items
+    Err(e) => return Err(e)
+  }
+
+  // 左から畳み込む: (proc (proc (proc init e1) e2) e3) ...
+  let mut acc = init
+  for item in list_items {
+    acc = match apply(proc, [acc, item]) {
+      Ok(v) => v
+      Err(e) => return Err(e)
+    }
+  }
+
+  Ok(acc)
+}
+
+/// 組み込み関数: fold-right
+/// (fold-right proc init list) - リストを右から畳み込む
+fn builtin_fold_right(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 3 {
+    return Err(
+      EvalError::ArityError("fold-right: requires exactly 3 arguments"),
+    )
+  }
+
+  // 最初の引数は手続きでなければならない
+  let proc = args[0]
+  match proc {
+    Value::Procedure(_) => ()
+    _ =>
+      return Err(
+        EvalError::TypeError("fold-right: first argument must be a procedure"),
+      )
+  }
+
+  let init = args[1]
+
+  // 3番目の引数はリストでなければならない
+  let list_items = match list_to_array(args[2]) {
+    Ok(items) => items
+    Err(e) => return Err(e)
+  }
+
+  // 右から畳み込む: (proc e1 (proc e2 (proc e3 init))) ...
+  let mut acc = init
+  let mut i = list_items.length()
+  let _ = while i > 0 {
+    i = i - 1
+    acc = match apply(proc, [list_items[i], acc]) {
+      Ok(v) => v
+      Err(e) => return Err(e)
+    }
+  } else {
+    ()
+  }
+
+  Ok(acc)
+}

@@ -32,6 +32,32 @@ fn builtin_cdr(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
+/// 組み込み関数: set-car!
+/// (set-car! pair obj) - ペアの car を obj に設定
+/// 注: 不変環境モデルのため、新しいペアを返す
+fn builtin_set_car(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 2 {
+    return Err(EvalError::ArityError("set-car!: requires exactly 2 arguments"))
+  }
+  match args[0] {
+    Value::Pair(_, cdr) => Ok(Value::Pair(args[1], cdr))
+    _ => Err(EvalError::TypeError("set-car!: first argument must be a pair"))
+  }
+}
+
+/// 組み込み関数: set-cdr!
+/// (set-cdr! pair obj) - ペアの cdr を obj に設定
+/// 注: 不変環境モデルのため、新しいペアを返す
+fn builtin_set_cdr(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 2 {
+    return Err(EvalError::ArityError("set-cdr!: requires exactly 2 arguments"))
+  }
+  match args[0] {
+    Value::Pair(car, _) => Ok(Value::Pair(car, args[1]))
+    _ => Err(EvalError::TypeError("set-cdr!: first argument must be a pair"))
+  }
+}
+
 /// 組み込み関数: caar
 fn builtin_caar(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
