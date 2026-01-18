@@ -78,6 +78,149 @@ fn builtin_string_eq(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
+/// 組み込み関数: string<?
+/// (string<? str1 str2) - 文字列の辞書順比較（str1 < str2）
+fn builtin_string_lt(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 2 {
+    return Err(EvalError::ArityError("string<?: requires exactly 2 arguments"))
+  }
+  match (args[0], args[1]) {
+    (Value::String(s1), Value::String(s2)) => Ok(Value::Bool(s1 < s2))
+    _ => Err(EvalError::TypeError("string<?: both arguments must be strings"))
+  }
+}
+
+/// 組み込み関数: string>?
+/// (string>? str1 str2) - 文字列の辞書順比較（str1 > str2）
+fn builtin_string_gt(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 2 {
+    return Err(EvalError::ArityError("string>?: requires exactly 2 arguments"))
+  }
+  match (args[0], args[1]) {
+    (Value::String(s1), Value::String(s2)) => Ok(Value::Bool(s1 > s2))
+    _ => Err(EvalError::TypeError("string>?: both arguments must be strings"))
+  }
+}
+
+/// 組み込み関数: string<=?
+/// (string<=? str1 str2) - 文字列の辞書順比較（str1 <= str2）
+fn builtin_string_le(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 2 {
+    return Err(EvalError::ArityError("string<=?: requires exactly 2 arguments"))
+  }
+  match (args[0], args[1]) {
+    (Value::String(s1), Value::String(s2)) => Ok(Value::Bool(s1 <= s2))
+    _ => Err(EvalError::TypeError("string<=?: both arguments must be strings"))
+  }
+}
+
+/// 組み込み関数: string>=?
+/// (string>=? str1 str2) - 文字列の辞書順比較（str1 >= str2）
+fn builtin_string_ge(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 2 {
+    return Err(EvalError::ArityError("string>=?: requires exactly 2 arguments"))
+  }
+  match (args[0], args[1]) {
+    (Value::String(s1), Value::String(s2)) => Ok(Value::Bool(s1 >= s2))
+    _ => Err(EvalError::TypeError("string>=?: both arguments must be strings"))
+  }
+}
+
+/// 文字列を小文字に変換するヘルパー関数
+fn string_downcase(s : String) -> String {
+  let builder = StringBuilder::new()
+  for c in s {
+    let code = c.to_int()
+    if code >= 65 && code <= 90 {
+      // A-Z -> a-z
+      builder.write_char(Char::from_int(code + 32))
+    } else {
+      builder.write_char(c)
+    }
+  }
+  builder.to_string()
+}
+
+/// 組み込み関数: string-ci=?
+/// (string-ci=? str1 str2) - 大文字小文字を区別しない文字列比較（等しい）
+fn builtin_string_ci_eq(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 2 {
+    return Err(
+      EvalError::ArityError("string-ci=?: requires exactly 2 arguments"),
+    )
+  }
+  match (args[0], args[1]) {
+    (Value::String(s1), Value::String(s2)) =>
+      Ok(Value::Bool(string_downcase(s1) == string_downcase(s2)))
+    _ =>
+      Err(EvalError::TypeError("string-ci=?: both arguments must be strings"))
+  }
+}
+
+/// 組み込み関数: string-ci<?
+/// (string-ci<? str1 str2) - 大文字小文字を区別しない文字列比較（str1 < str2）
+fn builtin_string_ci_lt(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 2 {
+    return Err(
+      EvalError::ArityError("string-ci<?: requires exactly 2 arguments"),
+    )
+  }
+  match (args[0], args[1]) {
+    (Value::String(s1), Value::String(s2)) =>
+      Ok(Value::Bool(string_downcase(s1) < string_downcase(s2)))
+    _ =>
+      Err(EvalError::TypeError("string-ci<?: both arguments must be strings"))
+  }
+}
+
+/// 組み込み関数: string-ci>?
+/// (string-ci>? str1 str2) - 大文字小文字を区別しない文字列比較（str1 > str2）
+fn builtin_string_ci_gt(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 2 {
+    return Err(
+      EvalError::ArityError("string-ci>?: requires exactly 2 arguments"),
+    )
+  }
+  match (args[0], args[1]) {
+    (Value::String(s1), Value::String(s2)) =>
+      Ok(Value::Bool(string_downcase(s1) > string_downcase(s2)))
+    _ =>
+      Err(EvalError::TypeError("string-ci>?: both arguments must be strings"))
+  }
+}
+
+/// 組み込み関数: string-ci<=?
+/// (string-ci<=? str1 str2) - 大文字小文字を区別しない文字列比較（str1 <= str2）
+fn builtin_string_ci_le(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 2 {
+    return Err(
+      EvalError::ArityError("string-ci<=?: requires exactly 2 arguments"),
+    )
+  }
+  match (args[0], args[1]) {
+    (Value::String(s1), Value::String(s2)) =>
+      Ok(Value::Bool(string_downcase(s1) <= string_downcase(s2)))
+    _ =>
+      Err(EvalError::TypeError("string-ci<=?: both arguments must be strings"))
+  }
+}
+
+/// 組み込み関数: string-ci>=?
+/// (string-ci>=? str1 str2) - 大文字小文字を区別しない文字列比較（str1 >= str2）
+fn builtin_string_ci_ge(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 2 {
+    return Err(
+      EvalError::ArityError("string-ci>=?: requires exactly 2 arguments"),
+    )
+  }
+  match (args[0], args[1]) {
+    (Value::String(s1), Value::String(s2)) =>
+      Ok(Value::Bool(string_downcase(s1) >= string_downcase(s2)))
+    _ =>
+      Err(EvalError::TypeError("string-ci>=?: both arguments must be strings"))
+  }
+}
+
 /// 組み込み関数: make-string
 /// (make-string k [char]) - 長さ k の文字列を作成（オプションで文字を指定）
 fn builtin_make_string(args : Array[Value]) -> Result[Value, EvalError] {
