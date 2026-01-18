@@ -8,7 +8,14 @@ fn value_to_display_string(value : Value) -> String {
     Value::Nil => "()"
     Value::Bool(b) => if b { "#t" } else { "#f" }
     Value::Number(Number::Int(n)) => n.to_string()
+    Value::Number(Number::Rational(num, den)) => num.to_string() + "/" + den.to_string()
     Value::Number(Number::Real(r)) => r.to_string()
+    Value::Number(Number::Complex(r, i)) =>
+      if i >= 0.0 {
+        r.to_string() + "+" + i.to_string() + "i"
+      } else {
+        r.to_string() + i.to_string() + "i"
+      }
     Value::Char(c) => c.to_string()
     Value::String(s) => s // displayは文字列を引用符なしで出力
     Value::Symbol(s) => s
@@ -78,7 +85,14 @@ fn value_to_write_string(value : Value) -> String {
     Value::Nil => "()"
     Value::Bool(b) => if b { "#t" } else { "#f" }
     Value::Number(Number::Int(n)) => n.to_string()
+    Value::Number(Number::Rational(num, den)) => num.to_string() + "/" + den.to_string()
     Value::Number(Number::Real(r)) => r.to_string()
+    Value::Number(Number::Complex(r, i)) =>
+      if i >= 0.0 {
+        r.to_string() + "+" + i.to_string() + "i"
+      } else {
+        r.to_string() + i.to_string() + "i"
+      }
     Value::Char(c) => "#\\" + c.to_string()
     Value::String(s) => "\"" + s + "\"" // writeは文字列を引用符付きで出力
     Value::Symbol(s) => s

@@ -445,6 +445,18 @@ fn apply_builtin(name : String, args : Array[Value]) -> Result[Value, EvalError]
     "values" => builtin_values(args)
     "call-with-values" => builtin_call_with_values(args)
     "dynamic-wind" => builtin_dynamic_wind(args)
+    // 複素数関連
+    "make-rectangular" => builtin_make_rectangular(args)
+    "make-polar" => builtin_make_polar(args)
+    "real-part" => builtin_real_part(args)
+    "imag-part" => builtin_imag_part(args)
+    "magnitude" => builtin_magnitude(args)
+    "angle" => builtin_angle(args)
+    "complex?" => builtin_complex_p(args)
+    // 有理数関連
+    "numerator" => builtin_numerator(args)
+    "denominator" => builtin_denominator(args)
+    "rational?" => builtin_rational_p(args)
     _ => Err(EvalError::InvalidSyntax("unknown builtin: " + name))
   }
 }
@@ -619,5 +631,17 @@ pub fn initial_env() -> Env {
   let env = define_var(env, "call-with-values", Value::Procedure(Procedure::Native("call-with-values")))
   // 動的スコープ
   let env = define_var(env, "dynamic-wind", Value::Procedure(Procedure::Native("dynamic-wind")))
+  // 複素数関連
+  let env = define_var(env, "make-rectangular", Value::Procedure(Procedure::Native("make-rectangular")))
+  let env = define_var(env, "make-polar", Value::Procedure(Procedure::Native("make-polar")))
+  let env = define_var(env, "real-part", Value::Procedure(Procedure::Native("real-part")))
+  let env = define_var(env, "imag-part", Value::Procedure(Procedure::Native("imag-part")))
+  let env = define_var(env, "magnitude", Value::Procedure(Procedure::Native("magnitude")))
+  let env = define_var(env, "angle", Value::Procedure(Procedure::Native("angle")))
+  let env = define_var(env, "complex?", Value::Procedure(Procedure::Native("complex?")))
+  // 有理数関連
+  let env = define_var(env, "numerator", Value::Procedure(Procedure::Native("numerator")))
+  let env = define_var(env, "denominator", Value::Procedure(Procedure::Native("denominator")))
+  let env = define_var(env, "rational?", Value::Procedure(Procedure::Native("rational?")))
   env
 }

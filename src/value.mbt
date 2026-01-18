@@ -1,10 +1,48 @@
 /// Scheme 評価器の実行時値（ドラフト）。
 
-/// 数値型の最小構成（拡張予定）。
+/// 数値型（R5RS 数値塔）
+/// Int < Rational < Real < Complex
 pub(all) enum Number {
   Int(Int)
+  /// 有理数: 分子と分母（常に既約分数で保持）
+  Rational(Int, Int)
   Real(Double)
+  /// 複素数: 実部と虚部
+  Complex(Double, Double)
 } derive(Show)
+
+/// 最大公約数を計算する
+pub fn gcd_int(a : Int, b : Int) -> Int {
+  let mut x = if a < 0 { -a } else { a }
+  let mut y = if b < 0 { -b } else { b }
+  while y != 0 {
+    let temp = y
+    y = x % y
+    x = temp
+  }
+  x
+}
+
+/// 有理数を既約分数に正規化する
+pub fn normalize_rational(numer : Int, denom : Int) -> Number {
+  if denom == 0 {
+    // ゼロ除算エラー（実際には呼び出し側でチェックすべき）
+    Number::Int(0)
+  } else if numer == 0 {
+    Number::Int(0)
+  } else {
+    let g = gcd_int(numer, denom)
+    let n = numer / g
+    let d = denom / g
+    // 分母が負の場合、符号を分子に移動
+    let (n, d) = if d < 0 { (-n, -d) } else { (n, d) }
+    if d == 1 {
+      Number::Int(n)
+    } else {
+      Number::Rational(n, d)
+    }
+  }
+}
 
 /// 継続を表す型。
 /// CPS 変換された評価器で使用される。
