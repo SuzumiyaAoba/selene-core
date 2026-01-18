@@ -37,27 +37,33 @@
 - [x] I/O (`display`, `newline`, `write`, `read`)
 - [x] ペア操作 (`set-car!`, `set-cdr!`)
 
-**テスト**: 400 件パス
+#### Phase 4: R5RS 制御構造 (一部)
+- [x] `do` ループ構文
+- [x] `delay` / `force` (遅延評価)
+- [x] `dynamic-wind`
+- [x] `call-with-values` / `values` (多値)
+
+**テスト**: 417 件パス
 
 ---
 
 ## TODO
 
-### Phase 4: R5RS 完全対応
+### Phase 4: R5RS 完全対応 (残り)
 
-- [ ] `do` ループ構文
-- [ ] `delay` / `force` (遅延評価)
-- [ ] `dynamic-wind`
-- [ ] `call-with-values` / `values` (多値)
+- [x] `do` ループ構文
+- [x] `delay` / `force` (遅延評価)
+- [x] `dynamic-wind`
+- [x] `call-with-values` / `values` (多値)
 - [ ] `syntax-rules` マクロシステム
 - [ ] 数値塔の拡張 (有理数, 複素数)
-- [ ] ポート操作の完全実装
+- [ ] ポート操作の完全実装 (FFI 拡張が必要)
   - [ ] `open-input-file`, `open-output-file`
   - [ ] `close-input-port`, `close-output-port`
   - [ ] `read-char`, `peek-char`, `write-char`
   - [ ] `eof-object?`
   - [ ] `call-with-input-file`, `call-with-output-file`
-- [ ] `load` 関数
+- [ ] `load` 関数 (FFI 拡張が必要)
 
 ### Phase 5: コンパイラ
 
@@ -164,7 +170,8 @@ src/
 ├── builtin_string.mbt     # 文字列操作
 ├── builtin_vector.mbt     # ベクタ
 ├── ffi.js.mbt             # JavaScript FFI
-├── ffi.wasm-gc.mbt        # WASM FFI
+├── ffi.wasm.mbt           # WASM FFI
+├── ffi.wasm-gc.mbt        # WASM-GC FFI
 ├── main.mbt               # エントリポイント
 └── *_test.mbt             # テストファイル群
 ```
@@ -173,15 +180,19 @@ src/
 
 ## 次のマイルストーン
 
-**Phase 4 (R5RS 完全対応)** の優先順位:
+**Phase 4 残りの優先順位**:
 
-1. `do` ループ - 一般的な反復構造
-2. `delay` / `force` - 遅延評価の基盤
-3. `values` / `call-with-values` - 多値サポート
-4. ポート操作の完全実装 - ファイル I/O
+1. ~~`do` ループ~~ ✓
+2. ~~`delay` / `force`~~ ✓
+3. ~~`values` / `call-with-values`~~ ✓
+4. ~~`dynamic-wind`~~ ✓
 5. `syntax-rules` - マクロシステム
-6. `dynamic-wind` - 継続との統合
-7. 数値塔拡張 - 有理数/複素数
+6. 数値塔拡張 - 有理数/複素数
+7. ポート操作 / `load` - FFI 拡張が必要
+
+**Phase 5 (コンパイラ)** への移行準備:
+- 中間表現 (IR) の設計
+- 基本的なコンパイラパイプラインの構築
 
 ---
 

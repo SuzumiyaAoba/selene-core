@@ -218,5 +218,7 @@ fn map_value_to_string(value : Value) -> String {
     }
     Value::Vector(_) => "#(...)"
     Value::Procedure(_) => "#<procedure>"
+    Value::Promise(_) => "#<promise>"
+    Value::MultipleValues(_) => "#<values>"
   }
 }

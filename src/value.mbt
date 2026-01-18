@@ -64,6 +64,21 @@ pub fn get_continuation(id : Int) -> ContinuationState? {
   None
 }
 
+/// プロミス（遅延評価）を表す型。
+pub(all) struct Promise {
+  /// 評価済みかどうか
+  forced : Ref[Bool]
+  /// 遅延された式（未評価の場合）または結果（評価済みの場合）
+  /// 未評価: Left(expr, env), 評価済み: Right(value)
+  content : Ref[PromiseContent]
+} derive(Show)
+
+/// プロミスの内容
+pub(all) enum PromiseContent {
+  Delayed(SExpr, Env)
+  Forced(Value)
+} derive(Show)
+
 /// 評価器が扱う値の総和型。
 pub(all) enum Value {
   Nil
@@ -75,4 +90,7 @@ pub(all) enum Value {
   Pair(Value, Value)
   Vector(Array[Value])
   Procedure(Procedure)
+  Promise(Promise)
+  /// 多値（call-with-values で使用）
+  MultipleValues(Array[Value])
 } derive(Show)

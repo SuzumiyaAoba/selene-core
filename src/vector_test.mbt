@@ -349,5 +349,7 @@ fn vector_test_value_to_string(value : Value) -> String {
       result + ")"
     }
     Value::Procedure(_) => "#<procedure>"
+    Value::Promise(_) => "#<promise>"
+    Value::MultipleValues(_) => "#<values>"
   }
 }

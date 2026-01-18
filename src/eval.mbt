@@ -203,6 +203,8 @@ pub fn eval(expr : SExpr, env : Env) -> Result[Value, EvalError] {
         SExpr::Symbol("letrec") => eval_letrec(cdr, env)
         SExpr::Symbol("cond") => eval_cond(cdr, env)
         SExpr::Symbol("case") => eval_case(cdr, env)
+        SExpr::Symbol("do") => eval_do(cdr, env)
+        SExpr::Symbol("delay") => eval_delay(cdr, env)
         SExpr::Symbol("quote") => {
           // quote特殊形式: (quote expr)
           match cdr {
@@ -438,6 +440,11 @@ fn apply_builtin(name : String, args : Array[Value]) -> Result[Value, EvalError]
     "read" => builtin_read(args)
     "string->number" => builtin_string_to_number(args)
     "call/cc" | "call-with-current-continuation" => builtin_call_cc(args)
+    "force" => builtin_force(args)
+    "promise?" => builtin_promise_p(args)
+    "values" => builtin_values(args)
+    "call-with-values" => builtin_call_with_values(args)
+    "dynamic-wind" => builtin_dynamic_wind(args)
     _ => Err(EvalError::InvalidSyntax("unknown builtin: " + name))
   }
 }
@@ -604,5 +611,13 @@ pub fn initial_env() -> Env {
   // 継続
   let env = define_var(env, "call/cc", Value::Procedure(Procedure::Native("call/cc")))
   let env = define_var(env, "call-with-current-continuation", Value::Procedure(Procedure::Native("call-with-current-continuation")))
+  // 遅延評価
+  let env = define_var(env, "force", Value::Procedure(Procedure::Native("force")))
+  let env = define_var(env, "promise?", Value::Procedure(Procedure::Native("promise?")))
+  // 多値
+  let env = define_var(env, "values", Value::Procedure(Procedure::Native("values")))
+  let env = define_var(env, "call-with-values", Value::Procedure(Procedure::Native("call-with-values")))
+  // 動的スコープ
+  let env = define_var(env, "dynamic-wind", Value::Procedure(Procedure::Native("dynamic-wind")))
   env
 }

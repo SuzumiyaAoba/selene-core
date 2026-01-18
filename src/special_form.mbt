@@ -460,3 +460,195 @@ fn values_eqv(a : Value, b : Value) -> Bool {
     _ => false
   }
 }
+
+/// delay 特殊形式を評価する。
+/// (delay expr) - expr の評価を遅延し、プロミスを返す
+fn eval_delay(args : SExpr, env : Env) -> Result[Value, EvalError] {
+  match args {
+    SExpr::Pair(expr, SExpr::Nil) => {
+      // プロミスを作成（未評価状態）
+      let promise = Promise::{
+        forced: { val: false },
+        content: { val: PromiseContent::Delayed(expr, env) },
+      }
+      Ok(Value::Promise(promise))
+    }
+    _ => Err(EvalError::InvalidSyntax("delay: requires exactly one argument"))
+  }
+}
+
+/// do 特殊形式を評価する。
+/// (do ((var1 init1 step1) (var2 init2 step2) ...)
+///     (test expr ...)
+///   command ...)
+fn eval_do(args : SExpr, env : Env) -> Result[Value, EvalError] {
+  match args {
+    SExpr::Pair(bindings_expr, SExpr::Pair(test_clause, commands)) => {
+      // バインディングリストを解析
+      let var_names : Array[String] = []
+      let step_exprs : Array[SExpr?] = []
+      let init_values : Array[Value] = []
+
+      let parse_result = parse_do_bindings(bindings_expr, env, var_names, step_exprs, init_values)
+      match parse_result {
+        Err(e) => return Err(e)
+        Ok(_) => ()
+      }
+
+      // test 節を解析
+      let test_expr : SExpr = match test_clause {
+        SExpr::Pair(t, _) => t
+        _ => return Err(EvalError::InvalidSyntax("do: invalid test clause"))
+      }
+      let result_exprs : SExpr = match test_clause {
+        SExpr::Pair(_, results) => results
+        _ => return Err(EvalError::InvalidSyntax("do: invalid test clause"))
+      }
+
+      // 初期環境を作成
+      let bindings : Array[Binding] = []
+      let len = var_names.length()
+      let mut i = 0
+      while i < len {
+        bindings.push((var_names[i], init_values[i]))
+        i = i + 1
+      }
+      let mut loop_env = extend(env, bindings)
+
+      // ループ
+      while true {
+        // test を評価
+        let test_val = match eval(test_expr, loop_env) {
+          Ok(v) => v
+          Err(e) => return Err(e)
+        }
+
+        let is_true = match test_val {
+          Value::Bool(false) => false
+          _ => true
+        }
+
+        if is_true {
+          // test が真なら result を評価して返す
+          return eval_begin(result_exprs, loop_env)
+        }
+
+        // commands を実行
+        let cmd_result = eval_do_commands(commands, loop_env)
+        match cmd_result {
+          Err(e) => return Err(e)
+          Ok(_) => ()
+        }
+
+        // step 式を評価（並列に）
+        let new_values = eval_do_steps(step_exprs, var_names, loop_env)
+        match new_values {
+          Err(e) => return Err(e)
+          Ok(vals) => {
+            // 環境を更新
+            let new_bindings : Array[Binding] = []
+            let mut k = 0
+            while k < len {
+              new_bindings.push((var_names[k], vals[k]))
+              k = k + 1
+            }
+            loop_env = extend(env, new_bindings)
+          }
+        }
+      }
+
+      Ok(Value::Nil)
+    }
+    _ => Err(EvalError::InvalidSyntax("do: invalid syntax"))
+  }
+}
+
+/// do のバインディングリストをパースする
+fn parse_do_bindings(
+  bindings_expr : SExpr,
+  env : Env,
+  var_names : Array[String],
+  step_exprs : Array[SExpr?],
+  init_values : Array[Value]
+) -> Result[Unit, EvalError] {
+  let mut current = bindings_expr
+  while true {
+    match current {
+      SExpr::Nil => break
+      SExpr::Pair(binding, rest) => {
+        match binding {
+          // (var init step) の形式
+          SExpr::Pair(SExpr::Symbol(name), SExpr::Pair(init_expr, step_rest)) => {
+            var_names.push(name)
+            // init を評価
+            let init_val = match eval(init_expr, env) {
+              Ok(v) => v
+              Err(e) => return Err(e)
+            }
+            init_values.push(init_val)
+            // step があれば取得
+            match step_rest {
+              SExpr::Pair(step_expr, SExpr::Nil) => step_exprs.push(Some(step_expr))
+              SExpr::Nil => step_exprs.push(None)
+              _ => return Err(EvalError::InvalidSyntax("do: invalid binding"))
+            }
+            current = rest
+          }
+          _ => return Err(EvalError::InvalidSyntax("do: invalid binding"))
+        }
+      }
+      _ => return Err(EvalError::InvalidSyntax("do: bindings must be a list"))
+    }
+  }
+  Ok(())
+}
+
+/// do の commands を実行する
+fn eval_do_commands(commands : SExpr, env : Env) -> Result[Unit, EvalError] {
+  let mut cmd = commands
+  while true {
+    match cmd {
+      SExpr::Nil => break
+      SExpr::Pair(command, rest) => {
+        match eval(command, env) {
+          Ok(_) => ()
+          Err(e) => return Err(e)
+        }
+        cmd = rest
+      }
+      _ => return Err(EvalError::InvalidSyntax("do: invalid command"))
+    }
+  }
+  Ok(())
+}
+
+/// do の step 式を評価する
+fn eval_do_steps(
+  step_exprs : Array[SExpr?],
+  var_names : Array[String],
+  env : Env
+) -> Result[Array[Value], EvalError] {
+  let new_values : Array[Value] = []
+  let mut j = 0
+  let len = step_exprs.length()
+  while j < len {
+    let new_val = match step_exprs[j] {
+      Some(step_expr) => {
+        match eval(step_expr, env) {
+          Ok(v) => v
+          Err(e) => return Err(e)
+        }
+      }
+      None => {
+        // step がない場合は現在の値を維持
+        match lookup(env, var_names[j]) {
+          Some(v) => v
+          None => return Err(EvalError::UnboundVariable(var_names[j]))
+        }
+      }
+    }
+    new_values.push(new_val)
+    j = j + 1
+  }
+  Ok(new_values)
+}
