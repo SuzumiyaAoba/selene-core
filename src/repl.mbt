@@ -69,6 +69,7 @@ fn value_to_string(value : Value) -> String {
       }
       result + ">"
     }
+    Value::Syntax(_) => "#<syntax-rules>"
   }
 }
 

@@ -76,6 +76,7 @@ fn value_to_display_string(value : Value) -> String {
       }
       result + ">"
     }
+    Value::Syntax(_) => "#<syntax-rules>"
   }
 }
 
@@ -153,6 +154,7 @@ fn value_to_write_string(value : Value) -> String {
       }
       result + ">"
     }
+    Value::Syntax(_) => "#<syntax-rules>"
   }
 }
 

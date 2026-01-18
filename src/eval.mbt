@@ -205,6 +205,10 @@ pub fn eval(expr : SExpr, env : Env) -> Result[Value, EvalError] {
         SExpr::Symbol("case") => eval_case(cdr, env)
         SExpr::Symbol("do") => eval_do(cdr, env)
         SExpr::Symbol("delay") => eval_delay(cdr, env)
+        SExpr::Symbol("define-syntax") => eval_define_syntax(cdr, env)
+        SExpr::Symbol("let-syntax") => eval_let_syntax(cdr, env)
+        SExpr::Symbol("letrec-syntax") => eval_letrec_syntax(cdr, env)
+        SExpr::Symbol("syntax-rules") => eval_syntax_rules(cdr, env)
         SExpr::Symbol("quote") => {
           // quote特殊形式: (quote expr)
           match cdr {
@@ -220,6 +224,23 @@ pub fn eval(expr : SExpr, env : Env) -> Result[Value, EvalError] {
           }
         }
         _ => {
+          // マクロ展開のチェック
+          match car {
+            SExpr::Symbol(name) =>
+              match lookup(env, name) {
+                Some(Value::Syntax(syntax_rules)) => {
+                  // マクロ呼び出し：展開して評価
+                  let expanded = match expand_macro(syntax_rules, expr) {
+                    Ok(e) => e
+                    Err(e) => return Err(e)
+                  }
+                  return eval(expanded, env)
+                }
+                _ => ()
+              }
+            _ => ()
+          }
+
           // 通常の関数適用
           let op = match eval(car, env) {
             Ok(v) => v

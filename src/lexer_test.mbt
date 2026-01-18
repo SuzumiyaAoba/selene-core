@@ -33,6 +33,7 @@ fn token_snapshot(token : Token) -> String {
     Token::Quasiquote => "Quasiquote"
     Token::Unquote => "Unquote"
     Token::UnquoteSplicing => "UnquoteSplicing"
+    Token::Dot => "Dot"
   }
 }
 

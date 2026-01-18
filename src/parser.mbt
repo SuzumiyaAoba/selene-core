@@ -11,6 +11,20 @@ fn list_from_array(items : Array[SExpr]) -> SExpr {
   acc
 }
 
+/// 配列からペア（improper list対応）を構築する。
+/// 最後の要素が指定された場合、それをcdrとする。
+fn list_from_array_with_tail(items : Array[SExpr], tail : SExpr) -> SExpr {
+  let mut acc = tail
+  let mut i = items.length()
+  let _ = while i > 0 {
+    i = i - 1
+    acc = SExpr::Pair(items[i], acc)
+  } else {
+    ()
+  }
+  acc
+}
+
 /// トークン列から 1 式を読み、次の位置を返す。
 fn parse_expr(tokens : Array[Token], start : Int) -> (SExpr, Int) {
   if start >= tokens.length() {
@@ -25,16 +39,35 @@ fn parse_expr(tokens : Array[Token], start : Int) -> (SExpr, Int) {
           Token::RParen => {
             return (list_from_array(items), i + 1)
           }
+          Token::Dot => {
+            // improper list: (a b . c)
+            i = i + 1
+            let (tail_expr, next_i) = parse_expr(tokens, i)
+            // RParen を期待
+            if next_i < tokens.length() {
+              match tokens[next_i] {
+                Token::RParen => {
+                  return (list_from_array_with_tail(items, tail_expr), next_i + 1)
+                }
+                _ => panic() // ドットの後の式の後にはRParenが必要
+              }
+            } else {
+              panic() // ドットの後の式の後に何もない
+            }
+          }
           _ => {
             let (expr, next_i) = parse_expr(tokens, i)
             items.push(expr)
             i = next_i
           }
         }
-      } else { () }
+      } else {
+        ()
+      }
       panic()
     }
     Token::RParen => panic()
+    Token::Dot => panic() // リスト外でのドット
     Token::Boolean(b) => (SExpr::Bool(b), start + 1)
     Token::Identifier(name) => (SExpr::Symbol(name), start + 1)
     Token::Number(value) => (SExpr::Number(value), start + 1)

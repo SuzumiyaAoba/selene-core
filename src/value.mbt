@@ -117,6 +117,24 @@ pub(all) enum PromiseContent {
   Forced(Value)
 } derive(Show)
 
+/// 構文ルール（syntax-rules マクロ）
+pub(all) struct SyntaxRules {
+  /// リテラルキーワード（パターン内でそのままマッチする識別子）
+  literals : Array[String]
+  /// パターンとテンプレートのペアのリスト
+  rules : Array[SyntaxRule]
+  /// マクロ定義時の環境（衛生的マクロのため）
+  def_env : Env
+} derive(Show)
+
+/// 個々の構文ルール
+pub(all) struct SyntaxRule {
+  /// パターン（マクロ呼び出し形式）
+  pattern : SExpr
+  /// テンプレート（展開形式）
+  template : SExpr
+} derive(Show)
+
 /// 評価器が扱う値の総和型。
 pub(all) enum Value {
   Nil
@@ -131,4 +149,6 @@ pub(all) enum Value {
   Promise(Promise)
   /// 多値（call-with-values で使用）
   MultipleValues(Array[Value])
+  /// 構文トランスフォーマ（マクロ）
+  Syntax(SyntaxRules)
 } derive(Show)
