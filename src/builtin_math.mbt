@@ -106,41 +106,39 @@ fn builtin_expt(args : Array[Value]) -> Result[Value, EvalError] {
       }
     }
     _ => {
-      let b_real = match base {
-        Number::Int(n) => n.to_double()
-        Number::Real(r) => r
-      }
-      let e_real = match exp {
-        Number::Int(n) => n.to_double()
-        Number::Real(r) => r
-      }
+      let b_real = number_to_double(base)
+      let e_real = number_to_double(exp)
       Ok(Value::Number(Number::Real(b_real.pow(e_real))))
     }
   }
 }
 
 /// 組み込み関数: exact?
-/// (exact? z) - z が正確な数（整数）かどうかを判定
+/// (exact? z) - z が正確な数（整数または有理数）かどうかを判定
 fn builtin_exact_p(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("exact?: requires exactly 1 argument"))
   }
   match args[0] {
     Value::Number(Number::Int(_)) => Ok(Value::Bool(true))
+    Value::Number(Number::Rational(_, _)) => Ok(Value::Bool(true))
     Value::Number(Number::Real(_)) => Ok(Value::Bool(false))
+    Value::Number(Number::Complex(_, _)) => Ok(Value::Bool(false))
     _ => Err(EvalError::TypeError("exact?: argument must be a number"))
   }
 }
 
 /// 組み込み関数: inexact?
-/// (inexact? z) - z が不正確な数（実数）かどうかを判定
+/// (inexact? z) - z が不正確な数（実数または複素数）かどうかを判定
 fn builtin_inexact_p(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("inexact?: requires exactly 1 argument"))
   }
   match args[0] {
     Value::Number(Number::Int(_)) => Ok(Value::Bool(false))
+    Value::Number(Number::Rational(_, _)) => Ok(Value::Bool(false))
     Value::Number(Number::Real(_)) => Ok(Value::Bool(true))
+    Value::Number(Number::Complex(_, _)) => Ok(Value::Bool(true))
     _ => Err(EvalError::TypeError("inexact?: argument must be a number"))
   }
 }
@@ -254,14 +252,8 @@ fn builtin_atan(args : Array[Value]) -> Result[Value, EvalError] {
       Ok(n) => n
       Err(e) => return Err(e)
     }
-    let y_real = match y {
-      Number::Int(n) => n.to_double()
-      Number::Real(r) => r
-    }
-    let x_real = match x {
-      Number::Int(n) => n.to_double()
-      Number::Real(r) => r
-    }
+    let y_real = number_to_double(y)
+    let x_real = number_to_double(x)
     Ok(Value::Number(Number::Real(@math.atan2(y_real, x_real))))
   } else {
     Err(EvalError::ArityError("atan: requires 1 or 2 arguments"))
@@ -299,5 +291,168 @@ fn builtin_log(args : Array[Value]) -> Result[Value, EvalError] {
     Value::Number(Number::Real(r)) =>
       Ok(Value::Number(Number::Real(@math.ln(r))))
     _ => Err(EvalError::TypeError("log: argument must be a number"))
+  }
+}
+
+// =============================================================================
+// 複素数関連の組み込み関数
+// =============================================================================
+
+/// 組み込み関数: make-rectangular
+/// (make-rectangular real imag) - 実部と虚部から複素数を作成
+fn builtin_make_rectangular(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 2 {
+    return Err(EvalError::ArityError("make-rectangular: requires exactly 2 arguments"))
+  }
+  let real = match args[0] {
+    Value::Number(n) => number_to_double(n)
+    _ => return Err(EvalError::TypeError("make-rectangular: arguments must be numbers"))
+  }
+  let imag = match args[1] {
+    Value::Number(n) => number_to_double(n)
+    _ => return Err(EvalError::TypeError("make-rectangular: arguments must be numbers"))
+  }
+  Ok(Value::Number(normalize_complex(real, imag)))
+}
+
+/// 組み込み関数: make-polar
+/// (make-polar magnitude angle) - 極形式から複素数を作成
+fn builtin_make_polar(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 2 {
+    return Err(EvalError::ArityError("make-polar: requires exactly 2 arguments"))
+  }
+  let mag = match args[0] {
+    Value::Number(n) => number_to_double(n)
+    _ => return Err(EvalError::TypeError("make-polar: arguments must be numbers"))
+  }
+  let angle = match args[1] {
+    Value::Number(n) => number_to_double(n)
+    _ => return Err(EvalError::TypeError("make-polar: arguments must be numbers"))
+  }
+  let real = mag * @math.cos(angle)
+  let imag = mag * @math.sin(angle)
+  Ok(Value::Number(normalize_complex(real, imag)))
+}
+
+/// 組み込み関数: real-part
+/// (real-part z) - 複素数の実部を取得
+fn builtin_real_part(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 1 {
+    return Err(EvalError::ArityError("real-part: requires exactly 1 argument"))
+  }
+  match args[0] {
+    Value::Number(Number::Complex(r, _)) => Ok(Value::Number(Number::Real(r)))
+    Value::Number(n) => Ok(Value::Number(Number::Real(number_to_double(n))))
+    _ => Err(EvalError::TypeError("real-part: argument must be a number"))
+  }
+}
+
+/// 組み込み関数: imag-part
+/// (imag-part z) - 複素数の虚部を取得
+fn builtin_imag_part(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 1 {
+    return Err(EvalError::ArityError("imag-part: requires exactly 1 argument"))
+  }
+  match args[0] {
+    Value::Number(Number::Complex(_, i)) => Ok(Value::Number(Number::Real(i)))
+    Value::Number(_) => Ok(Value::Number(Number::Real(0.0))) // 実数の虚部は0
+    _ => Err(EvalError::TypeError("imag-part: argument must be a number"))
+  }
+}
+
+/// 組み込み関数: magnitude
+/// (magnitude z) - 複素数の絶対値を取得
+fn builtin_magnitude(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 1 {
+    return Err(EvalError::ArityError("magnitude: requires exactly 1 argument"))
+  }
+  match args[0] {
+    Value::Number(Number::Complex(r, i)) => {
+      let mag = (r * r + i * i).sqrt()
+      Ok(Value::Number(Number::Real(mag)))
+    }
+    Value::Number(n) => {
+      let v = number_to_double(n)
+      Ok(Value::Number(Number::Real(if v < 0.0 { -v } else { v })))
+    }
+    _ => Err(EvalError::TypeError("magnitude: argument must be a number"))
+  }
+}
+
+/// 組み込み関数: angle
+/// (angle z) - 複素数の偏角を取得
+fn builtin_angle(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 1 {
+    return Err(EvalError::ArityError("angle: requires exactly 1 argument"))
+  }
+  match args[0] {
+    Value::Number(Number::Complex(r, i)) => {
+      Ok(Value::Number(Number::Real(@math.atan2(i, r))))
+    }
+    Value::Number(n) => {
+      // 実数の偏角は 0 または π
+      let v = number_to_double(n)
+      if v >= 0.0 {
+        Ok(Value::Number(Number::Real(0.0)))
+      } else {
+        Ok(Value::Number(Number::Real(@math.PI)))
+      }
+    }
+    _ => Err(EvalError::TypeError("angle: argument must be a number"))
+  }
+}
+
+/// 組み込み関数: complex?
+/// (complex? obj) - obj が複素数かどうかを判定（すべての数は複素数）
+fn builtin_complex_p(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 1 {
+    return Err(EvalError::ArityError("complex?: requires exactly 1 argument"))
+  }
+  match args[0] {
+    Value::Number(_) => Ok(Value::Bool(true)) // すべての数は複素数のサブセット
+    _ => Ok(Value::Bool(false))
+  }
+}
+
+// =============================================================================
+// 有理数関連の組み込み関数
+// =============================================================================
+
+/// 組み込み関数: numerator
+/// (numerator q) - 有理数の分子を取得
+fn builtin_numerator(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 1 {
+    return Err(EvalError::ArityError("numerator: requires exactly 1 argument"))
+  }
+  match args[0] {
+    Value::Number(Number::Int(n)) => Ok(Value::Number(Number::Int(n)))
+    Value::Number(Number::Rational(num, _)) => Ok(Value::Number(Number::Int(num)))
+    _ => Err(EvalError::TypeError("numerator: argument must be an integer or rational"))
+  }
+}
+
+/// 組み込み関数: denominator
+/// (denominator q) - 有理数の分母を取得
+fn builtin_denominator(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 1 {
+    return Err(EvalError::ArityError("denominator: requires exactly 1 argument"))
+  }
+  match args[0] {
+    Value::Number(Number::Int(_)) => Ok(Value::Number(Number::Int(1)))
+    Value::Number(Number::Rational(_, den)) => Ok(Value::Number(Number::Int(den)))
+    _ => Err(EvalError::TypeError("denominator: argument must be an integer or rational"))
+  }
+}
+
+/// 組み込み関数: rational?
+/// (rational? obj) - obj が有理数かどうかを判定
+fn builtin_rational_p(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 1 {
+    return Err(EvalError::ArityError("rational?: requires exactly 1 argument"))
+  }
+  match args[0] {
+    Value::Number(Number::Int(_)) => Ok(Value::Bool(true))
+    Value::Number(Number::Rational(_, _)) => Ok(Value::Bool(true))
+    _ => Ok(Value::Bool(false))
   }
 }

@@ -10,71 +10,170 @@ fn expect_number(value : Value) -> Result[Number, EvalError] {
   }
 }
 
-/// 整数演算（簡易版）。
+/// 数値を Double に変換する
+fn number_to_double(n : Number) -> Double {
+  match n {
+    Number::Int(x) => x.to_double()
+    Number::Rational(num, den) => num.to_double() / den.to_double()
+    Number::Real(x) => x
+    Number::Complex(r, _) => r // 実部のみ
+  }
+}
+
+/// 数値が複素数かどうか
+fn is_complex(n : Number) -> Bool {
+  match n {
+    Number::Complex(_, _) => true
+    _ => false
+  }
+}
+
+/// 数値から複素数の実部と虚部を取得
+fn to_complex_parts(n : Number) -> (Double, Double) {
+  match n {
+    Number::Int(x) => (x.to_double(), 0.0)
+    Number::Rational(num, den) => (num.to_double() / den.to_double(), 0.0)
+    Number::Real(x) => (x, 0.0)
+    Number::Complex(r, i) => (r, i)
+  }
+}
+
+/// 複素数の結果を正規化（虚部が0なら実数に）
+fn normalize_complex(r : Double, i : Double) -> Number {
+  if i == 0.0 {
+    Number::Real(r)
+  } else {
+    Number::Complex(r, i)
+  }
+}
+
+/// 整数演算（拡張版：有理数・複素数対応）
 fn add_numbers(a : Number, b : Number) -> Number {
+  // 複素数が含まれる場合
+  if is_complex(a) || is_complex(b) {
+    let (ar, ai) = to_complex_parts(a)
+    let (br, bi) = to_complex_parts(b)
+    return normalize_complex(ar + br, ai + bi)
+  }
   match (a, b) {
     (Number::Int(x), Number::Int(y)) => Number::Int(x + y)
     (Number::Real(x), Number::Real(y)) => Number::Real(x + y)
     (Number::Int(x), Number::Real(y)) => Number::Real(x.to_double() + y)
     (Number::Real(x), Number::Int(y)) => Number::Real(x + y.to_double())
+    // 有理数の加算
+    (Number::Rational(n1, d1), Number::Rational(n2, d2)) =>
+      normalize_rational(n1 * d2 + n2 * d1, d1 * d2)
+    (Number::Int(x), Number::Rational(n, d)) =>
+      normalize_rational(x * d + n, d)
+    (Number::Rational(n, d), Number::Int(y)) =>
+      normalize_rational(n + y * d, d)
+    (Number::Real(x), Number::Rational(n, d)) =>
+      Number::Real(x + n.to_double() / d.to_double())
+    (Number::Rational(n, d), Number::Real(y)) =>
+      Number::Real(n.to_double() / d.to_double() + y)
+    // 複素数は上で処理済み
+    (Number::Complex(_, _), _) => Number::Int(0) // unreachable
+    (_, Number::Complex(_, _)) => Number::Int(0) // unreachable
   }
 }
 
 fn sub_numbers(a : Number, b : Number) -> Number {
+  if is_complex(a) || is_complex(b) {
+    let (ar, ai) = to_complex_parts(a)
+    let (br, bi) = to_complex_parts(b)
+    return normalize_complex(ar - br, ai - bi)
+  }
   match (a, b) {
     (Number::Int(x), Number::Int(y)) => Number::Int(x - y)
     (Number::Real(x), Number::Real(y)) => Number::Real(x - y)
     (Number::Int(x), Number::Real(y)) => Number::Real(x.to_double() - y)
     (Number::Real(x), Number::Int(y)) => Number::Real(x - y.to_double())
+    (Number::Rational(n1, d1), Number::Rational(n2, d2)) =>
+      normalize_rational(n1 * d2 - n2 * d1, d1 * d2)
+    (Number::Int(x), Number::Rational(n, d)) =>
+      normalize_rational(x * d - n, d)
+    (Number::Rational(n, d), Number::Int(y)) =>
+      normalize_rational(n - y * d, d)
+    (Number::Real(x), Number::Rational(n, d)) =>
+      Number::Real(x - n.to_double() / d.to_double())
+    (Number::Rational(n, d), Number::Real(y)) =>
+      Number::Real(n.to_double() / d.to_double() - y)
+    (Number::Complex(_, _), _) => Number::Int(0)
+    (_, Number::Complex(_, _)) => Number::Int(0)
   }
 }
 
 fn mul_numbers(a : Number, b : Number) -> Number {
+  if is_complex(a) || is_complex(b) {
+    let (ar, ai) = to_complex_parts(a)
+    let (br, bi) = to_complex_parts(b)
+    // (ar + ai*i) * (br + bi*i) = (ar*br - ai*bi) + (ar*bi + ai*br)*i
+    return normalize_complex(ar * br - ai * bi, ar * bi + ai * br)
+  }
   match (a, b) {
     (Number::Int(x), Number::Int(y)) => Number::Int(x * y)
     (Number::Real(x), Number::Real(y)) => Number::Real(x * y)
     (Number::Int(x), Number::Real(y)) => Number::Real(x.to_double() * y)
     (Number::Real(x), Number::Int(y)) => Number::Real(x * y.to_double())
+    (Number::Rational(n1, d1), Number::Rational(n2, d2)) =>
+      normalize_rational(n1 * n2, d1 * d2)
+    (Number::Int(x), Number::Rational(n, d)) =>
+      normalize_rational(x * n, d)
+    (Number::Rational(n, d), Number::Int(y)) =>
+      normalize_rational(n * y, d)
+    (Number::Real(x), Number::Rational(n, d)) =>
+      Number::Real(x * n.to_double() / d.to_double())
+    (Number::Rational(n, d), Number::Real(y)) =>
+      Number::Real(n.to_double() / d.to_double() * y)
+    (Number::Complex(_, _), _) => Number::Int(0)
+    (_, Number::Complex(_, _)) => Number::Int(0)
   }
 }
 
 fn div_numbers(a : Number, b : Number) -> Number {
+  if is_complex(a) || is_complex(b) {
+    let (ar, ai) = to_complex_parts(a)
+    let (br, bi) = to_complex_parts(b)
+    // (ar + ai*i) / (br + bi*i) = ((ar*br + ai*bi) + (ai*br - ar*bi)*i) / (br^2 + bi^2)
+    let denom = br * br + bi * bi
+    return normalize_complex((ar * br + ai * bi) / denom, (ai * br - ar * bi) / denom)
+  }
   match (a, b) {
-    (Number::Int(x), Number::Int(y)) => Number::Int(x / y)
+    (Number::Int(x), Number::Int(y)) =>
+      // 整数除算で割り切れない場合は有理数を返す
+      if x % y == 0 {
+        Number::Int(x / y)
+      } else {
+        normalize_rational(x, y)
+      }
     (Number::Real(x), Number::Real(y)) => Number::Real(x / y)
     (Number::Int(x), Number::Real(y)) => Number::Real(x.to_double() / y)
     (Number::Real(x), Number::Int(y)) => Number::Real(x / y.to_double())
+    (Number::Rational(n1, d1), Number::Rational(n2, d2)) =>
+      normalize_rational(n1 * d2, d1 * n2)
+    (Number::Int(x), Number::Rational(n, d)) =>
+      normalize_rational(x * d, n)
+    (Number::Rational(n, d), Number::Int(y)) =>
+      normalize_rational(n, d * y)
+    (Number::Real(x), Number::Rational(n, d)) =>
+      Number::Real(x * d.to_double() / n.to_double())
+    (Number::Rational(n, d), Number::Real(y)) =>
+      Number::Real(n.to_double() / d.to_double() / y)
+    (Number::Complex(_, _), _) => Number::Int(0)
+    (_, Number::Complex(_, _)) => Number::Int(0)
   }
 }
 
 fn max_numbers(a : Number, b : Number) -> Number {
-  match (a, b) {
-    (Number::Int(x), Number::Int(y)) => Number::Int(if x > y { x } else { y })
-    (Number::Real(x), Number::Real(y)) => Number::Real(if x > y { x } else { y })
-    (Number::Int(x), Number::Real(y)) => {
-      let x_real = x.to_double()
-      Number::Real(if x_real > y { x_real } else { y })
-    }
-    (Number::Real(x), Number::Int(y)) => {
-      let y_real = y.to_double()
-      Number::Real(if x > y_real { x } else { y_real })
-    }
-  }
+  let av = number_to_double(a)
+  let bv = number_to_double(b)
+  if av > bv { a } else { b }
 }
 
 fn min_numbers(a : Number, b : Number) -> Number {
-  match (a, b) {
-    (Number::Int(x), Number::Int(y)) => Number::Int(if x < y { x } else { y })
-    (Number::Real(x), Number::Real(y)) => Number::Real(if x < y { x } else { y })
-    (Number::Int(x), Number::Real(y)) => {
-      let x_real = x.to_double()
-      Number::Real(if x_real < y { x_real } else { y })
-    }
-    (Number::Real(x), Number::Int(y)) => {
-      let y_real = y.to_double()
-      Number::Real(if x < y_real { x } else { y_real })
-    }
-  }
+  let av = number_to_double(a)
+  let bv = number_to_double(b)
+  if av < bv { a } else { b }
 }
 
 /// 組み込み関数: +
@@ -115,7 +214,9 @@ fn builtin_sub(args : Array[Value]) -> Result[Value, EvalError] {
       Value::Number(
         match num {
           Number::Int(x) => Number::Int(-x)
+          Number::Rational(n, d) => Number::Rational(-n, d)
           Number::Real(x) => Number::Real(-x)
+          Number::Complex(r, i) => Number::Complex(-r, -i)
         },
       ),
     )
@@ -176,8 +277,13 @@ fn builtin_div(args : Array[Value]) -> Result[Value, EvalError] {
     return Ok(
       Value::Number(
         match num {
-          Number::Int(x) => Number::Int(1 / x)
+          Number::Int(x) => normalize_rational(1, x)
+          Number::Rational(n, d) => normalize_rational(d, n)
           Number::Real(x) => Number::Real(1.0 / x)
+          Number::Complex(r, i) => {
+            let denom = r * r + i * i
+            Number::Complex(r / denom, -i / denom)
+          }
         },
       ),
     )
@@ -289,7 +395,13 @@ fn builtin_abs(args : Array[Value]) -> Result[Value, EvalError] {
     Value::Number(
       match num {
         Number::Int(x) => Number::Int(if x < 0 { -x } else { x })
+        Number::Rational(n, d) => Number::Rational(if n < 0 { -n } else { n }, d)
         Number::Real(x) => Number::Real(if x < 0.0 { -x } else { x })
+        Number::Complex(r, i) => {
+          // 複素数の絶対値は実数になる
+          let mag = (r * r + i * i).sqrt()
+          Number::Real(mag)
+        }
       },
     ),
   )
@@ -429,46 +541,30 @@ fn builtin_lcm(args : Array[Value]) -> Result[Value, EvalError] {
 
 /// 数値比較の補助関数
 fn compare_numbers(op : String, a : Number, b : Number) -> Bool {
+  // 複素数は = のみ比較可能
   match (a, b) {
-    (Number::Int(x), Number::Int(y)) => {
+    (Number::Complex(ar, ai), Number::Complex(br, bi)) => {
       match op {
-        "=" => x == y
-        "<" => x < y
-        ">" => x > y
-        "<=" => x <= y
-        ">=" => x >= y
+        "=" => ar == br && ai == bi
+        _ => false // 複素数は順序比較できない
+      }
+    }
+    (Number::Complex(_, _), _) | (_, Number::Complex(_, _)) => {
+      match op {
+        "=" => false // 複素数と非複素数は等しくない
         _ => false
       }
     }
-    (Number::Real(x), Number::Real(y)) => {
+    _ => {
+      // 実数に変換して比較
+      let av = number_to_double(a)
+      let bv = number_to_double(b)
       match op {
-        "=" => x == y
-        "<" => x < y
-        ">" => x > y
-        "<=" => x <= y
-        ">=" => x >= y
-        _ => false
-      }
-    }
-    (Number::Int(x), Number::Real(y)) => {
-      let xd = x.to_double()
-      match op {
-        "=" => xd == y
-        "<" => xd < y
-        ">" => xd > y
-        "<=" => xd <= y
-        ">=" => xd >= y
-        _ => false
-      }
-    }
-    (Number::Real(x), Number::Int(y)) => {
-      let yd = y.to_double()
-      match op {
-        "=" => x == yd
-        "<" => x < yd
-        ">" => x > yd
-        "<=" => x <= yd
-        ">=" => x >= yd
+        "=" => av == bv
+        "<" => av < bv
+        ">" => av > bv
+        "<=" => av <= bv
+        ">=" => av >= bv
         _ => false
       }
     }

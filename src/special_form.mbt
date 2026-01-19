@@ -652,3 +652,164 @@ fn eval_do_steps(
   }
   Ok(new_values)
 }
+
+/// define-syntax 特殊形式: (define-syntax name transformer)
+/// マクロを定義する
+/// 注: この実装は環境を返せないため、式コンテキストでは使用できません。
+/// REPLで特別に処理される必要があります。
+fn eval_define_syntax(_args : SExpr, _env : Env) -> Result[Value, EvalError] {
+  Err(
+    EvalError::InvalidSyntax(
+      "define-syntax: not supported in expression context (use REPL)",
+    ),
+  )
+}
+
+/// let-syntax 特殊形式: (let-syntax ((name transformer) ...) body)
+/// ローカルマクロを定義する
+fn eval_let_syntax(args : SExpr, env : Env) -> Result[Value, EvalError] {
+  match args {
+    SExpr::Pair(bindings_sexpr, body_rest) => {
+      // バインディングを処理
+      let new_bindings : Array[Binding] = []
+      let mut current = bindings_sexpr
+      let _ = while true {
+        match current {
+          SExpr::Nil => break
+          SExpr::Pair(binding, rest) => {
+            match binding {
+              SExpr::Pair(
+                SExpr::Symbol(name),
+                SExpr::Pair(transformer_expr, SExpr::Nil)
+              ) => {
+                // トランスフォーマを現在の環境で評価
+                let transformer = match eval(transformer_expr, env) {
+                  Ok(Value::Syntax(rules)) => rules
+                  Ok(_) =>
+                    return Err(
+                      EvalError::InvalidSyntax(
+                        "let-syntax: transformer must be a syntax-rules",
+                      ),
+                    )
+                  Err(e) => return Err(e)
+                }
+                new_bindings.push((name, Value::Syntax(transformer)))
+              }
+              _ =>
+                return Err(
+                  EvalError::InvalidSyntax(
+                    "let-syntax: invalid binding",
+                  ),
+                )
+            }
+            current = rest
+          }
+          _ => return Err(EvalError::InvalidSyntax("let-syntax: invalid bindings list"))
+        }
+      } else {
+        ()
+      }
+
+      // 新しい環境を作成
+      let new_env = extend(env, new_bindings)
+
+      // ボディを評価（begin と同様）
+      eval_body(body_rest, new_env)
+    }
+    _ => Err(EvalError::InvalidSyntax("let-syntax: expected bindings and body"))
+  }
+}
+
+/// letrec-syntax 特殊形式: (letrec-syntax ((name transformer) ...) body)
+/// 再帰的なローカルマクロを定義する
+fn eval_letrec_syntax(args : SExpr, env : Env) -> Result[Value, EvalError] {
+  match args {
+    SExpr::Pair(bindings_sexpr, body_rest) => {
+      // まず新しい環境を作成（未定義の値でバインド）
+      let binding_names : Array[String] = []
+      let transformer_exprs : Array[SExpr] = []
+      let mut current = bindings_sexpr
+      let _ = while true {
+        match current {
+          SExpr::Nil => break
+          SExpr::Pair(binding, rest) => {
+            match binding {
+              SExpr::Pair(
+                SExpr::Symbol(name),
+                SExpr::Pair(transformer_expr, SExpr::Nil)
+              ) => {
+                binding_names.push(name)
+                transformer_exprs.push(transformer_expr)
+              }
+              _ =>
+                return Err(
+                  EvalError::InvalidSyntax(
+                    "letrec-syntax: invalid binding",
+                  ),
+                )
+            }
+            current = rest
+          }
+          _ =>
+            return Err(EvalError::InvalidSyntax("letrec-syntax: invalid bindings list"))
+        }
+      } else {
+        ()
+      }
+
+      // 未定義の値で新しい環境を作成
+      let placeholder_bindings : Array[Binding] = []
+      for name in binding_names {
+        placeholder_bindings.push((name, Value::Nil))
+      }
+      let new_env = extend(env, placeholder_bindings)
+
+      // 新しい環境でトランスフォーマを評価し、フレームを直接更新
+      let mut i = 0
+      let len = binding_names.length()
+      let _ = while i < len {
+        let transformer = match eval(transformer_exprs[i], new_env) {
+          Ok(Value::Syntax(rules)) => rules
+          Ok(_) =>
+            return Err(
+              EvalError::InvalidSyntax(
+                "letrec-syntax: transformer must be a syntax-rules",
+              ),
+            )
+          Err(e) => return Err(e)
+        }
+        // フレームを直接更新
+        new_env.frame[i] = (binding_names[i], Value::Syntax(transformer))
+        i = i + 1
+      } else {
+        ()
+      }
+
+      // ボディを評価
+      eval_body(body_rest, new_env)
+    }
+    _ => Err(EvalError::InvalidSyntax("letrec-syntax: expected bindings and body"))
+  }
+}
+
+/// ボディ（式のリスト）を評価し、最後の式の値を返す
+fn eval_body(body : SExpr, env : Env) -> Result[Value, EvalError] {
+  let mut result = Value::Nil
+  let mut current = body
+  let _ = while true {
+    match current {
+      SExpr::Nil => break
+      SExpr::Pair(expr, rest) => {
+        result = match eval(expr, env) {
+          Ok(v) => v
+          Err(e) => return Err(e)
+        }
+        current = rest
+      }
+      _ => return Err(EvalError::InvalidSyntax("invalid body"))
+    }
+  } else {
+    ()
+  }
+  Ok(result)
+}

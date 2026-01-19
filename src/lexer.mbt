@@ -195,6 +195,20 @@ pub fn tokenize(input : String) -> Array[Token] {
       } else { () }
       continue
     }
+    // ドットの処理（improper list または ellipsis）
+    if ch == '.' {
+      // ...（ellipsis）かチェック
+      if i + 2 < len && chars[i + 1] == '.' && chars[i + 2] == '.' {
+        tokens.push(Token::Identifier("..."))
+        i = i + 3
+        continue
+      } else {
+        // 単一のドット（improper list）
+        tokens.push(Token::Dot)
+        i = i + 1
+        continue
+      }
+    }
     if is_digit(ch) {
       let mut value = 0
       let _ = while i < len && is_digit(chars[i]) {

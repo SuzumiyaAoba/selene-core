@@ -309,7 +309,14 @@ fn vector_test_value_to_string(value : Value) -> String {
     Value::Nil => "()"
     Value::Bool(b) => if b { "#t" } else { "#f" }
     Value::Number(Number::Int(n)) => n.to_string()
+    Value::Number(Number::Rational(num, den)) => num.to_string() + "/" + den.to_string()
     Value::Number(Number::Real(r)) => r.to_string()
+    Value::Number(Number::Complex(r, i)) =>
+      if i >= 0.0 {
+        r.to_string() + "+" + i.to_string() + "i"
+      } else {
+        r.to_string() + i.to_string() + "i"
+      }
     Value::Char(c) => "#\\" + c.to_string()
     Value::String(s) => "\"" + s + "\""
     Value::Symbol(s) => s
@@ -351,5 +358,6 @@ fn vector_test_value_to_string(value : Value) -> String {
     Value::Procedure(_) => "#<procedure>"
     Value::Promise(_) => "#<promise>"
     Value::MultipleValues(_) => "#<values>"
+    Value::Syntax(_) => "#<syntax-rules>"
   }
 }

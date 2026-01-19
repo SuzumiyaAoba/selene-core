@@ -205,6 +205,10 @@ pub fn eval(expr : SExpr, env : Env) -> Result[Value, EvalError] {
         SExpr::Symbol("case") => eval_case(cdr, env)
         SExpr::Symbol("do") => eval_do(cdr, env)
         SExpr::Symbol("delay") => eval_delay(cdr, env)
+        SExpr::Symbol("define-syntax") => eval_define_syntax(cdr, env)
+        SExpr::Symbol("let-syntax") => eval_let_syntax(cdr, env)
+        SExpr::Symbol("letrec-syntax") => eval_letrec_syntax(cdr, env)
+        SExpr::Symbol("syntax-rules") => eval_syntax_rules(cdr, env)
         SExpr::Symbol("quote") => {
           // quote特殊形式: (quote expr)
           match cdr {
@@ -220,6 +224,23 @@ pub fn eval(expr : SExpr, env : Env) -> Result[Value, EvalError] {
           }
         }
         _ => {
+          // マクロ展開のチェック
+          match car {
+            SExpr::Symbol(name) =>
+              match lookup(env, name) {
+                Some(Value::Syntax(syntax_rules)) => {
+                  // マクロ呼び出し：展開して評価
+                  let expanded = match expand_macro(syntax_rules, expr) {
+                    Ok(e) => e
+                    Err(e) => return Err(e)
+                  }
+                  return eval(expanded, env)
+                }
+                _ => ()
+              }
+            _ => ()
+          }
+
           // 通常の関数適用
           let op = match eval(car, env) {
             Ok(v) => v
@@ -445,6 +466,18 @@ fn apply_builtin(name : String, args : Array[Value]) -> Result[Value, EvalError]
     "values" => builtin_values(args)
     "call-with-values" => builtin_call_with_values(args)
     "dynamic-wind" => builtin_dynamic_wind(args)
+    // 複素数関連
+    "make-rectangular" => builtin_make_rectangular(args)
+    "make-polar" => builtin_make_polar(args)
+    "real-part" => builtin_real_part(args)
+    "imag-part" => builtin_imag_part(args)
+    "magnitude" => builtin_magnitude(args)
+    "angle" => builtin_angle(args)
+    "complex?" => builtin_complex_p(args)
+    // 有理数関連
+    "numerator" => builtin_numerator(args)
+    "denominator" => builtin_denominator(args)
+    "rational?" => builtin_rational_p(args)
     _ => Err(EvalError::InvalidSyntax("unknown builtin: " + name))
   }
 }
@@ -619,5 +652,17 @@ pub fn initial_env() -> Env {
   let env = define_var(env, "call-with-values", Value::Procedure(Procedure::Native("call-with-values")))
   // 動的スコープ
   let env = define_var(env, "dynamic-wind", Value::Procedure(Procedure::Native("dynamic-wind")))
+  // 複素数関連
+  let env = define_var(env, "make-rectangular", Value::Procedure(Procedure::Native("make-rectangular")))
+  let env = define_var(env, "make-polar", Value::Procedure(Procedure::Native("make-polar")))
+  let env = define_var(env, "real-part", Value::Procedure(Procedure::Native("real-part")))
+  let env = define_var(env, "imag-part", Value::Procedure(Procedure::Native("imag-part")))
+  let env = define_var(env, "magnitude", Value::Procedure(Procedure::Native("magnitude")))
+  let env = define_var(env, "angle", Value::Procedure(Procedure::Native("angle")))
+  let env = define_var(env, "complex?", Value::Procedure(Procedure::Native("complex?")))
+  // 有理数関連
+  let env = define_var(env, "numerator", Value::Procedure(Procedure::Native("numerator")))
+  let env = define_var(env, "denominator", Value::Procedure(Procedure::Native("denominator")))
+  let env = define_var(env, "rational?", Value::Procedure(Procedure::Native("rational?")))
   env
 }

@@ -11,4 +11,5 @@ pub enum Token {
   Quasiquote      // `
   Unquote         // ,
   UnquoteSplicing // ,@
+  Dot             // . (improper list notation)
 } derive(Show, Eq)
