@@ -135,6 +135,34 @@ pub(all) struct SyntaxRule {
   template : SExpr
 } derive(Show)
 
+/// ポートの方向
+pub(all) enum PortDirection {
+  Input
+  Output
+} derive(Show, Eq)
+
+/// ポート（入出力）を表す型
+pub(all) struct Port {
+  /// ポートの一意識別子
+  id : Int
+  /// 入力/出力
+  direction : PortDirection
+  /// 開いているかどうか
+  open : Ref[Bool]
+  /// ポート名（ファイル名など）
+  name : String
+} derive(Show)
+
+/// ポートカウンタ（グローバル）
+let port_counter : Ref[Int] = { val: 0 }
+
+/// 新しいポートIDを生成する
+pub fn new_port_id() -> Int {
+  let id = port_counter.val
+  port_counter.val = port_counter.val + 1
+  id
+}
+
 /// 評価器が扱う値の総和型。
 pub(all) enum Value {
   Nil
@@ -151,4 +179,6 @@ pub(all) enum Value {
   MultipleValues(Array[Value])
   /// 構文トランスフォーマ（マクロ）
   Syntax(SyntaxRules)
+  /// ポート（入出力）
+  Port(Port)
 } derive(Show)

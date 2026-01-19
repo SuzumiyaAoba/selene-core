@@ -209,6 +209,7 @@ pub fn eval(expr : SExpr, env : Env) -> Result[Value, EvalError] {
         SExpr::Symbol("let-syntax") => eval_let_syntax(cdr, env)
         SExpr::Symbol("letrec-syntax") => eval_letrec_syntax(cdr, env)
         SExpr::Symbol("syntax-rules") => eval_syntax_rules(cdr, env)
+        SExpr::Symbol("load") => eval_load(cdr, env)
         SExpr::Symbol("quote") => {
           // quote特殊形式: (quote expr)
           match cdr {
@@ -478,6 +479,18 @@ fn apply_builtin(name : String, args : Array[Value]) -> Result[Value, EvalError]
     "numerator" => builtin_numerator(args)
     "denominator" => builtin_denominator(args)
     "rational?" => builtin_rational_p(args)
+    // ポート操作
+    "input-port?" => builtin_input_port_p(args)
+    "output-port?" => builtin_output_port_p(args)
+    "port?" => builtin_port_p(args)
+    "open-input-file" => builtin_open_input_file(args)
+    "open-output-file" => builtin_open_output_file(args)
+    "close-input-port" => builtin_close_input_port(args)
+    "close-output-port" => builtin_close_output_port(args)
+    "read-char" => builtin_read_char(args)
+    "peek-char" => builtin_peek_char(args)
+    "eof-object?" => builtin_eof_object_p(args)
+    "write-char" => builtin_write_char_port(args)
     _ => Err(EvalError::InvalidSyntax("unknown builtin: " + name))
   }
 }
@@ -664,5 +677,17 @@ pub fn initial_env() -> Env {
   let env = define_var(env, "numerator", Value::Procedure(Procedure::Native("numerator")))
   let env = define_var(env, "denominator", Value::Procedure(Procedure::Native("denominator")))
   let env = define_var(env, "rational?", Value::Procedure(Procedure::Native("rational?")))
+  // ポート操作
+  let env = define_var(env, "input-port?", Value::Procedure(Procedure::Native("input-port?")))
+  let env = define_var(env, "output-port?", Value::Procedure(Procedure::Native("output-port?")))
+  let env = define_var(env, "port?", Value::Procedure(Procedure::Native("port?")))
+  let env = define_var(env, "open-input-file", Value::Procedure(Procedure::Native("open-input-file")))
+  let env = define_var(env, "open-output-file", Value::Procedure(Procedure::Native("open-output-file")))
+  let env = define_var(env, "close-input-port", Value::Procedure(Procedure::Native("close-input-port")))
+  let env = define_var(env, "close-output-port", Value::Procedure(Procedure::Native("close-output-port")))
+  let env = define_var(env, "read-char", Value::Procedure(Procedure::Native("read-char")))
+  let env = define_var(env, "peek-char", Value::Procedure(Procedure::Native("peek-char")))
+  let env = define_var(env, "eof-object?", Value::Procedure(Procedure::Native("eof-object?")))
+  let env = define_var(env, "write-char", Value::Procedure(Procedure::Native("write-char")))
   env
 }
