@@ -813,3 +813,74 @@ fn eval_body(body : SExpr, env : Env) -> Result[Value, EvalError] {
   }
   Ok(result)
 }
+
+/// load 特殊形式: (load "filename")
+/// ファイルを読み込んで評価する。
+/// 注: define は現在の環境には反映されない制限があります。
+fn eval_load(args : SExpr, env : Env) -> Result[Value, EvalError] {
+  match args {
+    SExpr::Pair(filename_expr, SExpr::Nil) => {
+      // ファイル名を評価
+      let filename = match eval(filename_expr, env) {
+        Ok(Value::String(s)) => s
+        Ok(_) => return Err(EvalError::TypeError("load: expected string filename"))
+        Err(e) => return Err(e)
+      }
+      // ファイルが存在するか確認
+      if not(file_exists(filename)) {
+        return Err(EvalError::TypeError("load: cannot open file: " + filename))
+      }
+      // ファイルを読み込む
+      let content = read_file(filename)
+      if content.length() == 0 {
+        return Err(EvalError::TypeError("load: cannot read file: " + filename))
+      }
+      // パースして式のリストに変換
+      let exprs = parse(content)
+      // 各式を順番に評価（envを変更しながら）
+      let mut current_env = env
+      let mut result = Value::Nil
+      let len = exprs.length()
+      let mut i = 0
+      while i < len {
+        let expr = exprs[i]
+        // define の特別処理
+        match expr {
+          SExpr::Pair(SExpr::Symbol("define"), SExpr::Pair(SExpr::Symbol(name), SExpr::Pair(value_expr, SExpr::Nil))) => {
+            match eval(value_expr, current_env) {
+              Ok(value) => {
+                current_env = define_var(current_env, name, value)
+                result = Value::Nil
+              }
+              Err(e) => return Err(e)
+            }
+          }
+          SExpr::Pair(SExpr::Symbol("define"), SExpr::Pair(SExpr::Pair(name_expr, params), SExpr::Pair(body, SExpr::Nil))) => {
+            // (define (name params...) body) 形式
+            match name_expr {
+              SExpr::Symbol(name) => {
+                let param_names = match extract_param_names(params) {
+                  Ok(p) => p
+                  Err(e) => return Err(e)
+                }
+                let closure = Value::Procedure(Procedure::Closure(param_names, body, current_env))
+                current_env = define_var(current_env, name, closure)
+                result = Value::Nil
+              }
+              _ => return Err(EvalError::InvalidSyntax("load: invalid define syntax"))
+            }
+          }
+          _ => {
+            match eval(expr, current_env) {
+              Ok(v) => result = v
+              Err(e) => return Err(e)
+            }
+          }
+        }
+        i = i + 1
+      }
+      Ok(result)
+    }
+    _ => Err(EvalError::InvalidSyntax("load: requires exactly 1 argument"))
+  }
+}

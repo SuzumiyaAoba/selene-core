@@ -70,6 +70,12 @@ fn value_to_string(value : Value) -> String {
       result + ">"
     }
     Value::Syntax(_) => "#<syntax-rules>"
+    Value::Port(port) =>
+      if port.direction == PortDirection::Input {
+        "#<input-port:" + port.name + ">"
+      } else {
+        "#<output-port:" + port.name + ">"
+      }
   }
 }
 
