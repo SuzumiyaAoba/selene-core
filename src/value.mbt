@@ -61,11 +61,36 @@ pub fn new_continuation_id() -> Int {
   id
 }
 
+/// VM クロージャ（前方宣言）
+pub(all) struct VMClosure {
+  chunk_idx : Int
+  captures : Array[Value]
+} derive(Show)
+
+/// VM 継続（前方宣言）
+pub(all) struct VMContinuation {
+  id : Int
+  stack : Array[Value]
+  call_stack : Array[VMCallFrame]
+  return_chunk : Int
+  return_ip : Int
+} derive(Show)
+
+/// VM コールフレーム（前方宣言）
+pub(all) struct VMCallFrame {
+  return_chunk : Int
+  return_ip : Int
+  base_ptr : Int
+  num_locals : Int
+} derive(Show)
+
 /// 手続き表現。
 pub(all) enum Procedure {
   Native(String)
   Closure(Array[String], SExpr, Env)
   Cont(Continuation)  // ファーストクラス継続
+  VMClosure(VMClosure)  // VM クロージャ
+  VMCont(VMContinuation)  // VM 継続
 } derive(Show)
 
 /// 継続呼び出しを表す型。
