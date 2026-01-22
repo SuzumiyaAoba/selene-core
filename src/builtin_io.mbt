@@ -62,6 +62,9 @@ fn value_to_display_string(value : Value) -> String {
     Value::Procedure(Procedure::Closure(_, _, _)) => "#<procedure:closure>"
     Value::Procedure(Procedure::Cont(cont)) =>
       "#<continuation:" + cont.id.to_string() + ">"
+    Value::Procedure(Procedure::VMClosure(_)) => "#<procedure:vm-closure>"
+    Value::Procedure(Procedure::VMCont(cont)) =>
+      "#<continuation:vm:" + cont.id.to_string() + ">"
     Value::Promise(_) => "#<promise>"
     Value::MultipleValues(values) => {
       let mut result = "#<values:"
@@ -146,6 +149,9 @@ fn value_to_write_string(value : Value) -> String {
     Value::Procedure(Procedure::Closure(_, _, _)) => "#<procedure:closure>"
     Value::Procedure(Procedure::Cont(cont)) =>
       "#<continuation:" + cont.id.to_string() + ">"
+    Value::Procedure(Procedure::VMClosure(_)) => "#<procedure:vm-closure>"
+    Value::Procedure(Procedure::VMCont(cont)) =>
+      "#<continuation:vm:" + cont.id.to_string() + ">"
     Value::Promise(_) => "#<promise>"
     Value::MultipleValues(values) => {
       let mut result = "#<values:"

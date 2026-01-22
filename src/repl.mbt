@@ -55,6 +55,8 @@ fn value_to_string(value : Value) -> String {
     Value::Procedure(Procedure::Native(name)) => "#<procedure:" + name + ">"
     Value::Procedure(Procedure::Closure(_, _, _)) => "#<procedure:closure>"
     Value::Procedure(Procedure::Cont(cont)) => "#<continuation:" + cont.id.to_string() + ">"
+    Value::Procedure(Procedure::VMClosure(_)) => "#<procedure:vm-closure>"
+    Value::Procedure(Procedure::VMCont(cont)) => "#<continuation:vm:" + cont.id.to_string() + ">"
     Value::Promise(_) => "#<promise>"
     Value::MultipleValues(values) => {
       let mut result = "#<values:"
