@@ -535,11 +535,28 @@ fn compile_lambda(args : SExpr, env : CompileEnv) -> Result[IRExpr, CompileError
       }
       // 自由変数を収集
       let free_vars = collect_free_vars(body_ir, params)
+      // Set! される変数を収集
+      let set_vars = collect_set_vars(body_ir)
+      // ボックス化が必要なパラメータを判定
+      let boxed_params : Array[Int] = []
+      let mut i = 0
+      while i < params.length() {
+        if needs_boxing(params[i], free_vars, set_vars) {
+          boxed_params.push(i)
+        }
+        i = i + 1
+      }
+      // ボックス化が必要なローカル変数を判定（Let/Letrec）
+      let boxed_locals : Array[String] = []
+      // TODO: ローカル変数の解析（Let/Letrec では別途処理）
+
       Ok(IRExpr::Lambda({
         params,
         arity: params.length(),
         body: body_ir,
         free_vars,
+        boxed_params,
+        boxed_locals,
       }))
     }
     _ => Err(CompileError::SyntaxError("lambda: invalid syntax"))
@@ -927,10 +944,220 @@ fn compile_application(
   }
 }
 
-/// 自由変数を収集する（簡易版）
-fn collect_free_vars(_body : IRExpr, _bound : Array[String]) -> Array[VarRef] {
-  // TODO: 本格的な自由変数解析を実装
-  []
+/// Set! される変数を収集する
+fn collect_set_vars(body : IRExpr) -> Array[String] {
+  let set_vars : Array[String] = []
+  let seen : @hashmap.T[String, Unit] = @hashmap.new()
+
+  fn visit(expr : IRExpr) -> Unit {
+    match expr {
+      IRExpr::Set(var_ref, value) => {
+        if !seen.contains(var_ref.name) {
+          set_vars.push(var_ref.name)
+          seen.set(var_ref.name, ())
+        }
+        visit(value)
+      }
+      IRExpr::GlobalSet(_name, value) => {
+        visit(value)
+      }
+      IRExpr::Const(_) => ()
+      IRExpr::Var(_) => ()
+      IRExpr::GlobalVar(_) => ()
+      IRExpr::If(cond, then_branch, else_branch) => {
+        visit(cond)
+        visit(then_branch)
+        visit(else_branch)
+      }
+      IRExpr::Begin(exprs) => {
+        for expr in exprs {
+          visit(expr)
+        }
+      }
+      IRExpr::Lambda(info) => {
+        // ネストした lambda の内部は探索しない
+        visit(info.body)
+      }
+      IRExpr::App(func, args) => {
+        visit(func)
+        for arg in args {
+          visit(arg)
+        }
+      }
+      IRExpr::TailApp(func, args) => {
+        visit(func)
+        for arg in args {
+          visit(arg)
+        }
+      }
+      IRExpr::Let(bindings, body) => {
+        for binding in bindings {
+          visit(binding.init)
+        }
+        visit(body)
+      }
+      IRExpr::Letrec(bindings, body) => {
+        for binding in bindings {
+          visit(binding.init)
+        }
+        visit(body)
+      }
+      IRExpr::PrimOp(_kind, args) => {
+        for arg in args {
+          visit(arg)
+        }
+      }
+      IRExpr::CallCC(proc) => {
+        visit(proc)
+      }
+      IRExpr::Quote(_) => ()
+      IRExpr::Delay(body) => {
+        visit(body)
+      }
+      IRExpr::And(exprs) => {
+        for expr in exprs {
+          visit(expr)
+        }
+      }
+      IRExpr::Or(exprs) => {
+        for expr in exprs {
+          visit(expr)
+        }
+      }
+    }
+  }
+
+  visit(body)
+  set_vars
+}
+
+/// 自由変数を収集する
+fn collect_free_vars(body : IRExpr, bound : Array[String]) -> Array[VarRef] {
+  let free_vars : Array[VarRef] = []
+  let seen : @hashmap.T[String, Unit] = @hashmap.new()
+
+  fn visit(expr : IRExpr) -> Unit {
+    match expr {
+      IRExpr::Var(var_ref) => {
+        // depth > 0 である（つまり自由変数である）かつ、既に見つけていない場合
+        if var_ref.depth > 0 && !seen.contains(var_ref.name) {
+          free_vars.push(var_ref)
+          seen.set(var_ref.name, ())
+        }
+      }
+      IRExpr::Const(_) => ()
+      IRExpr::GlobalVar(_) => ()
+      IRExpr::If(cond, then_branch, else_branch) => {
+        visit(cond)
+        visit(then_branch)
+        visit(else_branch)
+      }
+      IRExpr::Begin(exprs) => {
+        for expr in exprs {
+          visit(expr)
+        }
+      }
+      IRExpr::Lambda(info) => {
+        // ネストした lambda は新しいスコープ
+        visit(info.body)
+      }
+      IRExpr::App(func, args) => {
+        visit(func)
+        for arg in args {
+          visit(arg)
+        }
+      }
+      IRExpr::TailApp(func, args) => {
+        visit(func)
+        for arg in args {
+          visit(arg)
+        }
+      }
+      IRExpr::Let(bindings, body) => {
+        for binding in bindings {
+          visit(binding.init)
+        }
+        visit(body)
+      }
+      IRExpr::Letrec(bindings, body) => {
+        for binding in bindings {
+          visit(binding.init)
+        }
+        visit(body)
+      }
+      IRExpr::Set(var_ref, value) => {
+        if var_ref.depth > 0 && !seen.contains(var_ref.name) {
+          free_vars.push(var_ref)
+          seen.set(var_ref.name, ())
+        }
+        visit(value)
+      }
+      IRExpr::GlobalSet(_name, value) => {
+        visit(value)
+      }
+      IRExpr::PrimOp(_kind, args) => {
+        for arg in args {
+          visit(arg)
+        }
+      }
+      IRExpr::CallCC(proc) => {
+        visit(proc)
+      }
+      IRExpr::Quote(_) => ()
+      IRExpr::Delay(body) => {
+        visit(body)
+      }
+      IRExpr::And(exprs) => {
+        for expr in exprs {
+          visit(expr)
+        }
+      }
+      IRExpr::Or(exprs) => {
+        for expr in exprs {
+          visit(expr)
+        }
+      }
+    }
+  }
+
+  visit(body)
+  // 自由変数を (depth, index) でソート（安定性のため）
+  free_vars.sort_by(fn(a : VarRef, b : VarRef) -> Int {
+    let depth_cmp = a.depth - b.depth
+    if depth_cmp != 0 {
+      depth_cmp
+    } else {
+      a.index - b.index
+    }
+  })
+  free_vars
+}
+
+/// ボックス化が必要かどうかを判定
+fn needs_boxing(var_name : String, free_vars : Array[VarRef], set_vars : Array[String]) -> Bool {
+  // 自由変数として参照されているか？
+  let is_free = {
+    let mut found = false
+    for var_ref in free_vars {
+      if var_ref.name == var_name {
+        found = true
+        break
+      }
+    }
+    found
+  }
+  // set! されているか？
+  let is_set = {
+    let mut found = false
+    for v in set_vars {
+      if v == var_name {
+        found = true
+        break
+      }
+    }
+    found
+  }
+  is_free || is_set
 }
 
 /// トップレベルの式をコンパイルする

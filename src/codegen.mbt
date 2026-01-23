@@ -8,11 +8,34 @@ struct CodegenContext {
   builder : CodeChunkBuilder
   /// 生成された子チャンク（ネストした関数）
   chunks : Array[CodeChunk]
+  /// ボックス化されているパラメータのインデックス（depth=0）
+  boxed_params : Array[Int]
+  /// ボックス化されているローカル変数の名前（depth=0）
+  boxed_locals : Array[String]
 }
 
 /// 新しいコンテキストを作成
 fn new_context(debug_name : String?) -> CodegenContext {
-  { builder: new_builder(debug_name), chunks: [] }
+  {
+    builder: new_builder(debug_name),
+    chunks: [],
+    boxed_params: [],
+    boxed_locals: [],
+  }
+}
+
+/// ボックス化情報を含めて新しいコンテキストを作成
+fn new_context_with_boxing(
+  debug_name : String?,
+  boxed_params : Array[Int],
+  boxed_locals : Array[String]
+) -> CodegenContext {
+  {
+    builder: new_builder(debug_name),
+    chunks: [],
+    boxed_params,
+    boxed_locals,
+  }
 }
 
 /// IR 式をバイトコードに変換
@@ -67,6 +90,30 @@ fn codegen_const(ctx : CodegenContext, c : IRConst) -> Unit {
 /// ローカル変数参照をコード生成
 fn codegen_var(ctx : CodegenContext, var_ref : VarRef) -> Unit {
   ctx.builder.emit(Opcode::LoadLocal(var_ref.depth, var_ref.index))
+  // depth=0 でボックス化されている場合、BoxGet を使って値を取り出す
+  if var_ref.depth == 0 {
+    let is_boxed = {
+      let mut found = false
+      for idx in ctx.boxed_params {
+        if idx == var_ref.index {
+          found = true
+          break
+        }
+      }
+      if !found {
+        for name in ctx.boxed_locals {
+          if name == var_ref.name {
+            found = true
+            break
+          }
+        }
+      }
+      found
+    }
+    if is_boxed {
+      ctx.builder.emit(Opcode::BoxGet)
+    }
+  }
 }
 
 /// グローバル変数参照をコード生成
@@ -124,10 +171,21 @@ fn codegen_begin(ctx : CodegenContext, exprs : Array[IRExpr]) -> Unit {
 
 /// lambda 式をコード生成
 fn codegen_lambda(ctx : CodegenContext, info : LambdaInfo) -> Unit {
-  // 新しいコンテキストで関数本体をコンパイル
-  let func_ctx = new_context(None)
+  // 新しいコンテキストで関数本体をコンパイル（ボックス化情報を含める）
+  let func_ctx = new_context_with_boxing(None, info.boxed_params.copy(), info.boxed_locals.copy())
   func_ctx.builder.arity = info.arity
-  func_ctx.builder.num_locals = info.params.length()
+  // ローカル変数数：キャプチャ数 + パラメータ数
+  func_ctx.builder.num_locals = info.free_vars.length() + info.params.length()
+  func_ctx.builder.num_free_vars = info.free_vars.length()
+
+  // Lambda の開始時に、ボックス化が必要なパラメータをボックス化
+  for boxed_param_idx in info.boxed_params {
+    // パラメータはキャプチャの後ろにある
+    let param_local_idx = info.free_vars.length() + boxed_param_idx
+    func_ctx.builder.emit(Opcode::LoadLocal(0, param_local_idx))
+    func_ctx.builder.emit(Opcode::MakeBox)
+    func_ctx.builder.emit(Opcode::StoreLocal(0, param_local_idx))
+  }
 
   // 本体をコンパイル
   codegen_expr(func_ctx, info.body)
@@ -143,8 +201,15 @@ fn codegen_lambda(ctx : CodegenContext, info : LambdaInfo) -> Unit {
     ctx.chunks.push(chunk)
   }
 
-  // クロージャを作成
-  ctx.builder.emit(Opcode::MakeClosure(chunk_idx))
+  // 自由変数をスタックにプッシュ（逆順で）
+  let free_vars_reversed : Array[VarRef] = info.free_vars.copy()
+  free_vars_reversed.rev_in_place()
+  for var_ref in free_vars_reversed {
+    codegen_expr(ctx, IRExpr::Var(var_ref))
+  }
+
+  // クロージャを作成（chunk_idx, キャプチャ数）
+  ctx.builder.emit(Opcode::MakeClosure(chunk_idx, info.free_vars.length()))
 }
 
 /// 関数適用をコード生成
@@ -218,9 +283,42 @@ fn codegen_letrec(
 
 /// set! 式をコード生成
 fn codegen_set(ctx : CodegenContext, var_ref : VarRef, value : IRExpr) -> Unit {
-  codegen_expr(ctx, value)
-  ctx.builder.emit(Opcode::Dup)  // set! は代入した値を返す
-  ctx.builder.emit(Opcode::StoreLocal(var_ref.depth, var_ref.index))
+  // depth=0 でボックス化されている場合の処理を判定
+  let is_boxed = if var_ref.depth == 0 {
+    let mut found = false
+    for idx in ctx.boxed_params {
+      if idx == var_ref.index {
+        found = true
+        break
+      }
+    }
+    if !found {
+      for name in ctx.boxed_locals {
+        if name == var_ref.name {
+          found = true
+          break
+        }
+      }
+    }
+    found
+  } else {
+    false
+  }
+
+  if is_boxed {
+    // ボックス化されている場合
+    ctx.builder.emit(Opcode::LoadLocal(var_ref.depth, var_ref.index))  // ボックスをロード
+    codegen_expr(ctx, value)  // 新しい値を評価
+    ctx.builder.emit(Opcode::BoxSet)  // ボックスを更新
+    // set! は void を返す（R5RS）
+    let void_idx = ctx.builder.add_const(BCValue::Nil)
+    ctx.builder.emit(Opcode::Push(void_idx))
+  } else {
+    // ボックス化されていない場合
+    codegen_expr(ctx, value)
+    ctx.builder.emit(Opcode::Dup)  // set! は代入した値を返す
+    ctx.builder.emit(Opcode::StoreLocal(var_ref.depth, var_ref.index))
+  }
 }
 
 /// グローバル set! をコード生成

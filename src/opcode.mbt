@@ -35,8 +35,17 @@ pub(all) enum Opcode {
   /// グローバル変数にストア
   StoreGlobal(Int)  // 名前テーブルインデックス
 
-  /// クロージャを作成
-  MakeClosure(Int)  // 定数プール内のコードチャンクインデックス
+  /// クロージャを作成 (chunk_idx, num_captures)
+  MakeClosure(Int, Int)
+
+  /// ボックスを作成（スタックトップをボックスに包む）
+  MakeBox
+
+  /// ボックスから値を取り出す
+  BoxGet
+
+  /// ボックスの値を更新
+  BoxSet
 
   /// 関数呼び出し (引数の数)
   Call(Int)

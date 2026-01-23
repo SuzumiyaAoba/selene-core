@@ -206,4 +206,6 @@ pub(all) enum Value {
   Syntax(SyntaxRules)
   /// ポート（入出力）
   Port(Port)
+  /// ボックス化された値（参照キャプチャ用）
+  Box(Ref[Value])
 } derive(Show)

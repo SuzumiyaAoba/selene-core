@@ -244,6 +244,10 @@ pub(all) struct LambdaInfo {
   body : IRExpr
   /// 自由変数のリスト（クロージャ生成に使用）
   free_vars : Array[VarRef]
+  /// ボックス化が必要なパラメータのインデックス
+  boxed_params : Array[Int]
+  /// ボックス化が必要なローカル変数名
+  boxed_locals : Array[String]
 } derive(Show)
 
 /// 中間表現の式

@@ -181,5 +181,6 @@ fn value_to_string(value : Value) -> String {
       } else {
         "#<output-port:" + port.name + ">"
       }
+    Value::Box(_) => "#<box>"
   }
 }

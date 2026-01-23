@@ -84,7 +84,7 @@ fn adjust_chunk_refs(chunk : CodeChunk, offset : Int) -> CodeChunk {
   let new_code : Array[Opcode] = []
   for op in chunk.code {
     let adjusted = match op {
-      Opcode::MakeClosure(idx) => Opcode::MakeClosure(idx + offset)
+      Opcode::MakeClosure(chunk_idx, num_captures) => Opcode::MakeClosure(chunk_idx + offset, num_captures)
       Opcode::MakePromise(idx) => Opcode::MakePromise(idx + offset)
       other => other
     }

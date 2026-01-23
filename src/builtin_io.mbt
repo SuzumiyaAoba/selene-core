@@ -86,6 +86,7 @@ fn value_to_display_string(value : Value) -> String {
       } else {
         "#<output-port:" + port.name + ">"
       }
+    Value::Box(_) => "#<box>"
   }
 }
 
@@ -173,6 +174,7 @@ fn value_to_write_string(value : Value) -> String {
       } else {
         "#<output-port:" + port.name + ">"
       }
+    Value::Box(_) => "#<box>"
   }
 }
 

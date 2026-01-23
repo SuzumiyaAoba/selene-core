@@ -161,6 +161,8 @@ fn optimize_lambda(info : LambdaInfo) -> IRExpr {
     arity: info.arity,
     body: optimize_expr(info.body),
     free_vars: info.free_vars,
+    boxed_params: info.boxed_params,
+    boxed_locals: info.boxed_locals,
   })
 }
 

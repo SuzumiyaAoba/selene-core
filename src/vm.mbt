@@ -186,7 +186,7 @@ fn vm_exec_primop(
     }
     i = i + 1
   }
-  args.rev_inplace()
+  args.rev_in_place()
 
   match kind {
     PrimOpKind::Add => vm_exec_add(args)
@@ -677,6 +677,11 @@ fn vm_call_function(
         while vm.stack.length() > frame.base_ptr {
           let _ = vm.stack.pop()
         }
+        // キャプチャ値をプッシュ
+        for capture in closure.captures {
+          vm_push(vm, capture)
+        }
+        // 引数をプッシュ
         for arg in args {
           vm_push(vm, arg)
         }
@@ -687,9 +692,14 @@ fn vm_call_function(
           return_chunk: vm.current_chunk,
           return_ip: vm.ip,
           base_ptr: vm.stack.length(),
-          num_locals: args.length(),
+          num_locals: closure.captures.length() + args.length(),
         }
         vm.call_stack.push(frame)
+        // キャプチャ値をプッシュ
+        for capture in closure.captures {
+          vm_push(vm, capture)
+        }
+        // 引数をプッシュ
         for arg in args {
           vm_push(vm, arg)
         }
@@ -796,10 +806,60 @@ fn vm_step(vm : VMState) -> Result[Bool, VMError] {
       }
     }
 
-    Opcode::MakeClosure(chunk_idx) => {
-      let closure : VMClosure = { chunk_idx, captures: [] }
+    Opcode::MakeClosure(chunk_idx, num_captures) => {
+      let captures : Array[Value] = []
+      let mut i = 0
+      while i < num_captures {
+        match vm_pop(vm) {
+          Ok(v) => captures.push(v)
+          Err(e) => return Err(e)
+        }
+        i = i + 1
+      }
+      captures.rev_in_place()  // 正しい順序に戻す
+      let closure : VMClosure = { chunk_idx, captures }
       vm_push(vm, Value::Procedure(Procedure::VMClosure(closure)))
       Ok(true)
+    }
+
+    Opcode::MakeBox => {
+      match vm_pop(vm) {
+        Ok(val) => {
+          let boxed_ref = Ref::new(val)
+          vm_push(vm, Value::Box(boxed_ref))
+          Ok(true)
+        }
+        Err(e) => Err(e)
+      }
+    }
+
+    Opcode::BoxGet => {
+      match vm_pop(vm) {
+        Ok(Value::Box(cell)) => {
+          vm_push(vm, cell.val)
+          Ok(true)
+        }
+        Ok(_) => Err(VMError::TypeError("BoxGet expects Box"))
+        Err(e) => Err(e)
+      }
+    }
+
+    Opcode::BoxSet => {
+      match vm_pop(vm) {
+        Ok(new_val) => {
+          match vm_pop(vm) {
+            Ok(Value::Box(cell)) => {
+              cell.val = new_val
+              // set! は unspecified を返す（ここでは nil）
+              vm_push(vm, Value::Nil)
+              Ok(true)
+            }
+            Ok(_) => Err(VMError::TypeError("BoxSet expects Box"))
+            Err(e) => Err(e)
+          }
+        }
+        Err(e) => Err(e)
+      }
     }
 
     Opcode::Call(argc) => {
@@ -812,7 +872,7 @@ fn vm_step(vm : VMState) -> Result[Bool, VMError] {
         }
         i = i + 1
       }
-      args.rev_inplace()
+      args.rev_in_place()
       match vm_pop(vm) {
         Ok(func) =>
           match vm_call_function(vm, func, args, false) {
@@ -833,7 +893,7 @@ fn vm_step(vm : VMState) -> Result[Bool, VMError] {
         }
         i = i + 1
       }
-      args.rev_inplace()
+      args.rev_in_place()
       match vm_pop(vm) {
         Ok(func) =>
           match vm_call_function(vm, func, args, true) {
@@ -961,7 +1021,7 @@ fn vm_step(vm : VMState) -> Result[Bool, VMError] {
         }
         i = i + 1
       }
-      items.rev_inplace()
+      items.rev_in_place()
       vm_push(vm, Value::Vector(items))
       Ok(true)
     }
