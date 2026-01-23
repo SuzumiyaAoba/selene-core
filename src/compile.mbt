@@ -534,7 +534,14 @@ fn compile_lambda(args : SExpr, env : CompileEnv) -> Result[IRExpr, CompileError
         Err(e) => return Err(e)
       }
       // 自由変数を収集
-      let free_vars = collect_free_vars(body_ir, params)
+      let raw_free_vars = collect_free_vars(body_ir, params)
+
+      // 自由変数の depth を調整（lambda 内では depth=0 で参照）
+      let free_vars : Array[VarRef] = []
+      for var_ref in raw_free_vars {
+        free_vars.push({ name: var_ref.name, depth: 0, index: free_vars.length() })
+      }
+
       // Set! される変数を収集
       let set_vars = collect_set_vars(body_ir)
       // ボックス化が必要なパラメータを判定
@@ -548,6 +555,12 @@ fn compile_lambda(args : SExpr, env : CompileEnv) -> Result[IRExpr, CompileError
       }
       // ボックス化が必要なローカル変数を判定（Let/Letrec）
       let boxed_locals : Array[String] = []
+      // 自由変数がボックス化が必要な場合、boxed_locals に追加
+      for var_ref in free_vars {
+        if needs_boxing(var_ref.name, free_vars, set_vars) {
+          boxed_locals.push(var_ref.name)
+        }
+      }
       // TODO: ローカル変数の解析（Let/Letrec では別途処理）
 
       Ok(IRExpr::Lambda({

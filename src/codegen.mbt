@@ -171,17 +171,21 @@ fn codegen_begin(ctx : CodegenContext, exprs : Array[IRExpr]) -> Unit {
 
 /// lambda 式をコード生成
 fn codegen_lambda(ctx : CodegenContext, info : LambdaInfo) -> Unit {
+  // パラメータのローカルインデックスを調整（キャプチャの後ろにある）
+  let adjusted_boxed_params : Array[Int] = []
+  for boxed_param_idx in info.boxed_params {
+    adjusted_boxed_params.push(info.free_vars.length() + boxed_param_idx)
+  }
+
   // 新しいコンテキストで関数本体をコンパイル（ボックス化情報を含める）
-  let func_ctx = new_context_with_boxing(None, info.boxed_params.copy(), info.boxed_locals.copy())
+  let func_ctx = new_context_with_boxing(None, adjusted_boxed_params, info.boxed_locals.copy())
   func_ctx.builder.arity = info.arity
   // ローカル変数数：キャプチャ数 + パラメータ数
   func_ctx.builder.num_locals = info.free_vars.length() + info.params.length()
   func_ctx.builder.num_free_vars = info.free_vars.length()
 
   // Lambda の開始時に、ボックス化が必要なパラメータをボックス化
-  for boxed_param_idx in info.boxed_params {
-    // パラメータはキャプチャの後ろにある
-    let param_local_idx = info.free_vars.length() + boxed_param_idx
+  for param_local_idx in adjusted_boxed_params {
     func_ctx.builder.emit(Opcode::LoadLocal(0, param_local_idx))
     func_ctx.builder.emit(Opcode::MakeBox)
     func_ctx.builder.emit(Opcode::StoreLocal(0, param_local_idx))

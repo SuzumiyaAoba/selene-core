@@ -169,20 +169,20 @@ test "vm repl: higher order function" {
 }
 
 /// VM でのクロージャ
-/// 注: 自由変数のキャプチャが未実装のため、このテストは一時的に無効化
+/// 注: 自由変数のDepth調整が複雑なため、一時的に無効化
+/// 基本的なボックス化と参照キャプチャのインフラは実装済み
 // test "vm repl: closure" {
 //   let ctx = new_repl_context()
 //
-//   // (define (make-adder n) (lambda (x) (+ n x)))
-//   let _ = repl_eval(ctx, "(define (make-adder n) (lambda (x) (+ n x)))")
-//   // (define add5 (make-adder 5))
-//   let _ = repl_eval(ctx, "(define add5 (make-adder 5))")
-//
-//   // (add5 10) => 15
-//   let result = repl_eval(ctx, "(add5 10)")
+//   // (((lambda (n) (lambda (x) (+ n x))) 5) 10) => 15
+//   let result = repl_eval(ctx, "(((lambda (n) (lambda (x) (+ n x))) 5) 10)")
 //   match result {
-//     Ok(Value::Number(Number::Int(n))) => assert_eq!(n, 15)
-//     _ => fail!("Expected 15")
+//     Ok(Value::Number(Number::Int(n))) => {
+//       println("closure result = " + n.to_string())
+//       assert_eq!(n, 15)
+//     }
+//     Ok(v) => fail!("Expected number, got: " + v.to_string())
+//     Err(e) => fail!("Error: " + e)
 //   }
 // }
 
