@@ -174,14 +174,26 @@ fn codegen_let(
   bindings : Array[LetBinding],
   body : IRExpr
 ) -> Unit {
-  // 各バインディングの初期値を評価してスタックに積む
-  for binding in bindings {
-    codegen_expr(ctx, binding.init)
+  let num_bindings = bindings.length()
+  if num_bindings == 0 {
+    // バインディングがない場合は本体のみ評価
+    codegen_expr(ctx, body)
+    return
   }
+
+  // ローカル変数スロットを確保
+  ctx.builder.emit(Opcode::AllocateLocals(num_bindings))
+
+  // 各バインディングの初期値を評価してローカル変数に格納
+  let mut i = 0
+  while i < num_bindings {
+    codegen_expr(ctx, bindings[i].init)
+    ctx.builder.emit(Opcode::InitLocal(0, i))
+    i = i + 1
+  }
+
   // 本体を評価
   codegen_expr(ctx, body)
-  // バインディングの数だけローカル変数を解放（スタックから除去）
-  // 注: 実際の VM では環境フレームを使うため、ここでは特に何もしない
 }
 
 /// letrec 式をコード生成
