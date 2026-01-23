@@ -348,3 +348,14 @@ pub fn compile_to_module(expr : SExpr) -> Result[CompiledModule, CompileError] {
     Err(e) => Err(e)
   }
 }
+
+/// SExpr を最適化付きでコンパイル済みモジュールに変換
+pub fn compile_to_module_optimized(expr : SExpr) -> Result[CompiledModule, CompileError] {
+  match compile_toplevel(expr) {
+    Ok(ir) => {
+      let optimized = optimize(ir)
+      Ok(generate(optimized))
+    }
+    Err(e) => Err(e)
+  }
+}
