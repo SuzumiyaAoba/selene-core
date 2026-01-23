@@ -364,3 +364,95 @@ pub fn run_interactive() -> Unit {
     }
   }
 }
+
+/// VM ベースの REPL を起動する
+pub fn run_vm() -> Unit {
+  println("selene-core: VM REPL")
+  println("Type expressions to evaluate. (Ctrl+D to exit)")
+  println("")
+
+  // REPL コンテキストを初期化
+  let ctx = new_repl_context()
+
+  // サンプル式で動作確認
+  let test_inputs = [
+    "(+ 1 2)",
+    "(* 3 4)",
+    "(- 10 5)",
+    "(/ 20 4)",
+    "(+ 1 2 3 4 5)",
+    "(define x 10)",
+    "x",
+    "(define y 20)",
+    "(+ x y)",
+    "(define (square n) (* n n))",
+    "(square 5)",
+    "(square 12)",
+    "(define (add a b) (+ a b))",
+    "(add 3 4)",
+    "(if #t 1 2)",
+    "(if #f 1 2)",
+    "(let ((a 5) (b 10)) (+ a b))",
+    "(cons 1 2)",
+    "(car (cons 1 2))",
+    "(cdr (cons 1 2))",
+    "(list 1 2 3)",
+    "(null? ())",
+    "(null? (list 1))",
+    "(pair? (cons 1 2))",
+    "(define (fact n) (if (= n 0) 1 (* n (fact (- n 1)))))",
+    "(fact 5)",
+    "(fact 10)",
+    "(define (fib n) (if (< n 2) n (+ (fib (- n 1)) (fib (- n 2)))))",
+    "(fib 10)",
+  ]
+
+  for input in test_inputs {
+    println("> " + input)
+    match repl_eval(ctx, input) {
+      Ok(value) => {
+        // GlobalSet の結果は void として表示
+        let expr = parse_one(input)
+        match expr {
+          SExpr::Pair(SExpr::Symbol("define"), _) => println("#<void>")
+          _ => println(value_to_string(value))
+        }
+      }
+      Err(err) => println("Error: " + err)
+    }
+    println("")
+  }
+}
+
+/// VM ベースのインタラクティブ REPL を起動する
+/// JS バックエンド専用
+pub fn run_vm_interactive() -> Unit {
+  println("selene-core: VM Interactive REPL")
+  println("Type expressions to evaluate. (Ctrl+D or empty line to exit)")
+  println("")
+
+  // REPL コンテキストを初期化
+  let ctx = new_repl_context()
+
+  while true {
+    let input = read_line()
+
+    // 空行またはEOFで終了
+    if input.length() == 0 {
+      println("\nBye!")
+      break
+    }
+
+    match repl_eval(ctx, input) {
+      Ok(value) => {
+        // GlobalSet の結果は void として表示
+        let expr = parse_one(input)
+        match expr {
+          SExpr::Pair(SExpr::Symbol("define"), _) => println("#<void>")
+          _ => println(value_to_string(value))
+        }
+      }
+      Err(err) => println("Error: " + err)
+    }
+  }
+}

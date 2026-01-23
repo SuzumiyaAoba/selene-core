@@ -937,5 +937,43 @@ fn collect_free_vars(_body : IRExpr, _bound : Array[String]) -> Array[VarRef] {
 pub fn compile_toplevel(expr : SExpr) -> Result[IRExpr, CompileError] {
   let globals = initial_globals()
   let env = new_compile_env(globals)
-  compile(expr, env, false)
+  compile_toplevel_expr(expr, env)
+}
+
+/// トップレベル式をコンパイルする（define をサポート）
+fn compile_toplevel_expr(expr : SExpr, env : CompileEnv) -> Result[IRExpr, CompileError] {
+  match expr {
+    // (define name value)
+    SExpr::Pair(SExpr::Symbol("define"), SExpr::Pair(SExpr::Symbol(name), SExpr::Pair(value_expr, SExpr::Nil))) => {
+      let value_ir = match compile(value_expr, env, false) {
+        Ok(ir) => ir
+        Err(e) => return Err(e)
+      }
+      Ok(IRExpr::GlobalSet(name, value_ir))
+    }
+    // (define (name params...) body...)
+    SExpr::Pair(SExpr::Symbol("define"), SExpr::Pair(SExpr::Pair(SExpr::Symbol(name), params), body)) => {
+      // (define (f x y) body) => (define f (lambda (x y) body))
+      let lambda_expr = SExpr::Pair(
+        SExpr::Symbol("lambda"),
+        SExpr::Pair(params, body),
+      )
+      let lambda_ir = match compile(lambda_expr, env, false) {
+        Ok(ir) => ir
+        Err(e) => return Err(e)
+      }
+      Ok(IRExpr::GlobalSet(name, lambda_ir))
+    }
+    // 通常の式
+    _ => compile(expr, env, false)
+  }
+}
+
+/// 外部グローバル環境を使用してトップレベル式をコンパイルする
+pub fn compile_toplevel_with_globals(
+  expr : SExpr,
+  globals : @hashmap.T[String, Unit]
+) -> Result[IRExpr, CompileError] {
+  let env = new_compile_env(globals)
+  compile_toplevel_expr(expr, env)
 }

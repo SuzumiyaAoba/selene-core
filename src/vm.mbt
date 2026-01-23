@@ -62,8 +62,24 @@ pub fn new_vm_state(compiled_module : CompiledModule) -> VMState {
   }
 }
 
+/// 外部グローバル環境を使用して VM 状態を作成
+pub fn new_vm_state_with_globals(
+  compiled_module : CompiledModule,
+  globals : @hashmap.T[String, Value]
+) -> VMState {
+  {
+    stack: [],
+    call_stack: [],
+    current_chunk: -1,
+    ip: 0,
+    globals,
+    compiled_module,
+    cont_counter: 0,
+  }
+}
+
 /// 初期グローバル環境を作成
-fn create_initial_globals() -> @hashmap.T[String, Value] {
+pub fn create_initial_globals() -> @hashmap.T[String, Value] {
   let globals : @hashmap.T[String, Value] = @hashmap.new()
   globals.set("+", Value::Procedure(Procedure::Native("+")))
   globals.set("-", Value::Procedure(Procedure::Native("-")))
@@ -1017,6 +1033,15 @@ fn vm_step(vm : VMState) -> Result[Bool, VMError] {
 
 /// VM を実行
 pub fn vm_run(vm : VMState) -> Result[Value, VMError] {
+  // トップレベル用のダミーフレームを作成
+  let initial_frame : VMCallFrame = {
+    return_chunk: -1,
+    return_ip: 0,
+    base_ptr: 0,
+    num_locals: 0,
+  }
+  vm.call_stack.push(initial_frame)
+
   while true {
     match vm_step(vm) {
       Ok(true) => continue
