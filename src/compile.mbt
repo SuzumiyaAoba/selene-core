@@ -533,14 +533,8 @@ fn compile_lambda(args : SExpr, env : CompileEnv) -> Result[IRExpr, CompileError
         Ok(ir) => ir
         Err(e) => return Err(e)
       }
-      // 自由変数を収集
-      let raw_free_vars = collect_free_vars(body_ir, params)
-
-      // 自由変数の depth を調整（lambda 内では depth=0 で参照）
-      let free_vars : Array[VarRef] = []
-      for var_ref in raw_free_vars {
-        free_vars.push({ name: var_ref.name, depth: 0, index: free_vars.length() })
-      }
+      // 自由変数を収集（depth はそのまま）
+      let free_vars = collect_free_vars(body_ir, params)
 
       // Set! される変数を収集
       let set_vars = collect_set_vars(body_ir)
@@ -554,13 +548,9 @@ fn compile_lambda(args : SExpr, env : CompileEnv) -> Result[IRExpr, CompileError
         i = i + 1
       }
       // ボックス化が必要なローカル変数を判定（Let/Letrec）
+      // 注: 自由変数はキャプチャされた値であり、ここでは boxed_locals に追加しない
+      // boxed_locals は lambda 内で定義される let/letrec 束縛変数用
       let boxed_locals : Array[String] = []
-      // 自由変数がボックス化が必要な場合、boxed_locals に追加
-      for var_ref in free_vars {
-        if needs_boxing(var_ref.name, free_vars, set_vars) {
-          boxed_locals.push(var_ref.name)
-        }
-      }
       // TODO: ローカル変数の解析（Let/Letrec では別途処理）
 
       Ok(IRExpr::Lambda({
@@ -1070,9 +1060,11 @@ fn collect_free_vars(body : IRExpr, bound : Array[String]) -> Array[VarRef] {
           visit(expr)
         }
       }
-      IRExpr::Lambda(info) => {
-        // ネストした lambda は新しいスコープ
-        visit(info.body)
+      IRExpr::Lambda(_info) => {
+        // ネストした lambda の body は訪問しない
+        // その lambda の free_vars は既に計算されているので、
+        // 外側の lambda には影響しない
+        ()
       }
       IRExpr::App(func, args) => {
         visit(func)

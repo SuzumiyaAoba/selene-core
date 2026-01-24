@@ -88,8 +88,12 @@ fn codegen_const(ctx : CodegenContext, c : IRConst) -> Unit {
 }
 
 /// ローカル変数参照をコード生成
+/// 注: オプティマイザーが VarRef のインデックスを調整済み
+/// - 自由変数: depth=0, index=キャプチャ位置
+/// - パラメータ: depth=0, index=キャプチャ数+パラメータ位置
 fn codegen_var(ctx : CodegenContext, var_ref : VarRef) -> Unit {
   ctx.builder.emit(Opcode::LoadLocal(var_ref.depth, var_ref.index))
+
   // depth=0 でボックス化されている場合、BoxGet を使って値を取り出す
   if var_ref.depth == 0 {
     let is_boxed = {
@@ -177,7 +181,7 @@ fn codegen_lambda(ctx : CodegenContext, info : LambdaInfo) -> Unit {
     adjusted_boxed_params.push(info.free_vars.length() + boxed_param_idx)
   }
 
-  // 新しいコンテキストで関数本体をコンパイル（ボックス化情報を含める）
+  // 新しいコンテキストで関数本体をコンパイル（ボックス化情報とキャプチャ情報を含める）
   let func_ctx = new_context_with_boxing(None, adjusted_boxed_params, info.boxed_locals.copy())
   func_ctx.builder.arity = info.arity
   // ローカル変数数：キャプチャ数 + パラメータ数
@@ -198,22 +202,49 @@ fn codegen_lambda(ctx : CodegenContext, info : LambdaInfo) -> Unit {
   // 関数チャンクを追加
   let func_chunk = func_ctx.builder.build()
   let chunk_idx = ctx.chunks.length()
+
+  // 子チャンクがある場合、func_chunk 内のチャンクインデックスをオフセット
+  // func_chunk 内の MakeClosure/MakePromise が参照するチャンクは、
+  // func_ctx.chunks[0], func_ctx.chunks[1], ... にあり、
+  // これらは ctx.chunks に追加される際に chunk_idx+1, chunk_idx+2, ... の位置になる
+  if func_ctx.chunks.length() > 0 {
+    let offset = chunk_idx + 1  // 子チャンクが始まる位置
+    offset_chunk_indices(func_chunk, offset)
+  }
+
   ctx.chunks.push(func_chunk)
 
-  // 子コンテキストのチャンクも追加
+  // 子コンテキストのチャンクも追加（再帰的にオフセット済み）
   for chunk in func_ctx.chunks {
     ctx.chunks.push(chunk)
   }
 
-  // 自由変数をスタックにプッシュ（逆順で）
-  let free_vars_reversed : Array[VarRef] = info.free_vars.copy()
-  free_vars_reversed.rev_in_place()
-  for var_ref in free_vars_reversed {
+  // 自由変数をスタックにプッシュ
+  // 注: free_vars の VarRef は optimize で親スコープからの参照に調整済み
+  // MakeClosure が pop して reverse するので、ここでは順番通りにプッシュ
+  for var_ref in info.free_vars {
     codegen_expr(ctx, IRExpr::Var(var_ref))
   }
 
   // クロージャを作成（chunk_idx, キャプチャ数）
   ctx.builder.emit(Opcode::MakeClosure(chunk_idx, info.free_vars.length()))
+}
+
+/// チャンク内の MakeClosure/MakePromise のチャンクインデックスをオフセット
+fn offset_chunk_indices(chunk : CodeChunk, offset : Int) -> Unit {
+  let mut i = 0
+  while i < chunk.code.length() {
+    match chunk.code[i] {
+      Opcode::MakeClosure(idx, num_captures) => {
+        chunk.code[i] = Opcode::MakeClosure(idx + offset, num_captures)
+      }
+      Opcode::MakePromise(idx) => {
+        chunk.code[i] = Opcode::MakePromise(idx + offset)
+      }
+      _ => ()
+    }
+    i = i + 1
+  }
 }
 
 /// 関数適用をコード生成
@@ -286,6 +317,7 @@ fn codegen_letrec(
 }
 
 /// set! 式をコード生成
+/// 注: オプティマイザーが VarRef のインデックスを調整済み
 fn codegen_set(ctx : CodegenContext, var_ref : VarRef, value : IRExpr) -> Unit {
   // depth=0 でボックス化されている場合の処理を判定
   let is_boxed = if var_ref.depth == 0 {
@@ -455,10 +487,13 @@ pub fn generate(ir : IRExpr) -> CompiledModule {
   { main: main_chunk, chunks: ctx.chunks }
 }
 
-/// SExpr を直接コンパイル済みモジュールに変換
+/// SExpr を直接コンパイル済みモジュールに変換（最適化付き）
 pub fn compile_to_module(expr : SExpr) -> Result[CompiledModule, CompileError] {
   match compile_toplevel(expr) {
-    Ok(ir) => Ok(generate(ir))
+    Ok(ir) => {
+      let optimized = optimize(ir)
+      Ok(generate(optimized))
+    }
     Err(e) => Err(e)
   }
 }

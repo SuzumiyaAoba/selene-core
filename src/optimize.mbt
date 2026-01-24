@@ -156,129 +156,175 @@ fn optimize_begin(exprs : Array[IRExpr]) -> IRExpr {
 
 /// lambda 式を最適化する
 fn optimize_lambda(info : LambdaInfo) -> IRExpr {
-  // 自由変数の depth を調整（lambda 内では depth=0 で参照）
-  let adjusted_body = adjust_free_var_depth(info.body, info.free_vars)
+  // Lambda 内の変数参照を調整
+  // - 自由変数（free_vars に含まれる）: depth=0, index=free_vars リストでの位置
+  // - パラメータ（depth=0）: index に num_captures を加える
+  let adjusted_body = adjust_lambda_var_refs(
+    info.body,
+    info.params,
+    info.free_vars
+  )
+
+  // free_vars の VarRef を親スコープから参照できる形に調整
+  // 親スコープから見ると depth を 1 減らす必要がある
+  let adjusted_free_vars : Array[VarRef] = []
+  for var_ref in info.free_vars {
+    adjusted_free_vars.push({
+      name: var_ref.name,
+      depth: if var_ref.depth > 0 { var_ref.depth - 1 } else { 0 },
+      index: var_ref.index
+    })
+  }
 
   IRExpr::Lambda({
     params: info.params,
     arity: info.arity,
     body: optimize_expr(adjusted_body),
-    free_vars: info.free_vars,
+    free_vars: adjusted_free_vars,
     boxed_params: info.boxed_params,
     boxed_locals: info.boxed_locals,
   })
 }
 
-/// 自由変数の depth を調整（lambda 内では depth=0 で参照）
-fn adjust_free_var_depth(expr : IRExpr, free_vars : Array[VarRef]) -> IRExpr {
+/// Lambda 内の変数参照を調整
+fn adjust_lambda_var_refs(
+  expr : IRExpr,
+  params : Array[String],
+  free_vars : Array[VarRef]
+) -> IRExpr {
   match expr {
     IRExpr::Var(var_ref) => {
-      // 自由変数かどうかを確認
-      let mut new_index = -1
+      // 自由変数リストに含まれるかチェック
+      let mut free_var_index = -1
       for i in 0..<free_vars.length() {
         if free_vars[i].name == var_ref.name {
-          new_index = i
+          free_var_index = i
           break
         }
       }
-      if new_index >= 0 {
-        // 自由変数：depth=0, index は free_vars での位置
-        IRExpr::Var({ name: var_ref.name, depth: 0, index: new_index })
+
+      if free_var_index >= 0 {
+        // 自由変数：depth=0, index=free_vars リストでの位置
+        IRExpr::Var({
+          name: var_ref.name,
+          depth: 0,
+          index: free_var_index,
+        })
+      } else if var_ref.depth == 0 && var_ref.index < params.length() {
+        // このスコープのパラメータ（まだ調整されていない場合のみ）
+        // index に num_captures を加える
+        // 注: 複数パスで重複調整しないよう、index < params.length() をチェック
+        IRExpr::Var({
+          name: var_ref.name,
+          depth: 0,
+          index: var_ref.index + free_vars.length(),
+        })
+      } else if var_ref.depth == 0 {
+        // 既に調整済みのパラメータ（index >= params.length()）
+        expr
       } else {
-        // 自由変数ではない：depth を 1 減らす（参照が 1 レベル浅くなる）
-        if var_ref.depth > 0 {
-          IRExpr::Var({ name: var_ref.name, depth: var_ref.depth - 1, index: var_ref.index })
-        } else {
-          expr
-        }
+        // さらに外側のスコープの変数（ネストした lambda の場合）
+        // そのまま保持（ネストした lambda で処理される）
+        expr
       }
     }
     IRExpr::If(cond, then_branch, else_branch) =>
-      IRExpr::If(adjust_free_var_depth(cond, free_vars), adjust_free_var_depth(then_branch, free_vars), adjust_free_var_depth(else_branch, free_vars))
+      IRExpr::If(
+        adjust_lambda_var_refs(cond, params, free_vars),
+        adjust_lambda_var_refs(then_branch, params, free_vars),
+        adjust_lambda_var_refs(else_branch, params, free_vars)
+      )
     IRExpr::Begin(exprs) => {
       let adjusted : Array[IRExpr] = []
       for e in exprs {
-        adjusted.push(adjust_free_var_depth(e, free_vars))
+        adjusted.push(adjust_lambda_var_refs(e, params, free_vars))
       }
       IRExpr::Begin(adjusted)
     }
-    IRExpr::Lambda(lambda_info) =>
-      IRExpr::Lambda({
-        params: lambda_info.params,
-        arity: lambda_info.arity,
-        body: adjust_free_var_depth(lambda_info.body, lambda_info.free_vars),  // ネストされた lambda はそのまま処理
-        free_vars: lambda_info.free_vars,
-        boxed_params: lambda_info.boxed_params,
-        boxed_locals: lambda_info.boxed_locals,
-      })
+    IRExpr::Lambda(_lambda_info) =>
+      // ネストされた lambda はそのまま残す
+      // optimize_expr → optimize_lambda で独自に処理される
+      expr
     IRExpr::App(func, args) => {
       let adjusted_args : Array[IRExpr] = []
       for arg in args {
-        adjusted_args.push(adjust_free_var_depth(arg, free_vars))
+        adjusted_args.push(adjust_lambda_var_refs(arg, params, free_vars))
       }
-      IRExpr::App(adjust_free_var_depth(func, free_vars), adjusted_args)
+      IRExpr::App(adjust_lambda_var_refs(func, params, free_vars), adjusted_args)
     }
     IRExpr::TailApp(func, args) => {
       let adjusted_args : Array[IRExpr] = []
       for arg in args {
-        adjusted_args.push(adjust_free_var_depth(arg, free_vars))
+        adjusted_args.push(adjust_lambda_var_refs(arg, params, free_vars))
       }
-      IRExpr::TailApp(adjust_free_var_depth(func, free_vars), adjusted_args)
+      IRExpr::TailApp(adjust_lambda_var_refs(func, params, free_vars), adjusted_args)
     }
     IRExpr::Let(bindings, body) => {
       let adjusted_bindings : Array[LetBinding] = []
       for binding in bindings {
-        adjusted_bindings.push({ name: binding.name, init: adjust_free_var_depth(binding.init, free_vars) })
+        adjusted_bindings.push({
+          name: binding.name,
+          init: adjust_lambda_var_refs(binding.init, params, free_vars)
+        })
       }
-      IRExpr::Let(adjusted_bindings, adjust_free_var_depth(body, free_vars))
+      IRExpr::Let(adjusted_bindings, adjust_lambda_var_refs(body, params, free_vars))
     }
     IRExpr::Letrec(bindings, body) => {
       let adjusted_bindings : Array[LetBinding] = []
       for binding in bindings {
-        adjusted_bindings.push({ name: binding.name, init: adjust_free_var_depth(binding.init, free_vars) })
+        adjusted_bindings.push({
+          name: binding.name,
+          init: adjust_lambda_var_refs(binding.init, params, free_vars)
+        })
       }
-      IRExpr::Letrec(adjusted_bindings, adjust_free_var_depth(body, free_vars))
+      IRExpr::Letrec(adjusted_bindings, adjust_lambda_var_refs(body, params, free_vars))
     }
     IRExpr::Set(var_ref, value) => {
-      // 自由変数かどうかを確認
-      let mut new_index = -1
+      // 自由変数リストに含まれるかチェック
+      let mut free_var_index = -1
       for i in 0..<free_vars.length() {
         if free_vars[i].name == var_ref.name {
-          new_index = i
+          free_var_index = i
           break
         }
       }
-      if new_index >= 0 {
-        IRExpr::Set({ name: var_ref.name, depth: 0, index: new_index }, adjust_free_var_depth(value, free_vars))
+
+      let adjusted_var = if free_var_index >= 0 {
+        // 自由変数
+        { name: var_ref.name, depth: 0, index: free_var_index }
+      } else if var_ref.depth == 0 {
+        // このスコープの変数
+        { name: var_ref.name, depth: 0, index: var_ref.index + free_vars.length() }
       } else {
-        if var_ref.depth > 0 {
-          IRExpr::Set({ name: var_ref.name, depth: var_ref.depth - 1, index: var_ref.index }, adjust_free_var_depth(value, free_vars))
-        } else {
-          IRExpr::Set(var_ref, adjust_free_var_depth(value, free_vars))
-        }
+        // さらに外側のスコープの変数
+        var_ref
       }
+      IRExpr::Set(adjusted_var, adjust_lambda_var_refs(value, params, free_vars))
     }
-    IRExpr::GlobalSet(name, value) => IRExpr::GlobalSet(name, adjust_free_var_depth(value, free_vars))
+    IRExpr::GlobalSet(name, value) =>
+      IRExpr::GlobalSet(name, adjust_lambda_var_refs(value, params, free_vars))
     IRExpr::PrimOp(kind, args) => {
       let adjusted_args : Array[IRExpr] = []
       for arg in args {
-        adjusted_args.push(adjust_free_var_depth(arg, free_vars))
+        adjusted_args.push(adjust_lambda_var_refs(arg, params, free_vars))
       }
       IRExpr::PrimOp(kind, adjusted_args)
     }
-    IRExpr::CallCC(proc) => IRExpr::CallCC(adjust_free_var_depth(proc, free_vars))
-    IRExpr::Delay(body) => IRExpr::Delay(adjust_free_var_depth(body, free_vars))
+    IRExpr::CallCC(proc) =>
+      IRExpr::CallCC(adjust_lambda_var_refs(proc, params, free_vars))
+    IRExpr::Delay(body) =>
+      IRExpr::Delay(adjust_lambda_var_refs(body, params, free_vars))
     IRExpr::And(exprs) => {
       let adjusted : Array[IRExpr] = []
       for e in exprs {
-        adjusted.push(adjust_free_var_depth(e, free_vars))
+        adjusted.push(adjust_lambda_var_refs(e, params, free_vars))
       }
       IRExpr::And(adjusted)
     }
     IRExpr::Or(exprs) => {
       let adjusted : Array[IRExpr] = []
       for e in exprs {
-        adjusted.push(adjust_free_var_depth(e, free_vars))
+        adjusted.push(adjust_lambda_var_refs(e, params, free_vars))
       }
       IRExpr::Or(adjusted)
     }
