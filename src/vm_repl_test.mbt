@@ -422,3 +422,104 @@ test "vm repl: comparison" {
     _ => fail!("Expected #t")
   }
 }
+
+/// make-adder パターンのテスト
+test "vm repl: make-adder pattern" {
+  let ctx = new_repl_context()
+
+  // (define (make-adder n) (lambda (x) (+ n x)))
+  let _ = repl_eval(ctx, "(define (make-adder n) (lambda (x) (+ n x)))")
+
+  // (define add5 (make-adder 5))
+  let _ = repl_eval(ctx, "(define add5 (make-adder 5))")
+
+  // (add5 10) => 15
+  let result = repl_eval(ctx, "(add5 10)")
+  match result {
+    Ok(Value::Number(Number::Int(n))) => assert_eq!(n, 15)
+    Ok(v) => fail!("Expected 15, got: " + v.to_string())
+    Err(e) => fail!("Error: " + e)
+  }
+
+  // (define add10 (make-adder 10))
+  let _ = repl_eval(ctx, "(define add10 (make-adder 10))")
+
+  // (add10 10) => 20
+  let result2 = repl_eval(ctx, "(add10 10)")
+  match result2 {
+    Ok(Value::Number(Number::Int(n))) => assert_eq!(n, 20)
+    Ok(v) => fail!("Expected 20, got: " + v.to_string())
+    Err(e) => fail!("Error: " + e)
+  }
+
+  // add5 と add10 は別のクロージャ
+  // (+ (add5 0) (add10 0)) => 15
+  let result3 = repl_eval(ctx, "(+ (add5 0) (add10 0))")
+  match result3 {
+    Ok(Value::Number(Number::Int(n))) => assert_eq!(n, 15)
+    Ok(v) => fail!("Expected 15, got: " + v.to_string())
+    Err(e) => fail!("Error: " + e)
+  }
+}
+
+/// set! とクロージャの相互作用テスト
+test "vm repl: closure with set!" {
+  let ctx = new_repl_context()
+
+  // 単純な set! テスト（クロージャなし）
+  let _ = repl_eval(ctx, "(define x 0)")
+  let _ = repl_eval(ctx, "(set! x 10)")
+  let result1 = repl_eval(ctx, "x")
+  match result1 {
+    Ok(Value::Number(Number::Int(n))) => assert_eq!(n, 10)
+    Ok(v) => fail!("Expected 10, got: " + v.to_string())
+    Err(e) => fail!("Error in simple set!: " + e)
+  }
+}
+
+/// カウンターパターン: set! を使ったクロージャ
+test "vm repl: counter pattern" {
+  let ctx = new_repl_context()
+
+  // make-counter を定義
+  let _ = repl_eval(
+    ctx,
+    "(define (make-counter) (let ((count 0)) (lambda () (set! count (+ count 1)) count)))",
+  )
+
+  // カウンターを作成
+  let _ = repl_eval(ctx, "(define counter (make-counter))")
+
+  // 最初の呼び出し: 1
+  let result1 = repl_eval(ctx, "(counter)")
+  match result1 {
+    Ok(Value::Number(Number::Int(n))) => {
+      println("counter first call: " + n.to_string())
+      assert_eq!(n, 1)
+    }
+    Ok(v) => fail!("Expected 1, got: " + v.to_string())
+    Err(e) => fail!("Error in counter (1): " + e)
+  }
+
+  // 2回目の呼び出し: 2
+  let result2 = repl_eval(ctx, "(counter)")
+  match result2 {
+    Ok(Value::Number(Number::Int(n))) => {
+      println("counter second call: " + n.to_string())
+      assert_eq!(n, 2)
+    }
+    Ok(v) => fail!("Expected 2, got: " + v.to_string())
+    Err(e) => fail!("Error in counter (2): " + e)
+  }
+
+  // 3回目の呼び出し: 3
+  let result3 = repl_eval(ctx, "(counter)")
+  match result3 {
+    Ok(Value::Number(Number::Int(n))) => {
+      println("counter third call: " + n.to_string())
+      assert_eq!(n, 3)
+    }
+    Ok(v) => fail!("Expected 3, got: " + v.to_string())
+    Err(e) => fail!("Error in counter (3): " + e)
+  }
+}
