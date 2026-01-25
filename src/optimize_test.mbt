@@ -290,3 +290,163 @@ test "optimize: if with constant condition from computation" {
     _ => fail!("Expected Const(Int(10))")
   }
 }
+
+/// 不要コード除去: 未使用の let バインディング
+test "optimize: dead code elimination - unused let binding" {
+  // (let ((x 1) (y 2)) y) => y=2 のみ残す
+  let expr = IRExpr::Let(
+    [
+      { name: "x", init: IRExpr::Const(IRConst::Int(1)) },
+      { name: "y", init: IRExpr::Const(IRConst::Int(2)) },
+    ],
+    IRExpr::Var({ name: "y", depth: 0, index: 1 })
+  )
+  let result = optimize(expr)
+  // x は使用されていないので除去される
+  match result {
+    IRExpr::Let(bindings, _body) => {
+      // x が除去されているはず
+      assert_eq!(bindings.length(), 1)
+      assert_eq!(bindings[0].name, "y")
+    }
+    _ => fail!("Expected Let with one binding")
+  }
+}
+
+/// 不要コード除去: すべてのバインディングが未使用
+test "optimize: dead code elimination - all bindings unused" {
+  // (let ((x 1) (y 2)) 3) => 3
+  let expr = IRExpr::Let(
+    [
+      { name: "x", init: IRExpr::Const(IRConst::Int(1)) },
+      { name: "y", init: IRExpr::Const(IRConst::Int(2)) },
+    ],
+    IRExpr::Const(IRConst::Int(3))
+  )
+  let result = optimize(expr)
+  // すべてのバインディングが除去される
+  match result {
+    IRExpr::Const(IRConst::Int(n)) => assert_eq!(n, 3)
+    _ => fail!("Expected Const(Int(3))")
+  }
+}
+
+/// 不要コード除去: 副作用のある未使用バインディングは保持
+test "optimize: dead code elimination - keep side effects" {
+  // (let ((x (display 1))) 2) => (begin (display 1) 2)
+  let expr = IRExpr::Let(
+    [
+      { name: "x", init: IRExpr::PrimOp(PrimOpKind::Display, [IRExpr::Const(IRConst::Int(1))]) },
+    ],
+    IRExpr::Const(IRConst::Int(2))
+  )
+  let result = optimize(expr)
+  // display は副作用があるので begin で実行される
+  match result {
+    IRExpr::Begin(_exprs) => ()  // OK
+    _ => fail!("Expected Begin (side effect preserved)")
+  }
+}
+
+/// 不要コード除去: 使用される変数は保持
+test "optimize: dead code elimination - used binding kept" {
+  // (let ((x 1)) x) => (let ((x 1)) x)
+  let expr = IRExpr::Let(
+    [
+      { name: "x", init: IRExpr::Const(IRConst::Int(1)) },
+    ],
+    IRExpr::Var({ name: "x", depth: 0, index: 0 })
+  )
+  let result = optimize(expr)
+  match result {
+    IRExpr::Let(bindings, _body) => {
+      assert_eq!(bindings.length(), 1)
+      assert_eq!(bindings[0].name, "x")
+    }
+    _ => fail!("Expected Let with x binding")
+  }
+}
+
+/// インライン展開: 単純な lambda 呼び出し
+test "optimize: inline expansion - simple lambda" {
+  // ((lambda (x) (+ x 1)) 5) => (let ((x 5)) (+ x 1))
+  let expr = IRExpr::App(
+    IRExpr::Lambda({
+      params: ["x"],
+      arity: 1,
+      body: IRExpr::PrimOp(PrimOpKind::Add, [
+        IRExpr::Var({ name: "x", depth: 0, index: 0 }),
+        IRExpr::Const(IRConst::Int(1)),
+      ]),
+      free_vars: [],
+      boxed_params: [],
+      boxed_locals: [],
+    }),
+    [IRExpr::Const(IRConst::Int(5))]
+  )
+  let result = optimize(expr)
+  // インライン化されて Let に変換される
+  match result {
+    IRExpr::Let(bindings, _body) => {
+      assert_eq!(bindings.length(), 1)
+      assert_eq!(bindings[0].name, "x")
+      match bindings[0].init {
+        IRExpr::Const(IRConst::Int(n)) => assert_eq!(n, 5)
+        _ => fail!("Expected binding init to be Const(5)")
+      }
+    }
+    _ => fail!("Expected Let")
+  }
+}
+
+/// インライン展開: 複数引数の lambda
+test "optimize: inline expansion - multiple args" {
+  // ((lambda (x y) (+ x y)) 3 4) => (let ((x 3) (y 4)) (+ x y))
+  let expr = IRExpr::App(
+    IRExpr::Lambda({
+      params: ["x", "y"],
+      arity: 2,
+      body: IRExpr::PrimOp(PrimOpKind::Add, [
+        IRExpr::Var({ name: "x", depth: 0, index: 0 }),
+        IRExpr::Var({ name: "y", depth: 0, index: 1 }),
+      ]),
+      free_vars: [],
+      boxed_params: [],
+      boxed_locals: [],
+    }),
+    [IRExpr::Const(IRConst::Int(3)), IRExpr::Const(IRConst::Int(4))]
+  )
+  let result = optimize(expr)
+  match result {
+    IRExpr::Let(bindings, _body) => {
+      assert_eq!(bindings.length(), 2)
+      assert_eq!(bindings[0].name, "x")
+      assert_eq!(bindings[1].name, "y")
+    }
+    _ => fail!("Expected Let with 2 bindings")
+  }
+}
+
+/// インライン展開: 末尾呼び出しでもインライン化
+test "optimize: inline expansion - tail call" {
+  // (tail-app (lambda (x) x) 42) => (let ((x 42)) x)
+  let expr = IRExpr::TailApp(
+    IRExpr::Lambda({
+      params: ["x"],
+      arity: 1,
+      body: IRExpr::Var({ name: "x", depth: 0, index: 0 }),
+      free_vars: [],
+      boxed_params: [],
+      boxed_locals: [],
+    }),
+    [IRExpr::Const(IRConst::Int(42))]
+  )
+  let result = optimize(expr)
+  match result {
+    IRExpr::Let(bindings, _body) => {
+      assert_eq!(bindings.length(), 1)
+      assert_eq!(bindings[0].name, "x")
+    }
+    _ => fail!("Expected Let")
+  }
+}

@@ -42,10 +42,10 @@ fn optimize_expr(expr : IRExpr) -> IRExpr {
       optimize_lambda(info)
 
     IRExpr::App(func, args) =>
-      IRExpr::App(optimize_expr(func), optimize_exprs(args))
+      optimize_app(func, args, false)
 
     IRExpr::TailApp(func, args) =>
-      IRExpr::TailApp(optimize_expr(func), optimize_exprs(args))
+      optimize_app(func, args, true)
 
     IRExpr::Let(bindings, body) =>
       optimize_let(bindings, body)
@@ -83,6 +83,118 @@ fn optimize_exprs(exprs : Array[IRExpr]) -> Array[IRExpr] {
     result.push(optimize_expr(expr))
   }
   result
+}
+
+/// 関数適用を最適化する（インライン展開を含む）
+fn optimize_app(func : IRExpr, args : Array[IRExpr], is_tail : Bool) -> IRExpr {
+  let opt_func = optimize_expr(func)
+  let opt_args = optimize_exprs(args)
+
+  // Lambda の直接呼び出しをインライン化
+  // ((lambda (x) body) arg) => (let ((x arg)) body)
+  match opt_func {
+    IRExpr::Lambda(info) => {
+      // 引数の数が一致する場合のみインライン化
+      if info.arity >= 0 && opt_args.length() == info.arity {
+        // 自由変数がない場合のみインライン化（複雑なクロージャは避ける）
+        if info.free_vars.length() == 0 && info.boxed_params.length() == 0 {
+          // ボディサイズが小さい場合のみインライン化
+          if ir_expr_size(info.body) <= 20 {
+            // let バインディングに変換
+            let bindings : Array[LetBinding] = []
+            let mut i = 0
+            while i < info.params.length() {
+              bindings.push({ name: info.params[i], init: opt_args[i] })
+              i = i + 1
+            }
+            // body の変数参照インデックスは既に正しいはず
+            return optimize_expr(IRExpr::Let(bindings, info.body))
+          }
+        }
+      }
+    }
+    _ => ()
+  }
+
+  // インライン化できない場合は通常の関数呼び出し
+  if is_tail {
+    IRExpr::TailApp(opt_func, opt_args)
+  } else {
+    IRExpr::App(opt_func, opt_args)
+  }
+}
+
+/// IR 式のサイズ（ノード数）を計算
+fn ir_expr_size(expr : IRExpr) -> Int {
+  match expr {
+    IRExpr::Const(_) => 1
+    IRExpr::Var(_) => 1
+    IRExpr::GlobalVar(_) => 1
+    IRExpr::Quote(_) => 1
+    IRExpr::If(cond, then_branch, else_branch) =>
+      1 + ir_expr_size(cond) + ir_expr_size(then_branch) + ir_expr_size(else_branch)
+    IRExpr::Begin(exprs) => {
+      let mut size = 1
+      for e in exprs {
+        size = size + ir_expr_size(e)
+      }
+      size
+    }
+    IRExpr::Lambda(info) => 1 + ir_expr_size(info.body)
+    IRExpr::App(func, args) => {
+      let mut size = 1 + ir_expr_size(func)
+      for arg in args {
+        size = size + ir_expr_size(arg)
+      }
+      size
+    }
+    IRExpr::TailApp(func, args) => {
+      let mut size = 1 + ir_expr_size(func)
+      for arg in args {
+        size = size + ir_expr_size(arg)
+      }
+      size
+    }
+    IRExpr::Let(bindings, body) => {
+      let mut size = 1 + ir_expr_size(body)
+      for binding in bindings {
+        size = size + ir_expr_size(binding.init)
+      }
+      size
+    }
+    IRExpr::Letrec(bindings, body) => {
+      let mut size = 1 + ir_expr_size(body)
+      for binding in bindings {
+        size = size + ir_expr_size(binding.init)
+      }
+      size
+    }
+    IRExpr::Set(_, value) => 1 + ir_expr_size(value)
+    IRExpr::GlobalSet(_, value) => 1 + ir_expr_size(value)
+    IRExpr::PrimOp(_, args) => {
+      let mut size = 1
+      for arg in args {
+        size = size + ir_expr_size(arg)
+      }
+      size
+    }
+    IRExpr::CallCC(proc) => 1 + ir_expr_size(proc)
+    IRExpr::Delay(body) => 1 + ir_expr_size(body)
+    IRExpr::And(exprs) => {
+      let mut size = 1
+      for e in exprs {
+        size = size + ir_expr_size(e)
+      }
+      size
+    }
+    IRExpr::Or(exprs) => {
+      let mut size = 1
+      for e in exprs {
+        size = size + ir_expr_size(e)
+      }
+      size
+    }
+  }
 }
 
 /// if 式を最適化する
@@ -348,7 +460,40 @@ fn optimize_let(bindings : Array[LetBinding], body : IRExpr) -> IRExpr {
     return opt_body
   }
 
-  IRExpr::Let(opt_bindings, opt_body)
+  // 不要コード除去: 使用されないバインディングを除去
+  let used_vars = collect_used_vars(opt_body)
+  let live_bindings : Array[LetBinding] = []
+  let side_effect_exprs : Array[IRExpr] = []
+
+  for binding in opt_bindings {
+    if used_vars.contains(binding.name) {
+      // 変数が使用されている場合は保持
+      live_bindings.push(binding)
+    } else if has_side_effect(binding.init) {
+      // 副作用がある場合は式だけ実行
+      side_effect_exprs.push(binding.init)
+    }
+    // 使用されず副作用もない場合は除去
+  }
+
+  // すべてのバインディングが除去された場合
+  if live_bindings.length() == 0 {
+    if side_effect_exprs.length() == 0 {
+      return opt_body
+    }
+    // 副作用のある式を begin で包む
+    side_effect_exprs.push(opt_body)
+    return IRExpr::Begin(side_effect_exprs)
+  }
+
+  // 副作用のある除去された式がある場合
+  if side_effect_exprs.length() > 0 {
+    // let の body の前に副作用を実行
+    side_effect_exprs.push(opt_body)
+    return IRExpr::Let(live_bindings, IRExpr::Begin(side_effect_exprs))
+  }
+
+  IRExpr::Let(live_bindings, opt_body)
 }
 
 /// letrec 式を最適化する
@@ -364,7 +509,47 @@ fn optimize_letrec(bindings : Array[LetBinding], body : IRExpr) -> IRExpr {
     return opt_body
   }
 
-  IRExpr::Letrec(opt_bindings, opt_body)
+  // 不要コード除去: 使用されないバインディングを除去
+  // letrec は相互参照があるため、初期化式内での使用も考慮
+  let used_in_body = collect_used_vars(opt_body)
+  let used_in_inits : Array[String] = []
+  for binding in opt_bindings {
+    let init_vars = collect_used_vars(binding.init)
+    for v in init_vars {
+      if not(used_in_inits.contains(v)) {
+        used_in_inits.push(v)
+      }
+    }
+  }
+
+  // 依存関係グラフを構築し、body から到達可能なバインディングのみ保持
+  let reachable = compute_reachable_bindings(opt_bindings, used_in_body)
+
+  let live_bindings : Array[LetBinding] = []
+  let side_effect_exprs : Array[IRExpr] = []
+
+  for binding in opt_bindings {
+    if reachable.contains(binding.name) {
+      live_bindings.push(binding)
+    } else if has_side_effect(binding.init) {
+      side_effect_exprs.push(binding.init)
+    }
+  }
+
+  if live_bindings.length() == 0 {
+    if side_effect_exprs.length() == 0 {
+      return opt_body
+    }
+    side_effect_exprs.push(opt_body)
+    return IRExpr::Begin(side_effect_exprs)
+  }
+
+  if side_effect_exprs.length() > 0 {
+    side_effect_exprs.push(opt_body)
+    return IRExpr::Letrec(live_bindings, IRExpr::Begin(side_effect_exprs))
+  }
+
+  IRExpr::Letrec(live_bindings, opt_body)
 }
 
 /// プリミティブ操作を最適化する（定数畳み込み）
@@ -543,6 +728,179 @@ fn is_one(expr : IRExpr) -> Bool {
     IRExpr::Const(IRConst::Int(1)) => true
     IRExpr::Const(IRConst::Real(r)) => r == 1.0
     _ => false
+  }
+}
+
+/// letrec バインディングの依存関係から到達可能なバインディング名を計算
+fn compute_reachable_bindings(
+  bindings : Array[LetBinding],
+  roots : Array[String]
+) -> Array[String] {
+  // バインディング名のセットを構築
+  let binding_names : Array[String] = []
+  for binding in bindings {
+    binding_names.push(binding.name)
+  }
+
+  // 各バインディングの依存先を収集
+  let deps : Array[(String, Array[String])] = []
+  for binding in bindings {
+    let init_vars = collect_used_vars(binding.init)
+    // バインディング名に含まれるもののみ
+    let binding_deps : Array[String] = []
+    for v in init_vars {
+      if binding_names.contains(v) && not(binding_deps.contains(v)) {
+        binding_deps.push(v)
+      }
+    }
+    deps.push((binding.name, binding_deps))
+  }
+
+  // roots から到達可能なバインディングを計算（BFS）
+  let reachable : Array[String] = []
+  let queue : Array[String] = []
+
+  // 初期ルートの追加
+  for root in roots {
+    if binding_names.contains(root) && not(reachable.contains(root)) {
+      reachable.push(root)
+      queue.push(root)
+    }
+  }
+
+  // BFS
+  while queue.length() > 0 {
+    let current = queue.pop().unwrap()
+    // current の依存先を探索
+    for dep_entry in deps {
+      if dep_entry.0 == current {
+        for dep in dep_entry.1 {
+          if not(reachable.contains(dep)) {
+            reachable.push(dep)
+            queue.push(dep)
+          }
+        }
+        break
+      }
+    }
+  }
+
+  reachable
+}
+
+/// 式で使用されている変数名を収集する
+fn collect_used_vars(expr : IRExpr) -> Array[String] {
+  let vars : Array[String] = []
+  collect_used_vars_inner(expr, vars)
+  vars
+}
+
+/// 変数名収集の内部関数
+fn collect_used_vars_inner(expr : IRExpr, vars : Array[String]) -> Unit {
+  match expr {
+    IRExpr::Const(_) => ()
+    IRExpr::Quote(_) => ()
+    IRExpr::Var(var_ref) => {
+      // 現在のスコープの変数のみ（depth == 0）
+      if var_ref.depth == 0 && not(vars.contains(var_ref.name)) {
+        vars.push(var_ref.name)
+      }
+    }
+    IRExpr::GlobalVar(_) => ()
+    IRExpr::If(cond, then_branch, else_branch) => {
+      collect_used_vars_inner(cond, vars)
+      collect_used_vars_inner(then_branch, vars)
+      collect_used_vars_inner(else_branch, vars)
+    }
+    IRExpr::Begin(exprs) => {
+      for e in exprs {
+        collect_used_vars_inner(e, vars)
+      }
+    }
+    IRExpr::Lambda(info) => {
+      // Lambda 内の自由変数をチェック
+      for free_var in info.free_vars {
+        if free_var.depth == 0 && not(vars.contains(free_var.name)) {
+          vars.push(free_var.name)
+        }
+      }
+      // Lambda の body は別スコープなので再帰しない
+    }
+    IRExpr::App(func, args) => {
+      collect_used_vars_inner(func, vars)
+      for arg in args {
+        collect_used_vars_inner(arg, vars)
+      }
+    }
+    IRExpr::TailApp(func, args) => {
+      collect_used_vars_inner(func, vars)
+      for arg in args {
+        collect_used_vars_inner(arg, vars)
+      }
+    }
+    IRExpr::Let(bindings, body) => {
+      // バインディングの初期化式
+      for binding in bindings {
+        collect_used_vars_inner(binding.init, vars)
+      }
+      // body 内で使用される変数（ただし let で束縛される変数は外のスコープには影響しない）
+      let body_vars = collect_used_vars(body)
+      let bound_names : Array[String] = []
+      for binding in bindings {
+        bound_names.push(binding.name)
+      }
+      for v in body_vars {
+        if not(bound_names.contains(v)) && not(vars.contains(v)) {
+          vars.push(v)
+        }
+      }
+    }
+    IRExpr::Letrec(bindings, body) => {
+      // letrec の初期化式と body
+      for binding in bindings {
+        collect_used_vars_inner(binding.init, vars)
+      }
+      let body_vars = collect_used_vars(body)
+      let bound_names : Array[String] = []
+      for binding in bindings {
+        bound_names.push(binding.name)
+      }
+      for v in body_vars {
+        if not(bound_names.contains(v)) && not(vars.contains(v)) {
+          vars.push(v)
+        }
+      }
+    }
+    IRExpr::Set(var_ref, value) => {
+      if var_ref.depth == 0 && not(vars.contains(var_ref.name)) {
+        vars.push(var_ref.name)
+      }
+      collect_used_vars_inner(value, vars)
+    }
+    IRExpr::GlobalSet(_, value) => {
+      collect_used_vars_inner(value, vars)
+    }
+    IRExpr::PrimOp(_, args) => {
+      for arg in args {
+        collect_used_vars_inner(arg, vars)
+      }
+    }
+    IRExpr::CallCC(proc) => {
+      collect_used_vars_inner(proc, vars)
+    }
+    IRExpr::Delay(body) => {
+      collect_used_vars_inner(body, vars)
+    }
+    IRExpr::And(exprs) => {
+      for e in exprs {
+        collect_used_vars_inner(e, vars)
+      }
+    }
+    IRExpr::Or(exprs) => {
+      for e in exprs {
+        collect_used_vars_inner(e, vars)
+      }
+    }
   }
 }
 
