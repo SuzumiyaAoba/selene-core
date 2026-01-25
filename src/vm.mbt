@@ -426,6 +426,7 @@ fn vm_exec_cons(args : Array[Value]) -> Result[Value, VMError] {
   if args.length() != 2 {
     return Err(VMError::ArityError("cons requires 2 arguments"))
   }
+  gc_track_pair()
   Ok(Value::Pair(args[0], args[1]))
 }
 
@@ -490,6 +491,7 @@ fn vm_exec_list(args : Array[Value]) -> Result[Value, VMError] {
   let mut i = args.length() - 1
   while i >= 0 {
     result = Value::Pair(args[i], result)
+    gc_track_pair()
     i = i - 1
   }
   Ok(result)
@@ -819,6 +821,7 @@ fn vm_step(vm : VMState) -> Result[Bool, VMError] {
       captures.rev_in_place()  // 正しい順序に戻す
       let closure : VMClosure = { chunk_idx, captures }
       vm_push(vm, Value::Procedure(Procedure::VMClosure(closure)))
+      gc_track_closure()
       Ok(true)
     }
 
@@ -827,6 +830,7 @@ fn vm_step(vm : VMState) -> Result[Bool, VMError] {
         Ok(val) => {
           let boxed_ref = Ref::new(val)
           vm_push(vm, Value::Box(boxed_ref))
+          gc_track_box()
           Ok(true)
         }
         Err(e) => Err(e)
@@ -971,6 +975,7 @@ fn vm_step(vm : VMState) -> Result[Bool, VMError] {
             return_chunk: vm.current_chunk,
             return_ip: vm.ip,
           }
+          gc_register_continuation(cont_id)
           let cont_value = Value::Procedure(Procedure::VMCont(cont))
           match vm_call_function(vm, proc, [cont_value], false) {
             Ok(_) => Ok(true)
@@ -989,6 +994,7 @@ fn vm_step(vm : VMState) -> Result[Bool, VMError] {
           match vm_pop(vm) {
             Ok(car) => {
               vm_push(vm, Value::Pair(car, cdr))
+              gc_track_pair()
               Ok(true)
             }
             Err(e) => Err(e)
@@ -1023,6 +1029,7 @@ fn vm_step(vm : VMState) -> Result[Bool, VMError] {
       }
       items.rev_in_place()
       vm_push(vm, Value::Vector(items))
+      gc_track_vector()
       Ok(true)
     }
 
@@ -1102,9 +1109,19 @@ pub fn vm_run(vm : VMState) -> Result[Value, VMError] {
   }
   vm.call_stack.push(initial_frame)
 
+  let mut step_count = 0
+  let gc_check_interval = 1000  // 1000ステップごとにGCチェック
+
   while true {
     match vm_step(vm) {
-      Ok(true) => continue
+      Ok(true) => {
+        step_count = step_count + 1
+        // 定期的にGCチェック
+        if step_count % gc_check_interval == 0 {
+          let _ = gc_check_and_run(vm)
+        }
+        continue
+      }
       Ok(false) => break
       Err(e) => return Err(e)
     }
