@@ -192,3 +192,129 @@ test "deserialize: symbol roundtrip" {
     Err(_) => fail!("Compilation failed")
   }
 }
+
+/// ========================================
+/// バイナリ形式のテスト
+/// ========================================
+
+/// バイナリ形式の基本ラウンドトリップ
+test "binary: simple roundtrip" {
+  let expr = parse_one("(+ 1 2)")
+  match compile_to_module(expr) {
+    Ok(original) => {
+      let binary = serialize_module_to_binary(original)
+      match deserialize_module_from_binary(binary) {
+        Ok(restored) => {
+          assert_eq!(restored.main.arity, original.main.arity)
+          assert_eq!(restored.main.num_free_vars, original.main.num_free_vars)
+          assert_eq!(restored.main.num_locals, original.main.num_locals)
+          assert_eq!(restored.main.code.length(), original.main.code.length())
+          assert_eq!(restored.main.constants.length(), original.main.constants.length())
+        }
+        Err(e) => fail!("Binary deserialization failed: " + e.to_string())
+      }
+    }
+    Err(_) => fail!("Compilation failed")
+  }
+}
+
+/// バイナリ形式のLambdaラウンドトリップ
+test "binary: lambda roundtrip" {
+  let expr = parse_one("(lambda (x y) (+ x y))")
+  match compile_to_module(expr) {
+    Ok(original) => {
+      let binary = serialize_module_to_binary(original)
+      match deserialize_module_from_binary(binary) {
+        Ok(restored) => {
+          assert_eq!(restored.chunks.length(), original.chunks.length())
+          if restored.chunks.length() > 0 {
+            assert_eq!(restored.chunks[0].arity, original.chunks[0].arity)
+          }
+        }
+        Err(e) => fail!("Binary deserialization failed: " + e.to_string())
+      }
+    }
+    Err(_) => fail!("Compilation failed")
+  }
+}
+
+/// バイナリ形式の定数ラウンドトリップ
+test "binary: constants roundtrip" {
+  let expr = parse_one("(list 1 2 \"hello\" 'world)")
+  match compile_to_module(expr) {
+    Ok(original) => {
+      let binary = serialize_module_to_binary(original)
+      match deserialize_module_from_binary(binary) {
+        Ok(restored) => {
+          assert_eq!(restored.main.constants.length(), original.main.constants.length())
+        }
+        Err(e) => fail!("Binary deserialization failed: " + e.to_string())
+      }
+    }
+    Err(_) => fail!("Compilation failed")
+  }
+}
+
+/// バイナリ形式の制御フローラウンドトリップ
+test "binary: control flow roundtrip" {
+  let expr = parse_one("(if #t 1 2)")
+  match compile_to_module(expr) {
+    Ok(original) => {
+      let binary = serialize_module_to_binary(original)
+      match deserialize_module_from_binary(binary) {
+        Ok(restored) => {
+          assert_eq!(restored.main.code.length(), original.main.code.length())
+        }
+        Err(e) => fail!("Binary deserialization failed: " + e.to_string())
+      }
+    }
+    Err(_) => fail!("Compilation failed")
+  }
+}
+
+/// バイナリ形式の複雑なプログラムラウンドトリップ
+test "binary: complex program roundtrip" {
+  let expr = parse_one("(define (fact n) (if (<= n 1) 1 (* n (fact (- n 1)))))")
+  match compile_to_module(expr) {
+    Ok(original) => {
+      let binary = serialize_module_to_binary(original)
+      match deserialize_module_from_binary(binary) {
+        Ok(restored) => {
+          assert_eq!(restored.main.code.length(), original.main.code.length())
+          assert_eq!(restored.chunks.length(), original.chunks.length())
+        }
+        Err(e) => fail!("Binary deserialization failed: " + e.to_string())
+      }
+    }
+    Err(_) => fail!("Compilation failed")
+  }
+}
+
+/// バイナリ形式の不正データエラー
+test "binary: invalid format" {
+  // 空データ
+  match deserialize_module_from_binary([]) {
+    Err(SerializeError::UnexpectedEnd) => ()
+    _ => fail!("Expected UnexpectedEnd error")
+  }
+
+  // 不正なマジックナンバー
+  match deserialize_module_from_binary([0x00, 0x00, 0x00, 0x00]) {
+    Err(SerializeError::InvalidFormat(_)) => ()
+    _ => fail!("Expected InvalidFormat error")
+  }
+}
+
+/// バイナリサイズがテキストより小さいことを確認
+test "binary: smaller than text" {
+  let expr = parse_one("(define (fact n) (if (<= n 1) 1 (* n (fact (- n 1)))))")
+  match compile_to_module(expr) {
+    Ok(compiled) => {
+      let text = serialize_module_to_string(compiled)
+      let binary = serialize_module_to_binary(compiled)
+      // バイナリはテキストより小さいはず
+      assert_true!(binary.length() < text.length())
+    }
+    Err(_) => fail!("Compilation failed")
+  }
+}
