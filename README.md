@@ -62,11 +62,56 @@ moon test
 
 ## Usage
 
-### REPL
+### Interactive REPL (Node.js)
+
+For an interactive REPL with full standard input support, use the JavaScript backend with Node.js:
 
 ```bash
-moon run
+make run-js
+# or
+moon run src --target js
 ```
+
+Then type Scheme expressions and press Enter:
+
+```
+selene-core: VM Interactive REPL
+Type expressions to evaluate. (Ctrl+D to exit)
+
+> (+ 1 2)
+3
+
+> (define (square x) (* x x))
+#<void>
+
+> (square 5)
+25
+
+> (Ctrl+D)
+Bye!
+```
+
+**Requirements**: Node.js must be installed on your system.
+
+### Demo REPL (WASM)
+
+To run a demo REPL with pre-defined sample expressions:
+
+```bash
+make run
+# or
+moon run src
+```
+
+The demo REPL will execute a series of Scheme expressions to demonstrate the interpreter's functionality:
+- Arithmetic operations
+- Variable definitions
+- Function definitions
+- Closures
+- Recursion
+- Higher-order functions
+- List operations
+- Control flow (if, cond, let, etc.)
 
 ### Examples
 

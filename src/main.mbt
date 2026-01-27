@@ -1,8 +1,10 @@
-/// エントリーポイント。REPL を起動する。
+/// エントリーポイント。
 ///
-/// JS バックエンドでインタラクティブ REPL を使用する場合は、
-/// run() を run_interactive() に変更してください。
+/// JavaScript バックエンド（Node.js）では対話的 REPL を起動します：
+///   moon run src --target js
+///
+/// WASM バックエンドではサンプル式を実行します：
+///   moon run src
 fn main {
-  run()  // サンプル入力を使用するバージョン（すべてのバックエンドで動作）
-  // run_interactive()  // 標準入力から読み取るバージョン（JS バックエンド専用）
+  run_vm_interactive()
 }

@@ -1,12 +1,15 @@
 MOON ?= moon
 
-.PHONY: build run test fmt clean
+.PHONY: build run run-js test fmt clean
 
 build:
 	$(MOON) build
 
 run:
-	$(MOON) run
+	$(MOON) run src
+
+run-js:
+	$(MOON) run src --target js
 
 test:
 	$(MOON) test
