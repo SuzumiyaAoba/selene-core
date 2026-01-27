@@ -65,8 +65,21 @@ moon test
 ### REPL
 
 ```bash
-moon run
+# Run demo REPL with sample Scheme expressions
+make run
+# or
+moon run src
 ```
+
+The REPL will execute a series of sample Scheme expressions to demonstrate the interpreter's functionality:
+- Arithmetic operations
+- Variable definitions
+- Function definitions
+- Closures
+- Recursion
+- Higher-order functions
+- List operations
+- Control flow (if, cond, let, etc.)
 
 ### Examples
 
