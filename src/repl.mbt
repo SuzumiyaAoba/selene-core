@@ -446,13 +446,15 @@ pub fn run_vm_interactive() -> Unit {
       break
     }
 
+    // 式を評価
     match repl_eval(ctx, input) {
       Ok(value) => {
-        // GlobalSet の結果は void として表示
-        let expr = parse_one(input)
-        match expr {
-          SExpr::Pair(SExpr::Symbol("define"), _) => println("#<void>")
-          _ => println(value_to_string(value))
+        // define で始まる式の場合は void として表示
+        let is_define = input.trim().starts_with("(define")
+        if is_define {
+          println("#<void>")
+        } else {
+          println(value_to_string(value))
         }
       }
       Err(err) => println("Error: " + err)
