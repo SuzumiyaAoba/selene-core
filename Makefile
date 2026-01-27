@@ -6,7 +6,7 @@ build:
 	$(MOON) build
 
 run:
-	$(MOON) run
+	$(MOON) run src
 
 test:
 	$(MOON) test
