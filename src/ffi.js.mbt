@@ -1,11 +1,17 @@
 /// JavaScript FFI for Node.js
 /// このファイルは JS バックエンド専用です
 
-/// 標準入力から一行読み取る（同期版）
+/// プロンプトを表示してから標準入力から一行読み取る（同期版）
 /// Node.js の fs.readSync を使用して標準入力（fd=0）から読み取る
-extern "js" fn read_line_sync_ffi() -> String =
-  #|() => {
+extern "js" fn read_line_with_prompt_ffi(prompt : String) -> String =
+  #|(prompt) => {
   #|  const fs = require('fs');
+  #|
+  #|  // プロンプトを出力（改行なし）
+  #|  if (prompt && prompt.length > 0) {
+  #|    process.stdout.write(prompt);
+  #|  }
+  #|
   #|  let buffer = Buffer.alloc(1);
   #|  let bytesRead = 0;
   #|  let result = '';
@@ -27,10 +33,16 @@ extern "js" fn read_line_sync_ffi() -> String =
   #|  return result;
   #|}
 
+/// 標準入力から一行読み取る（プロンプト付き）
+/// JS バックエンドでのみ動作します
+pub fn read_line_with_prompt(prompt : String) -> String {
+  read_line_with_prompt_ffi(prompt)
+}
+
 /// 標準入力から一行読み取る
 /// JS バックエンドでのみ動作します
 pub fn read_line() -> String {
-  read_line_sync_ffi()
+  read_line_with_prompt("")
 }
 
 // =============================================================================

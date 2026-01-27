@@ -1,6 +1,12 @@
 /// wasm バックエンド用のスタブ実装
 /// 標準入力の読み取りは wasm では利用できません
 
+/// 標準入力から一行読み取る（プロンプト付き、スタブ実装）
+/// wasm バックエンドでは常に空文字列を返します
+pub fn read_line_with_prompt(_prompt : String) -> String {
+  ""  // wasm では stdin 読み取りは利用不可
+}
+
 /// 標準入力から一行読み取る（スタブ実装）
 /// wasm バックエンドでは常に空文字列を返します
 pub fn read_line() -> String {

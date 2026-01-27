@@ -429,18 +429,20 @@ pub fn run_vm() -> Unit {
 /// JS バックエンド専用
 pub fn run_vm_interactive() -> Unit {
   println("selene-core: VM Interactive REPL")
-  println("Type expressions to evaluate. (Ctrl+D or empty line to exit)")
+  println("Type expressions to evaluate. (Ctrl+D to exit)")
   println("")
 
   // REPL コンテキストを初期化
   let ctx = new_repl_context()
 
   while true {
-    let input = read_line()
+    // プロンプト付きで入力を読み取る
+    let input = read_line_with_prompt("> ")
 
     // 空行またはEOFで終了
     if input.length() == 0 {
-      println("\nBye!")
+      println("")
+      println("Bye!")
       break
     }
 
