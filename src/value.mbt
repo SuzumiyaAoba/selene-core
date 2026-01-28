@@ -1,17 +1,17 @@
-/// Scheme 評価器の実行時値（ドラフト）。
+/// Runtime values ​​(draft) of the Scheme evaluator.
 
-/// 数値型（R5RS 数値塔）
+/// Numeric type (R5RS numeric tower)
 /// Int < Rational < Real < Complex
 pub(all) enum Number {
   Int(Int)
-  /// 有理数: 分子と分母（常に既約分数で保持）
+  /// Rational numbers: numerator and denominator (always kept as irreducible fractions)
   Rational(Int, Int)
   Real(Double)
-  /// 複素数: 実部と虚部
+  /// Complex numbers: real and imaginary parts
   Complex(Double, Double)
 } derive(Show)
 
-/// 最大公約数を計算する
+/// Calculate the greatest common divisor
 pub fn gcd_int(a : Int, b : Int) -> Int {
   let mut x = if a < 0 { -a } else { a }
   let mut y = if b < 0 { -b } else { b }
@@ -23,10 +23,10 @@ pub fn gcd_int(a : Int, b : Int) -> Int {
   x
 }
 
-/// 有理数を既約分数に正規化する
+/// Normalize rational numbers to irreducible fractions
 pub fn normalize_rational(numer : Int, denom : Int) -> Number {
   if denom == 0 {
-    // ゼロ除算エラー（実際には呼び出し側でチェックすべき）
+    // Divide-by-zero error (should actually be checked on the caller side)
     Number::Int(0)
   } else if numer == 0 {
     Number::Int(0)
@@ -34,7 +34,7 @@ pub fn normalize_rational(numer : Int, denom : Int) -> Number {
     let g = gcd_int(numer, denom)
     let n = numer / g
     let d = denom / g
-    // 分母が負の場合、符号を分子に移動
+    // If the denominator is negative, move the sign to the numerator
     let (n, d) = if d < 0 { (-n, -d) } else { (n, d) }
     if d == 1 {
       Number::Int(n)
@@ -44,30 +44,30 @@ pub fn normalize_rational(numer : Int, denom : Int) -> Number {
   }
 }
 
-/// 継続を表す型。
-/// CPS 変換された評価器で使用される。
+/// A type that represents a continuation.
+/// Used in CPS converted evaluators.
 pub(all) struct Continuation {
-  /// 継続の識別子
+  /// continuation identifier
   id : Int
 } derive(Show)
 
-/// 継続カウンタ（グローバル）
+/// Continuation counter (global)
 let continuation_counter : Ref[Int] = { val: 0 }
 
-/// 新しい継続IDを生成する。
+/// Generate a new continuation ID.
 pub fn new_continuation_id() -> Int {
   let id = continuation_counter.val
   continuation_counter.val = continuation_counter.val + 1
   id
 }
 
-/// VM クロージャ（前方宣言）
+/// VM closure (forward declaration)
 pub(all) struct VMClosure {
   chunk_idx : Int
   captures : Array[Value]
 } derive(Show)
 
-/// VM 継続（前方宣言）
+/// VM continuation (forward declaration)
 pub(all) struct VMContinuation {
   id : Int
   stack : Array[Value]
@@ -76,7 +76,7 @@ pub(all) struct VMContinuation {
   return_ip : Int
 } derive(Show)
 
-/// VM コールフレーム（前方宣言）
+/// VM call frame (forward declaration)
 pub(all) struct VMCallFrame {
   return_chunk : Int
   return_ip : Int
@@ -84,40 +84,40 @@ pub(all) struct VMCallFrame {
   num_locals : Int
 } derive(Show)
 
-/// 手続き表現。
+/// procedural expression.
 pub(all) enum Procedure {
   Native(String)
   Closure(Array[String], SExpr, Env)
-  Cont(Continuation)  // ファーストクラス継続
-  VMClosure(VMClosure)  // VM クロージャ
-  VMCont(VMContinuation)  // VM 継続
+  Cont(Continuation)  // Continuation of first class
+  VMClosure(VMClosure)  // VM closure
+  VMCont(VMContinuation)  // VM continuation
 } derive(Show)
 
-/// 継続呼び出しを表す型。
-/// 継続が呼び出されたときに、この値がスローされる。
+/// A type representing a continuation call.
+/// This value is thrown when the continuation is called.
 pub(all) struct ContinuationCall {
   cont_id : Int
   value : Value
 } derive(Show)
 
-/// 継続ストア（グローバル）
-/// 継続IDから継続の状態へのマッピング
+/// Continuous store (global)
+/// Mapping from continuation ID to continuation state
 struct ContinuationState {
-  /// 継続が呼び出されたときに返す値を受け取るコールバック
-  /// (実際には評価の「残り」を表す)
+  /// A callback that receives the value to return when the continuation is called
+  /// (actually represents the “remaining” of the evaluation)
   env : Env
-  /// 継続がキャプチャされた時点での式（デバッグ用）
+  /// Expression at the time the continuation was captured (for debugging)
   captured_at : String
 }
 
 let continuation_store : Array[(Int, ContinuationState)] = []
 
-/// 継続を保存する。
+/// Save continuation.
 pub fn store_continuation(id : Int, env : Env, captured_at : String) -> Unit {
   continuation_store.push((id, { env, captured_at }))
 }
 
-/// 継続を取得する。
+/// Get a continuation.
 pub fn get_continuation(id : Int) -> ContinuationState? {
   for entry in continuation_store {
     if entry.0 == id {
@@ -127,68 +127,68 @@ pub fn get_continuation(id : Int) -> ContinuationState? {
   None
 }
 
-/// プロミス（遅延評価）を表す型。
+/// A type that represents a promise (lazy evaluation).
 pub(all) struct Promise {
-  /// 評価済みかどうか
+  /// Has it been evaluated?
   forced : Ref[Bool]
-  /// 遅延された式（未評価の場合）または結果（評価済みの場合）
-  /// 未評価: Left(expr, env), 評価済み: Right(value)
+  /// Deferred expression (if unevaluated) or result (if evaluated)
+  /// Unrated: Left(expr, env), Evaluated: Right(value)
   content : Ref[PromiseContent]
 } derive(Show)
 
-/// プロミスの内容
+/// Promise content
 pub(all) enum PromiseContent {
   Delayed(SExpr, Env)
   Forced(Value)
 } derive(Show)
 
-/// 構文ルール（syntax-rules マクロ）
+/// Syntax rules (syntax-rules macro)
 pub(all) struct SyntaxRules {
-  /// リテラルキーワード（パターン内でそのままマッチする識別子）
+  /// Literal keywords (identifiers that match exactly in the pattern)
   literals : Array[String]
-  /// パターンとテンプレートのペアのリスト
+  /// List of pattern and template pairs
   rules : Array[SyntaxRule]
-  /// マクロ定義時の環境（衛生的マクロのため）
+  /// Environment at macro definition (for hygienic macros)
   def_env : Env
 } derive(Show)
 
-/// 個々の構文ルール
+/// individual syntax rules
 pub(all) struct SyntaxRule {
-  /// パターン（マクロ呼び出し形式）
+  /// Pattern (macro call format)
   pattern : SExpr
-  /// テンプレート（展開形式）
+  /// Template (expanded format)
   template : SExpr
 } derive(Show)
 
-/// ポートの方向
+/// Port direction
 pub(all) enum PortDirection {
   Input
   Output
 } derive(Show, Eq)
 
-/// ポート（入出力）を表す型
+/// Type representing port (input/output)
 pub(all) struct Port {
-  /// ポートの一意識別子
+  /// Unique identifier for the port
   id : Int
-  /// 入力/出力
+  /// input/output
   direction : PortDirection
-  /// 開いているかどうか
+  /// open or not
   open : Ref[Bool]
-  /// ポート名（ファイル名など）
+  /// Port name (file name, etc.)
   name : String
 } derive(Show)
 
-/// ポートカウンタ（グローバル）
+/// Port counter (global)
 let port_counter : Ref[Int] = { val: 0 }
 
-/// 新しいポートIDを生成する
+/// Generate a new port ID
 pub fn new_port_id() -> Int {
   let id = port_counter.val
   port_counter.val = port_counter.val + 1
   id
 }
 
-/// 評価器が扱う値の総和型。
+/// Summation type of values ​​handled by the evaluator.
 pub(all) enum Value {
   Nil
   Bool(Bool)
@@ -200,12 +200,12 @@ pub(all) enum Value {
   Vector(Array[Value])
   Procedure(Procedure)
   Promise(Promise)
-  /// 多値（call-with-values で使用）
+  /// Multivalued (used with call-with-values)
   MultipleValues(Array[Value])
-  /// 構文トランスフォーマ（マクロ）
+  /// Syntax transformer (macro)
   Syntax(SyntaxRules)
-  /// ポート（入出力）
+  /// Port (input/output)
   Port(Port)
-  /// ボックス化された値（参照キャプチャ用）
+  /// Boxed values ​​(for reference capture)
   Box(Ref[Value])
 } derive(Show)

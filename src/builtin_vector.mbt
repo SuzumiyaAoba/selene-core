@@ -1,9 +1,9 @@
-/// ベクタ操作組み込み関数
+/// Vector Operation Built-in Functions
 ///
-/// Scheme のベクタ操作を実装する。
+/// Implement the vector operation of Scheme.
 
-/// 組み込み関数: vector?
-/// (vector? obj) - obj がベクトルかどうかを判定
+/// Built-in function: vector?
+/// (vector? obj) - Determine if obj is a vector
 fn builtin_vector_p(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("vector?: requires exactly 1 argument"))
@@ -14,8 +14,8 @@ fn builtin_vector_p(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: make-vector
-/// (make-vector k [fill]) - 長さ k のベクトルを作成（オプションで初期値を指定）
+/// Built-in function: make-vector
+/// (make-vector k [fill]) - creates a vector of length k (optional initial value)
 fn builtin_make_vector(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() < 1 || args.length() > 2 {
     return Err(EvalError::ArityError("make-vector: requires 1 or 2 arguments"))
@@ -30,7 +30,7 @@ fn builtin_make_vector(args : Array[Value]) -> Result[Value, EvalError] {
       let fill = if args.length() == 2 {
         args[1]
       } else {
-        Value::Nil // デフォルトは ()
+        Value::Nil // Default is
       }
       let items : Array[Value] = []
       let mut i = 0
@@ -49,8 +49,8 @@ fn builtin_make_vector(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: vector
-/// (vector obj ...) - 引数からベクトルを作成
+/// Built-in function: vector
+/// (vector obj...) - create vector from arguments
 fn builtin_vector(args : Array[Value]) -> Result[Value, EvalError] {
   let items : Array[Value] = []
   for arg in args {
@@ -59,8 +59,8 @@ fn builtin_vector(args : Array[Value]) -> Result[Value, EvalError] {
   Ok(Value::Vector(items))
 }
 
-/// 組み込み関数: vector-length
-/// (vector-length vector) - ベクトルの長さを返す
+/// Built-in function: vector-length
+/// (vector-length vector) - Returns the length of a vector
 fn builtin_vector_length(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(
@@ -73,8 +73,8 @@ fn builtin_vector_length(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: vector-ref
-/// (vector-ref vector k) - ベクトルの k 番目の要素を返す
+/// Built-in function: vector-ref
+/// (vector-ref vector k) - returns the kth element of the vector
 fn builtin_vector_ref(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 2 {
     return Err(
@@ -96,9 +96,9 @@ fn builtin_vector_ref(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: vector-set!
-/// (vector-set! vector k obj) - ベクトルの k 番目の要素を obj に設定
-/// 注: 不変環境モデルのため、新しいベクトルを返す
+/// Built-in function: vector-set!
+/// (vector-set! vector k obj) - sets the kth element of the vector to obj
+/// Note: Because of the immutable environment model, a new vector is returned
 fn builtin_vector_set(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 3 {
     return Err(
@@ -123,7 +123,7 @@ fn builtin_vector_set(args : Array[Value]) -> Result[Value, EvalError] {
       } else {
         ()
       }
-      // 注: 本来は副作用のみで戻り値は未定義だが、不変モデルでは新しいベクトルを返す
+      // Note: Originally only side effects, the return value is undefined, but the invariant model returns a new vector
       Ok(Value::Vector(new_items))
     }
     (Value::Vector(_), _) =>
@@ -135,8 +135,8 @@ fn builtin_vector_set(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: vector->list
-/// (vector->list vector) - ベクトルをリストに変換
+/// Built-in function: vector- > list
+/// (vector- > list vector) - Convert vector to list
 fn builtin_vector_to_list(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(
@@ -159,8 +159,8 @@ fn builtin_vector_to_list(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: list->vector
-/// (list->vector list) - リストをベクトルに変換
+/// Built-in function: list- > vector
+/// (list- > vector list) - Convert list to vector
 fn builtin_list_to_vector(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(

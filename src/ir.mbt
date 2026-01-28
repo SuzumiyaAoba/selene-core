@@ -1,19 +1,19 @@
-/// 中間表現 (IR) の型定義
+/// Intermediate representation (IR) type definition
 ///
-/// SExpr (AST) からコンパイルされた中間表現。
-/// レキシカルアドレッシングと末尾呼び出し最適化の情報を含む。
+/// Intermediate representation compiled from SExpr (AST).
+/// Contains information on lexical addressing and tail call optimization.
 
-/// 変数参照（レキシカルアドレッシング）
+/// Variable reference (lexical addressing)
 pub(all) struct VarRef {
-  /// 変数名（デバッグ用）
+  /// Variable name (for debugging)
   name : String
-  /// レキシカル深度（0 = 現在のフレーム、1 = 親フレーム、...）
+  /// Lexical depth (0 = current frame, 1 = parent frame,...)
   depth : Int
-  /// フレーム内インデックス
+  /// In-frame index
   index : Int
 } derive(Show, Eq)
 
-/// 定数値（コンパイル時に決定される値）
+/// Constant value (value determined at compile time)
 pub(all) enum IRConst {
   Nil
   Bool(Bool)
@@ -22,14 +22,14 @@ pub(all) enum IRConst {
   Char(Char)
   String(String)
   Symbol(String)
-  /// 複合データ（quote されたリストやベクトル）
+  /// Complex data (quoted lists and vectors)
   Pair(IRConst, IRConst)
   Vector(Array[IRConst])
 } derive(Show)
 
-/// プリミティブ操作の種類
+/// Primitive operation types
 pub(all) enum PrimOpKind {
-  // 算術演算
+  // Arithmetic operations
   Add
   Sub
   Mul
@@ -43,7 +43,7 @@ pub(all) enum PrimOpKind {
   Gcd
   Lcm
 
-  // 比較演算
+  // Relations
   NumEq
   Lt
   Gt
@@ -53,14 +53,14 @@ pub(all) enum PrimOpKind {
   Eqv
   Equal
 
-  // 数値述語
+  // Numeric predicate
   ZeroP
   PositiveP
   NegativeP
   OddP
   EvenP
 
-  // 型述語
+  // Type predicate
   PairP
   NumberP
   IntegerP
@@ -76,7 +76,7 @@ pub(all) enum PrimOpKind {
   PromiseP
   PortP
 
-  // リスト操作
+  // List operations
   Cons
   Car
   Cdr
@@ -89,7 +89,7 @@ pub(all) enum PrimOpKind {
   ListRef
   ListTail
 
-  // 文字操作
+  // Character manipulation
   CharEq
   CharLt
   CharGt
@@ -105,7 +105,7 @@ pub(all) enum PrimOpKind {
   CharToInteger
   IntegerToChar
 
-  // 文字列操作
+  // String manipulation
   StringLength
   StringRef
   StringAppend
@@ -119,7 +119,7 @@ pub(all) enum PrimOpKind {
   StringToList
   ListToString
 
-  // ベクトル操作
+  // Vector manipulation
   MakeVector
   Vector
   VectorLength
@@ -128,7 +128,7 @@ pub(all) enum PrimOpKind {
   VectorToList
   ListToVector
 
-  // 数学関数
+  // Mathematical Functions
   Floor
   Ceiling
   Truncate
@@ -144,16 +144,16 @@ pub(all) enum PrimOpKind {
   Exp
   Log
 
-  // 変換
+  // Conversion
   NumberToString
   StringToNumber
   SymbolToString
   StringToSymbol
 
-  // 論理演算
+  // Logical connective
   Not
 
-  // 複素数
+  // Complex number
   MakeRectangular
   MakePolar
   RealPart
@@ -162,12 +162,12 @@ pub(all) enum PrimOpKind {
   Angle
   ComplexP
 
-  // 有理数
+  // Set of rational numbers
   Numerator
   Denominator
   RationalP
 
-  // 数値判定
+  // Numerical Interpretation
   ExactP
   InexactP
 
@@ -177,7 +177,7 @@ pub(all) enum PrimOpKind {
   Write
   Read
 
-  // ポート
+  // Port
   InputPortP
   OutputPortP
   OpenInputFile
@@ -189,7 +189,7 @@ pub(all) enum PrimOpKind {
   WriteChar
   EofObjectP
 
-  // 制御
+  // Controlled
   Apply
   Map
   ForEach
@@ -201,17 +201,17 @@ pub(all) enum PrimOpKind {
   CallWithValues
   DynamicWind
 
-  // 連想リスト
+  // Associations List
   Assq
   Assv
   Assoc
 
-  // メンバーシップ
+  // Membership
   Memq
   Memv
   Member
 
-  // cXXr アクセサ
+  // cXXr accessor
   Caar
   Cadr
   Cdar
@@ -226,81 +226,81 @@ pub(all) enum PrimOpKind {
   Cdddr
 } derive(Show)
 
-/// let バインディング
+/// let binding
 pub(all) struct LetBinding {
-  /// 変数名
+  /// variable name
   name : String
-  /// 初期化式
+  /// initialization expression
   init : IRExpr
 } derive(Show)
 
-/// ラムダ情報
+/// Lambda information
 pub(all) struct LambdaInfo {
-  /// パラメータ名（デバッグ用）
+  /// Parameter name (for debugging)
   params : Array[String]
-  /// パラメータ数
+  /// Number of parameters
   arity : Int
-  /// 関数本体
+  /// function body
   body : IRExpr
-  /// 自由変数のリスト（クロージャ生成に使用）
+  /// List of free variables (used for closure generation)
   free_vars : Array[VarRef]
-  /// ボックス化が必要なパラメータのインデックス
+  /// Index of parameter that requires boxing
   boxed_params : Array[Int]
-  /// ボックス化が必要なローカル変数名
+  /// Local variable names that require boxing
   boxed_locals : Array[String]
 } derive(Show)
 
-/// 中間表現の式
+/// intermediate representation expression
 pub(all) enum IRExpr {
-  /// 定数
+  /// constant
   Const(IRConst)
-  /// ローカル変数参照
+  /// local variable reference
   Var(VarRef)
-  /// グローバル変数参照
+  /// Global variable reference
   GlobalVar(String)
-  /// 条件分岐: (if test then else)
+  /// Conditional branch: (if test then else)
   If(IRExpr, IRExpr, IRExpr)
-  /// 逐次実行: (begin expr ...)
+  /// Serial execution: (begin expr ...)
   Begin(Array[IRExpr])
-  /// ラムダ式
+  /// lambda expression
   Lambda(LambdaInfo)
-  /// 関数適用: (app func args...)
+  /// Function application: (app func args...)
   App(IRExpr, Array[IRExpr])
-  /// 末尾呼び出し: (tail-app func args...)
+  /// Tail call: (tail-app func args...)
   TailApp(IRExpr, Array[IRExpr])
-  /// let 束縛: (let ((var init) ...) body)
+  /// let binding: (let ((var init) ...) body)
   Let(Array[LetBinding], IRExpr)
-  /// letrec 束縛: (letrec ((var init) ...) body)
+  /// letrec binding: (letrec ((var init) ...) body)
   Letrec(Array[LetBinding], IRExpr)
-  /// 代入: (set! var value)
+  /// Assignment: (set! var value)
   Set(VarRef, IRExpr)
-  /// グローバル代入: (set! global-var value)
+  /// Global assignment: (set! global-var value)
   GlobalSet(String, IRExpr)
-  /// プリミティブ操作: (prim-op kind args...)
+  /// Primitive operations: (prim-op kind args...)
   PrimOp(PrimOpKind, Array[IRExpr])
-  /// 継続のキャプチャ: (call/cc proc)
+  /// Capturing a continuation: (call/cc proc)
   CallCC(IRExpr)
-  /// クォート: 'datum
+  /// Quote: 'datum
   Quote(IRConst)
-  /// 遅延評価: (delay expr)
+  /// Delayed evaluation: (delay expr)
   Delay(IRExpr)
-  /// and 特殊形式: (and expr ...)
+  /// and special form: (and expr ...)
   And(Array[IRExpr])
-  /// or 特殊形式: (or expr ...)
+  /// or special form: (or expr ...)
   Or(Array[IRExpr])
 } derive(Show)
 
-/// コンパイルエラー
+/// compilation error
 pub(all) enum CompileError {
-  /// 未束縛変数
+  /// unbound variable
   UnboundVariable(String)
-  /// 構文エラー
+  /// syntax error
   SyntaxError(String)
-  /// サポートされていない機能
+  /// Unsupported features
   Unsupported(String)
 } derive(Show)
 
-/// IRConst を Value に変換する
+/// Convert IRConst to Value
 pub fn ir_const_to_value(c : IRConst) -> Value {
   match c {
     IRConst::Nil => Value::Nil
@@ -322,7 +322,7 @@ pub fn ir_const_to_value(c : IRConst) -> Value {
   }
 }
 
-/// SExpr を IRConst に変換する（quote されたデータ用）
+/// Convert SExpr to IRConst (for quoted data)
 pub fn sexpr_to_ir_const(sexpr : SExpr) -> IRConst {
   match sexpr {
     SExpr::Nil => IRConst::Nil

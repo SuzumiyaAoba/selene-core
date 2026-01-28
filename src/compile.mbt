@@ -1,37 +1,37 @@
-/// SExpr → IR コンパイラ
+/// SExpr → IR compiler
 ///
-/// Scheme の S 式を中間表現 (IR) にコンパイルする。
-/// レキシカルアドレッシングと末尾呼び出し最適化を行う。
+/// Compile a Scheme S-expression into an intermediate representation (IR).
+/// Performs lexical addressing and tail call optimization.
 
-/// コンパイル環境
-/// ローカル変数のスコープを管理する
+/// compilation environment
+/// Manage the scope of local variables
 struct CompileEnv {
-  /// 親環境
+  /// parent environment
   parent : CompileEnv?
-  /// 現在のフレームの変数名リスト
+  /// Variable name list for current frame
   locals : Array[String]
-  /// グローバル変数のセット（組み込み関数など）
+  /// a set of global variables (such as built-in functions)
   globals : @hashmap.T[String, Unit]
 }
 
-/// 新しいコンパイル環境を作成する
+/// Create a new compilation environment
 fn new_compile_env(globals : @hashmap.T[String, Unit]) -> CompileEnv {
   { parent: None, locals: [], globals }
 }
 
-/// コンパイル環境を拡張する（新しいスコープに入る）
+/// Extend the compilation environment (enter a new scope)
 fn extend_compile_env(parent : CompileEnv, locals : Array[String]) -> CompileEnv {
   { parent: Some(parent), locals, globals: parent.globals }
 }
 
-/// 変数がローカルかどうかを調べ、VarRef を返す
+/// Check if variable is local and return VarRef
 fn lookup_local(env : CompileEnv, name : String) -> VarRef? {
   lookup_local_with_depth(env, name, 0)
 }
 
-/// 変数がローカルかどうかを調べ、深度付きで VarRef を返す
+/// Check if variable is local and return VarRef with depth
 fn lookup_local_with_depth(env : CompileEnv, name : String, depth : Int) -> VarRef? {
-  // 現在のフレームで検索
+  // Search in current frame
   let mut i = 0
   let len = env.locals.length()
   while i < len {
@@ -40,19 +40,19 @@ fn lookup_local_with_depth(env : CompileEnv, name : String, depth : Int) -> VarR
     }
     i = i + 1
   }
-  // 親環境で検索
+  // Search in parent environment
   match env.parent {
     Some(parent) => lookup_local_with_depth(parent, name, depth + 1)
     None => None
   }
 }
 
-/// 変数がグローバルかどうかを調べる
+/// Check if variable is global
 fn is_global(env : CompileEnv, name : String) -> Bool {
   env.globals.contains(name)
 }
 
-/// 組み込み関数名をプリミティブ操作に変換する
+/// Convert built-in function names to primitive operations
 fn name_to_primop(name : String) -> PrimOpKind? {
   match name {
     "+" => Some(PrimOpKind::Add)
@@ -215,10 +215,10 @@ fn name_to_primop(name : String) -> PrimOpKind? {
   }
 }
 
-/// グローバル環境の初期化（組み込み関数名を登録）
+/// Initializing the global environment (registering built-in function names)
 pub fn initial_globals() -> @hashmap.T[String, Unit] {
   let globals : @hashmap.T[String, Unit] = @hashmap.new()
-  // 算術演算
+  // Arithmetic operations
   globals.set("+", ())
   globals.set("-", ())
   globals.set("*", ())
@@ -231,7 +231,7 @@ pub fn initial_globals() -> @hashmap.T[String, Unit] {
   globals.set("min", ())
   globals.set("gcd", ())
   globals.set("lcm", ())
-  // 比較
+  // comparison
   globals.set("=", ())
   globals.set("<", ())
   globals.set(">", ())
@@ -240,7 +240,7 @@ pub fn initial_globals() -> @hashmap.T[String, Unit] {
   globals.set("eq?", ())
   globals.set("eqv?", ())
   globals.set("equal?", ())
-  // 述語
+  // predicate
   globals.set("zero?", ())
   globals.set("positive?", ())
   globals.set("negative?", ())
@@ -260,7 +260,7 @@ pub fn initial_globals() -> @hashmap.T[String, Unit] {
   globals.set("vector?", ())
   globals.set("promise?", ())
   globals.set("port?", ())
-  // リスト
+  // list
   globals.set("cons", ())
   globals.set("car", ())
   globals.set("cdr", ())
@@ -272,7 +272,7 @@ pub fn initial_globals() -> @hashmap.T[String, Unit] {
   globals.set("reverse", ())
   globals.set("list-ref", ())
   globals.set("list-tail", ())
-  // 文字
+  // character
   globals.set("char=?", ())
   globals.set("char<?", ())
   globals.set("char>?", ())
@@ -287,7 +287,7 @@ pub fn initial_globals() -> @hashmap.T[String, Unit] {
   globals.set("char-downcase", ())
   globals.set("char->integer", ())
   globals.set("integer->char", ())
-  // 文字列
+  // string
   globals.set("string-length", ())
   globals.set("string-ref", ())
   globals.set("string-append", ())
@@ -300,7 +300,7 @@ pub fn initial_globals() -> @hashmap.T[String, Unit] {
   globals.set("substring", ())
   globals.set("string->list", ())
   globals.set("list->string", ())
-  // ベクトル
+  // vector
   globals.set("make-vector", ())
   globals.set("vector", ())
   globals.set("vector-length", ())
@@ -308,7 +308,7 @@ pub fn initial_globals() -> @hashmap.T[String, Unit] {
   globals.set("vector-set!", ())
   globals.set("vector->list", ())
   globals.set("list->vector", ())
-  // 数学
+  // mathematics
   globals.set("floor", ())
   globals.set("ceiling", ())
   globals.set("truncate", ())
@@ -323,14 +323,14 @@ pub fn initial_globals() -> @hashmap.T[String, Unit] {
   globals.set("atan", ())
   globals.set("exp", ())
   globals.set("log", ())
-  // 変換
+  // Conversion
   globals.set("number->string", ())
   globals.set("string->number", ())
   globals.set("symbol->string", ())
   globals.set("string->symbol", ())
-  // 論理
+  // logic
   globals.set("not", ())
-  // 複素数
+  // Complex number
   globals.set("make-rectangular", ())
   globals.set("make-polar", ())
   globals.set("real-part", ())
@@ -338,7 +338,7 @@ pub fn initial_globals() -> @hashmap.T[String, Unit] {
   globals.set("magnitude", ())
   globals.set("angle", ())
   globals.set("complex?", ())
-  // 有理数
+  // Set of rational numbers
   globals.set("numerator", ())
   globals.set("denominator", ())
   globals.set("rational?", ())
@@ -349,7 +349,7 @@ pub fn initial_globals() -> @hashmap.T[String, Unit] {
   globals.set("newline", ())
   globals.set("write", ())
   globals.set("read", ())
-  // ポート
+  // Port
   globals.set("input-port?", ())
   globals.set("output-port?", ())
   globals.set("open-input-file", ())
@@ -360,7 +360,7 @@ pub fn initial_globals() -> @hashmap.T[String, Unit] {
   globals.set("peek-char", ())
   globals.set("write-char", ())
   globals.set("eof-object?", ())
-  // 高階
+  // Takashina
   globals.set("apply", ())
   globals.set("map", ())
   globals.set("for-each", ())
@@ -371,7 +371,7 @@ pub fn initial_globals() -> @hashmap.T[String, Unit] {
   globals.set("values", ())
   globals.set("call-with-values", ())
   globals.set("dynamic-wind", ())
-  // 連想リスト
+  // Associations List
   globals.set("assq", ())
   globals.set("assv", ())
   globals.set("assoc", ())
@@ -391,34 +391,34 @@ pub fn initial_globals() -> @hashmap.T[String, Unit] {
   globals.set("cdadr", ())
   globals.set("cddar", ())
   globals.set("cdddr", ())
-  // 継続
+  // continuation
   globals.set("call/cc", ())
   globals.set("call-with-current-continuation", ())
   globals
 }
 
-/// SExpr を IR にコンパイルする
-/// tail: 末尾位置かどうか
+/// Compile SExpr to IR
+/// tail: whether it is the tail position
 pub fn compile(
   expr : SExpr,
   env : CompileEnv,
   tail : Bool
 ) -> Result[IRExpr, CompileError] {
   match expr {
-    // 自己評価式
+    // self-assessment
     SExpr::Number(n) => Ok(IRExpr::Const(IRConst::Int(n)))
     SExpr::Bool(b) => Ok(IRExpr::Const(IRConst::Bool(b)))
     SExpr::Char(c) => Ok(IRExpr::Const(IRConst::Char(c)))
     SExpr::String(s) => Ok(IRExpr::Const(IRConst::String(s)))
     SExpr::Nil => Ok(IRExpr::Const(IRConst::Nil))
 
-    // 変数参照
+    // variable reference
     SExpr::Symbol(name) => compile_var_ref(name, env)
 
     // quote
     SExpr::Quote(inner) => Ok(IRExpr::Quote(sexpr_to_ir_const(inner)))
 
-    // ベクトル（自己評価）
+    // Vector (self-evaluation)
     SExpr::Vector(items) => {
       let ir_items : Array[IRConst] = []
       for item in items {
@@ -427,7 +427,7 @@ pub fn compile(
       Ok(IRExpr::Const(IRConst::Vector(ir_items)))
     }
 
-    // リスト（特殊形式または関数適用）
+    // list (special form or function applied)
     SExpr::Pair(car, cdr) => compile_pair(car, cdr, env, tail)
 
     // quasiquote
@@ -440,7 +440,7 @@ pub fn compile(
   }
 }
 
-/// 変数参照をコンパイルする
+/// Compile variable references
 fn compile_var_ref(name : String, env : CompileEnv) -> Result[IRExpr, CompileError] {
   match lookup_local(env, name) {
     Some(var_ref) => Ok(IRExpr::Var(var_ref))
@@ -448,13 +448,13 @@ fn compile_var_ref(name : String, env : CompileEnv) -> Result[IRExpr, CompileErr
       if is_global(env, name) {
         Ok(IRExpr::GlobalVar(name))
       } else {
-        // 未定義の変数もグローバルとして扱う（後でエラーになる可能性あり）
+        // Treat undefined variables as global (possibly an error later)
         Ok(IRExpr::GlobalVar(name))
       }
   }
 }
 
-/// ペア（リスト）をコンパイルする
+/// Compile pairs (lists)
 fn compile_pair(
   car : SExpr,
   cdr : SExpr,
@@ -462,7 +462,7 @@ fn compile_pair(
   tail : Bool
 ) -> Result[IRExpr, CompileError] {
   match car {
-    // 特殊形式
+    // special format
     SExpr::Symbol("if") => compile_if(cdr, env, tail)
     SExpr::Symbol("lambda") => compile_lambda(cdr, env)
     SExpr::Symbol("begin") => compile_begin(cdr, env, tail)
@@ -481,12 +481,12 @@ fn compile_pair(
     SExpr::Symbol("define-syntax") =>
       Err(CompileError::SyntaxError("define-syntax not allowed in expression context"))
 
-    // 関数適用
+    // function application
     _ => compile_application(car, cdr, env, tail)
   }
 }
 
-/// if 式をコンパイルする
+/// Compile the if expression
 fn compile_if(
   args : SExpr,
   env : CompileEnv,
@@ -517,28 +517,28 @@ fn compile_if(
   }
 }
 
-/// lambda 式をコンパイルする
+/// Compile lambda expressions
 fn compile_lambda(args : SExpr, env : CompileEnv) -> Result[IRExpr, CompileError] {
   match args {
     SExpr::Pair(params_expr, body_rest) => {
-      // パラメータを抽出
+      // extract parameters
       let params = match extract_params(params_expr) {
         Ok(p) => p
         Err(e) => return Err(e)
       }
-      // 新しい環境でボディをコンパイル
+      // Compile the body in the new environment
       let new_env = extend_compile_env(env, params.copy())
-      // ボディを begin としてコンパイル（末尾位置）
+      // Compile body as begin (tail position)
       let body_ir = match compile_body(body_rest, new_env, true) {
         Ok(ir) => ir
         Err(e) => return Err(e)
       }
-      // 自由変数を収集（depth はそのまま）
+      // Collect free variables (depth remains the same)
       let free_vars = collect_free_vars(body_ir, params)
 
-      // Set! される変数を収集
+      // Set! Collect variables to be set!
       let set_vars = collect_set_vars(body_ir)
-      // ボックス化が必要なパラメータを判定
+      // Determine which parameters require boxing
       let boxed_params : Array[Int] = []
       let mut i = 0
       while i < params.length() {
@@ -547,11 +547,11 @@ fn compile_lambda(args : SExpr, env : CompileEnv) -> Result[IRExpr, CompileError
         }
         i = i + 1
       }
-      // ボックス化が必要なローカル変数を判定（Let/Letrec）
-      // 注: 自由変数はキャプチャされた値であり、ここでは boxed_locals に追加しない
-      // boxed_locals は lambda 内で定義される let/letrec 束縛変数用
+      // Determine local variables that require boxing (Let/Letrec)
+      // Note: Free variables are captured values ​​and will not be added to boxed_locals here
+      // boxed_locals is for let/letrec bound variables defined inside lambda
       let boxed_locals : Array[String] = []
-      // TODO: ローカル変数の解析（Let/Letrec では別途処理）
+      // TODO: Parse local variables (processed separately in Let/Letrec)
 
       Ok(IRExpr::Lambda({
         params,
@@ -566,7 +566,7 @@ fn compile_lambda(args : SExpr, env : CompileEnv) -> Result[IRExpr, CompileError
   }
 }
 
-/// パラメータリストを抽出する
+/// Extract parameter list
 fn extract_params(params : SExpr) -> Result[Array[String], CompileError] {
   let names : Array[String] = []
   let mut current = params
@@ -578,7 +578,7 @@ fn extract_params(params : SExpr) -> Result[Array[String], CompileError] {
         current = rest
       }
       SExpr::Symbol(_) =>
-        // 可変長引数はまだサポートしない
+        // Doesn't support varargs yet
         return Err(CompileError::Unsupported("rest parameter"))
       _ => return Err(CompileError::SyntaxError("lambda: invalid parameter"))
     }
@@ -586,7 +586,7 @@ fn extract_params(params : SExpr) -> Result[Array[String], CompileError] {
   Ok(names)
 }
 
-/// ボディ（式のリスト）をコンパイルする
+/// Compile the body (list of expressions)
 fn compile_body(
   body : SExpr,
   env : CompileEnv,
@@ -610,7 +610,7 @@ fn compile_body(
   if exprs.length() == 1 {
     return compile(exprs[0], env, tail)
   }
-  // 複数の式は begin として扱う
+  // Treat multiple expressions as begin
   let ir_exprs : Array[IRExpr] = []
   let len = exprs.length()
   let mut i = 0
@@ -626,7 +626,7 @@ fn compile_body(
   Ok(IRExpr::Begin(ir_exprs))
 }
 
-/// begin 式をコンパイルする
+/// Compile the begin expression
 fn compile_begin(
   args : SExpr,
   env : CompileEnv,
@@ -635,7 +635,7 @@ fn compile_begin(
   compile_body(args, env, tail)
 }
 
-/// and 式をコンパイルする
+/// Compile the and expression
 fn compile_and(
   args : SExpr,
   env : CompileEnv,
@@ -667,7 +667,7 @@ fn compile_and(
   Ok(IRExpr::And(ir_exprs))
 }
 
-/// or 式をコンパイルする
+/// Compile or expression
 fn compile_or(
   args : SExpr,
   env : CompileEnv,
@@ -699,7 +699,7 @@ fn compile_or(
   Ok(IRExpr::Or(ir_exprs))
 }
 
-/// let 式をコンパイルする
+/// Compile the let expression
 fn compile_let(
   args : SExpr,
   env : CompileEnv,
@@ -711,13 +711,13 @@ fn compile_let(
         Ok(b) => b
         Err(e) => return Err(e)
       }
-      // 新しい環境を作成
+      // Create a new environment
       let names : Array[String] = []
       for b in bindings {
         names.push(b.name)
       }
       let new_env = extend_compile_env(env, names)
-      // ボディをコンパイル
+      // compile body
       let body_ir = match compile_body(body, new_env, tail) {
         Ok(ir) => ir
         Err(e) => return Err(e)
@@ -728,7 +728,7 @@ fn compile_let(
   }
 }
 
-/// let バインディングをパースする
+/// Parse the let binding
 fn parse_let_bindings(
   bindings_expr : SExpr,
   env : CompileEnv
@@ -757,7 +757,7 @@ fn parse_let_bindings(
   Ok(bindings)
 }
 
-/// let* 式をコンパイルする
+/// Compile let* expressions
 fn compile_let_star(
   args : SExpr,
   env : CompileEnv,
@@ -765,14 +765,14 @@ fn compile_let_star(
 ) -> Result[IRExpr, CompileError] {
   match args {
     SExpr::Pair(bindings_expr, body) => {
-      // let* はネストした let に変換
+      // let* converts to nested let
       compile_let_star_bindings(bindings_expr, body, env, tail)
     }
     _ => Err(CompileError::SyntaxError("let*: invalid syntax"))
   }
 }
 
-/// let* バインディングを再帰的に処理する
+/// Process let* bindings recursively
 fn compile_let_star_bindings(
   bindings_expr : SExpr,
   body : SExpr,
@@ -802,7 +802,7 @@ fn compile_let_star_bindings(
   }
 }
 
-/// letrec 式をコンパイルする
+/// Compile the letrec expression
 fn compile_letrec(
   args : SExpr,
   env : CompileEnv,
@@ -810,7 +810,7 @@ fn compile_letrec(
 ) -> Result[IRExpr, CompileError] {
   match args {
     SExpr::Pair(bindings_expr, body) => {
-      // まず変数名を収集
+      // First collect variable names
       let names : Array[String] = []
       let mut current = bindings_expr
       while true {
@@ -823,14 +823,14 @@ fn compile_letrec(
           _ => return Err(CompileError::SyntaxError("letrec: invalid binding"))
         }
       }
-      // 新しい環境を作成（すべての変数が見える）
+      // Create a new environment (all variables visible)
       let new_env = extend_compile_env(env, names.copy())
-      // バインディングをパース（新しい環境で）
+      // Parse binding (in new environment)
       let bindings = match parse_let_bindings(bindings_expr, new_env) {
         Ok(b) => b
         Err(e) => return Err(e)
       }
-      // ボディをコンパイル
+      // compile body
       let body_ir = match compile_body(body, new_env, tail) {
         Ok(ir) => ir
         Err(e) => return Err(e)
@@ -841,7 +841,7 @@ fn compile_letrec(
   }
 }
 
-/// set! 式をコンパイルする
+/// set! Compile the expression
 fn compile_set(args : SExpr, env : CompileEnv) -> Result[IRExpr, CompileError] {
   match args {
     SExpr::Pair(SExpr::Symbol(name), SExpr::Pair(value_expr, SExpr::Nil)) => {
@@ -858,7 +858,7 @@ fn compile_set(args : SExpr, env : CompileEnv) -> Result[IRExpr, CompileError] {
   }
 }
 
-/// quote 式をコンパイルする
+/// Compile a quote expression
 fn compile_quote(args : SExpr) -> Result[IRExpr, CompileError] {
   match args {
     SExpr::Pair(datum, SExpr::Nil) => Ok(IRExpr::Quote(sexpr_to_ir_const(datum)))
@@ -866,7 +866,7 @@ fn compile_quote(args : SExpr) -> Result[IRExpr, CompileError] {
   }
 }
 
-/// delay 式をコンパイルする
+/// Compile the delay expression
 fn compile_delay(args : SExpr, env : CompileEnv) -> Result[IRExpr, CompileError] {
   match args {
     SExpr::Pair(expr, SExpr::Nil) => {
@@ -880,7 +880,7 @@ fn compile_delay(args : SExpr, env : CompileEnv) -> Result[IRExpr, CompileError]
   }
 }
 
-/// call/cc 式をコンパイルする
+/// Compile call/cc expressions
 fn compile_call_cc(
   args : SExpr,
   env : CompileEnv,
@@ -898,20 +898,20 @@ fn compile_call_cc(
   }
 }
 
-/// 関数適用をコンパイルする
+/// Compile function application
 fn compile_application(
   op : SExpr,
   args : SExpr,
   env : CompileEnv,
   tail : Bool
 ) -> Result[IRExpr, CompileError] {
-  // 演算子をコンパイル
+  // compile operator
   let op_ir = match compile(op, env, false) {
     Ok(ir) => ir
     Err(e) => return Err(e)
   }
 
-  // 引数をコンパイル
+  // compile arguments
   let arg_irs : Array[IRExpr] = []
   let mut current = args
   while true {
@@ -929,7 +929,7 @@ fn compile_application(
     }
   }
 
-  // プリミティブ操作への最適化
+  // Optimization for primitive operations
   match op {
     SExpr::Symbol(name) =>
       match name_to_primop(name) {
@@ -939,7 +939,7 @@ fn compile_application(
     _ => ()
   }
 
-  // 末尾呼び出しかどうかで分岐
+  // Branch depending on whether it is a tail call or not
   if tail {
     Ok(IRExpr::TailApp(op_ir, arg_irs))
   } else {
@@ -947,7 +947,7 @@ fn compile_application(
   }
 }
 
-/// Set! される変数を収集する
+/// Set! Collect variables to be set!
 fn collect_set_vars(body : IRExpr) -> Array[String] {
   let set_vars : Array[String] = []
   let seen : @hashmap.T[String, Unit] = @hashmap.new()
@@ -978,7 +978,7 @@ fn collect_set_vars(body : IRExpr) -> Array[String] {
         }
       }
       IRExpr::Lambda(info) => {
-        // ネストした lambda の内部は探索しない
+        // Do not search inside nested lambdas
         visit(info.body)
       }
       IRExpr::App(func, args) => {
@@ -1034,7 +1034,7 @@ fn collect_set_vars(body : IRExpr) -> Array[String] {
   set_vars
 }
 
-/// 自由変数を収集する
+/// Collect free variables
 fn collect_free_vars(body : IRExpr, bound : Array[String]) -> Array[VarRef] {
   let free_vars : Array[VarRef] = []
   let seen : @hashmap.T[String, Unit] = @hashmap.new()
@@ -1042,7 +1042,7 @@ fn collect_free_vars(body : IRExpr, bound : Array[String]) -> Array[VarRef] {
   fn visit(expr : IRExpr) -> Unit {
     match expr {
       IRExpr::Var(var_ref) => {
-        // depth > 0 である（つまり自由変数である）かつ、既に見つけていない場合
+        // If depth > 0 (that is, it is a free variable) and it has not already been found
         if var_ref.depth > 0 && !seen.contains(var_ref.name) {
           free_vars.push(var_ref)
           seen.set(var_ref.name, ())
@@ -1061,9 +1061,9 @@ fn collect_free_vars(body : IRExpr, bound : Array[String]) -> Array[VarRef] {
         }
       }
       IRExpr::Lambda(_info) => {
-        // ネストした lambda の body は訪問しない
-        // その lambda の free_vars は既に計算されているので、
-        // 外側の lambda には影響しない
+        // Do not visit bodies of nested lambdas
+        // The free_vars of that lambda has already been calculated, so
+        // Does not affect outer lambda
         ()
       }
       IRExpr::App(func, args) => {
@@ -1126,7 +1126,7 @@ fn collect_free_vars(body : IRExpr, bound : Array[String]) -> Array[VarRef] {
   }
 
   visit(body)
-  // 自由変数を (depth, index) でソート（安定性のため）
+  // Sort free variables by (depth, index) (for stability)
   free_vars.sort_by(fn(a : VarRef, b : VarRef) -> Int {
     let depth_cmp = a.depth - b.depth
     if depth_cmp != 0 {
@@ -1138,9 +1138,9 @@ fn collect_free_vars(body : IRExpr, bound : Array[String]) -> Array[VarRef] {
   free_vars
 }
 
-/// ボックス化が必要かどうかを判定
+/// Determine whether boxing is required
 fn needs_boxing(var_name : String, free_vars : Array[VarRef], set_vars : Array[String]) -> Bool {
-  // 自由変数として参照されているか？
+  // Is it referenced as a free variable?
   let is_free = {
     let mut found = false
     for var_ref in free_vars {
@@ -1151,7 +1151,7 @@ fn needs_boxing(var_name : String, free_vars : Array[VarRef], set_vars : Array[S
     }
     found
   }
-  // set! されているか？
+  // set! Has it been set?
   let is_set = {
     let mut found = false
     for v in set_vars {
@@ -1165,14 +1165,14 @@ fn needs_boxing(var_name : String, free_vars : Array[VarRef], set_vars : Array[S
   is_free || is_set
 }
 
-/// トップレベルの式をコンパイルする
+/// Compile top-level expressions
 pub fn compile_toplevel(expr : SExpr) -> Result[IRExpr, CompileError] {
   let globals = initial_globals()
   let env = new_compile_env(globals)
   compile_toplevel_expr(expr, env)
 }
 
-/// トップレベル式をコンパイルする（define をサポート）
+/// Compile top-level expressions (define supported)
 fn compile_toplevel_expr(expr : SExpr, env : CompileEnv) -> Result[IRExpr, CompileError] {
   match expr {
     // (define name value)
@@ -1196,12 +1196,12 @@ fn compile_toplevel_expr(expr : SExpr, env : CompileEnv) -> Result[IRExpr, Compi
       }
       Ok(IRExpr::GlobalSet(name, lambda_ir))
     }
-    // 通常の式
+    // normal expression
     _ => compile(expr, env, false)
   }
 }
 
-/// 外部グローバル環境を使用してトップレベル式をコンパイルする
+/// Compile top-level expressions using external global environment
 pub fn compile_toplevel_with_globals(
   expr : SExpr,
   globals : @hashmap.T[String, Unit]

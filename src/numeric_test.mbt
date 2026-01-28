@@ -1,8 +1,8 @@
-/// 数値関数のテスト
-/// 注: レキサーが実数リテラルをサポートしていないため、
-/// 実数を使うテストはsqrtなどで生成した実数を利用します
+/// Testing numerical functions
+/// Note: Because the lexer does not support real literals,
+/// Tests that use real numbers use real numbers generated with sqrt etc.
 
-/// floor で整数
+/// integer on floor
 test "floor integer" {
   let env = initial_env()
   let expr = parse_one("(floor 5)")
@@ -12,7 +12,7 @@ test "floor integer" {
   }
 }
 
-/// floor で sqrt の結果
+/// sqrt result on floor
 test "floor with sqrt" {
   let env = initial_env()
   let expr = parse_one("(floor (sqrt 10))")
@@ -22,7 +22,7 @@ test "floor with sqrt" {
   }
 }
 
-/// ceiling で整数
+/// ceiling and integer
 test "ceiling integer" {
   let env = initial_env()
   let expr = parse_one("(ceiling 7)")
@@ -32,7 +32,7 @@ test "ceiling integer" {
   }
 }
 
-/// ceiling で sqrt の結果
+/// sqrt result with ceiling
 test "ceiling with sqrt" {
   let env = initial_env()
   let expr = parse_one("(ceiling (sqrt 10))")
@@ -42,7 +42,7 @@ test "ceiling with sqrt" {
   }
 }
 
-/// truncate で整数
+/// truncate integer
 test "truncate integer" {
   let env = initial_env()
   let expr = parse_one("(truncate 9)")
@@ -52,7 +52,7 @@ test "truncate integer" {
   }
 }
 
-/// truncate で sqrt の結果
+/// sqrt result with truncate
 test "truncate with sqrt" {
   let env = initial_env()
   let expr = parse_one("(truncate (sqrt 10))")
@@ -62,7 +62,7 @@ test "truncate with sqrt" {
   }
 }
 
-/// round で整数
+/// integer in round
 test "round integer" {
   let env = initial_env()
   let expr = parse_one("(round 7)")
@@ -72,7 +72,7 @@ test "round integer" {
   }
 }
 
-/// round で sqrt の結果
+/// sqrt result in round
 test "round with sqrt" {
   let env = initial_env()
   let expr = parse_one("(round (sqrt 10))")
@@ -82,7 +82,7 @@ test "round with sqrt" {
   }
 }
 
-/// sqrt の基本的な動作
+/// Basic operation of sqrt
 test "sqrt basic" {
   let env = initial_env()
   let expr = parse_one("(sqrt 4)")
@@ -94,7 +94,7 @@ test "sqrt basic" {
   }
 }
 
-/// sqrt で 0
+/// 0 in sqrt
 test "sqrt zero" {
   let env = initial_env()
   let expr = parse_one("(sqrt 0)")
@@ -106,7 +106,7 @@ test "sqrt zero" {
   }
 }
 
-/// sqrt で 9
+/// sqrt at 9
 test "sqrt nine" {
   let env = initial_env()
   let expr = parse_one("(sqrt 9)")
@@ -118,7 +118,7 @@ test "sqrt nine" {
   }
 }
 
-/// expt の基本的な動作（整数のべき乗）
+/// Basic operation of expt (integer power)
 test "expt basic integer" {
   let env = initial_env()
   let expr = parse_one("(expt 2 3)")
@@ -128,7 +128,7 @@ test "expt basic integer" {
   }
 }
 
-/// expt で指数が 0
+/// expt with exponent 0
 test "expt zero exponent" {
   let env = initial_env()
   let expr = parse_one("(expt 5 0)")
@@ -138,7 +138,7 @@ test "expt zero exponent" {
   }
 }
 
-/// expt で負の指数
+/// Negative exponent in expt
 test "expt negative exponent" {
   let env = initial_env()
   let expr = parse_one("(expt 2 (- 0 2))")
@@ -150,7 +150,7 @@ test "expt negative exponent" {
   }
 }
 
-/// expt で 10^3
+/// 10^3 in expt
 test "expt 10 to 3" {
   let env = initial_env()
   let expr = parse_one("(expt 10 3)")
@@ -160,7 +160,7 @@ test "expt 10 to 3" {
   }
 }
 
-/// exact? の基本的な動作
+/// Basic behavior of exact?
 test "exact? with integer" {
   let env = initial_env()
   let expr = parse_one("(exact? 42)")
@@ -170,7 +170,7 @@ test "exact? with integer" {
   }
 }
 
-/// exact? で sqrt の結果（実数）
+/// sqrt result (real number) with exact?
 test "exact? with sqrt" {
   let env = initial_env()
   let expr = parse_one("(exact? (sqrt 2))")
@@ -180,7 +180,7 @@ test "exact? with sqrt" {
   }
 }
 
-/// inexact? で整数
+/// Integer with inexact?
 test "inexact? with integer" {
   let env = initial_env()
   let expr = parse_one("(inexact? 42)")
@@ -190,7 +190,7 @@ test "inexact? with integer" {
   }
 }
 
-/// inexact? で sqrt の結果（実数）
+/// sqrt result (real number) with inexact?
 test "inexact? with sqrt" {
   let env = initial_env()
   let expr = parse_one("(inexact? (sqrt 2))")
@@ -200,7 +200,7 @@ test "inexact? with sqrt" {
   }
 }
 
-/// number->string の基本的な動作（整数）
+/// Basic behavior of number->string (integer)
 test "number->string integer" {
   let env = initial_env()
   let expr = parse_one("(number->string 42)")
@@ -210,7 +210,7 @@ test "number->string integer" {
   }
 }
 
-/// number->string で 0
+/// 0 in number->string
 test "number->string zero" {
   let env = initial_env()
   let expr = parse_one("(number->string 0)")
@@ -220,7 +220,7 @@ test "number->string zero" {
   }
 }
 
-/// number->string で負の数
+/// negative number in number->string
 test "number->string negative" {
   let env = initial_env()
   let expr = parse_one("(number->string (- 0 123))")
@@ -230,7 +230,7 @@ test "number->string negative" {
   }
 }
 
-/// number->string で sqrt の結果
+/// sqrt result with number->string
 test "number->string with sqrt" {
   let env = initial_env()
   let expr = parse_one("(number->string (sqrt 4))")
@@ -240,7 +240,7 @@ test "number->string with sqrt" {
   }
 }
 
-/// sqrt と expt の組み合わせ
+/// Combination of sqrt and expt
 test "sqrt and expt combined" {
   let env = initial_env()
   let expr = parse_one("(expt (sqrt 4) 2)")
@@ -252,10 +252,10 @@ test "sqrt and expt combined" {
   }
 }
 
-/// floor, ceiling, round の比較
+/// Comparison of floor, ceiling, round
 test "rounding functions comparison" {
   let env = initial_env()
-  // sqrt(17) ≈ 4.12 なので、floor=4, ceiling=5, round=4
+  // sqrt(17) ≈ 4.12, so floor=4, ceiling=5, round=4
   let expr1 = parse_one("(floor (sqrt 17))")
   match eval(expr1, env) {
     Ok(Value::Number(Number::Int(4))) => ()

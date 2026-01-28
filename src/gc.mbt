@@ -1,33 +1,33 @@
-/// ガベージコレクション
+/// garbage collection
 ///
-/// MoonBit はGC言語であるため、低レベルのメモリ管理はランタイムに依存する。
-/// このモジュールでは以下を提供する:
-/// - メモリ使用量の統計
-/// - 継続ストアのクリーンアップ
-/// - VMリソースの明示的解放
-/// - GCトリガーポイントの管理
+/// MoonBit is a GC language, so low-level memory management is dependent on the runtime.
+/// This module provides:
+/// - Memory usage statistics
+/// - Continuation store cleanup
+/// - Explicit release of VM resources
+/// - GC trigger point management
 
-/// GC 統計情報
+/// GC statistics
 pub(all) struct GCStats {
-  /// 作成された Value の数
+  /// Number of Values ​​created
   mut values_allocated : Int
-  /// 作成された Closure の数
+  /// Number of Closures created
   mut closures_allocated : Int
-  /// 作成された Continuation の数
+  /// Number of continuations created
   mut continuations_allocated : Int
-  /// 作成された Pair の数
+  /// Number of pairs created
   mut pairs_allocated : Int
-  /// 作成された Vector の数
+  /// Number of Vectors created
   mut vectors_allocated : Int
-  /// 作成された Box の数
+  /// Number of Boxes created
   mut boxes_allocated : Int
-  /// GC が実行された回数
+  /// Number of times GC was run
   mut gc_runs : Int
-  /// 最後の GC で解放された継続の数
+  /// Number of continuations freed in last GC
   mut last_gc_freed_continuations : Int
 }
 
-/// グローバル GC 統計
+/// Global GC statistics
 let gc_stats : GCStats = {
   values_allocated: 0,
   closures_allocated: 0,
@@ -39,12 +39,12 @@ let gc_stats : GCStats = {
   last_gc_freed_continuations: 0,
 }
 
-/// GC 統計を取得
+/// Get GC statistics
 pub fn get_gc_stats() -> GCStats {
   gc_stats
 }
 
-/// GC 統計をリセット
+/// Reset GC statistics
 pub fn reset_gc_stats() -> Unit {
   gc_stats.values_allocated = 0
   gc_stats.closures_allocated = 0
@@ -56,52 +56,52 @@ pub fn reset_gc_stats() -> Unit {
   gc_stats.last_gc_freed_continuations = 0
 }
 
-/// Value 作成を記録
+/// Record creation of Value
 pub fn gc_track_value() -> Unit {
   gc_stats.values_allocated = gc_stats.values_allocated + 1
 }
 
-/// Closure 作成を記録
+/// Record closure creation
 pub fn gc_track_closure() -> Unit {
   gc_stats.closures_allocated = gc_stats.closures_allocated + 1
 }
 
-/// Continuation 作成を記録
+/// Record Continuation creation
 pub fn gc_track_continuation() -> Unit {
   gc_stats.continuations_allocated = gc_stats.continuations_allocated + 1
 }
 
-/// Pair 作成を記録
+/// Record pair creation
 pub fn gc_track_pair() -> Unit {
   gc_stats.pairs_allocated = gc_stats.pairs_allocated + 1
 }
 
-/// Vector 作成を記録
+/// Record Vector creation
 pub fn gc_track_vector() -> Unit {
   gc_stats.vectors_allocated = gc_stats.vectors_allocated + 1
 }
 
-/// Box 作成を記録
+/// Record Box creation
 pub fn gc_track_box() -> Unit {
   gc_stats.boxes_allocated = gc_stats.boxes_allocated + 1
 }
 
-/// 継続が生きているかを判定するためのマーク
+/// Mark to determine whether the continuation is alive
 pub(all) struct ContinuationMark {
   cont_id : Int
   mut marked : Bool
 }
 
-/// 継続の生存状態を管理するマップ
+/// A map that manages the survival status of continuations
 let continuation_marks : Array[ContinuationMark] = []
 
-/// 継続をマークリストに追加
+/// Add continuation to marked list
 pub fn gc_register_continuation(cont_id : Int) -> Unit {
   continuation_marks.push({ cont_id, marked: false })
   gc_track_continuation()
 }
 
-/// 継続をマークする（到達可能）
+/// Mark continuation (reachable)
 pub fn gc_mark_continuation(cont_id : Int) -> Unit {
   for mark in continuation_marks {
     if mark.cont_id == cont_id {
@@ -111,14 +111,14 @@ pub fn gc_mark_continuation(cont_id : Int) -> Unit {
   }
 }
 
-/// VM スタック内の値をスキャンしてマーク
+/// Scan and mark values ​​in VM stack
 fn gc_mark_value(value : Value) -> Unit {
   match value {
     Value::Procedure(Procedure::Cont(cont)) => gc_mark_continuation(cont.id)
     Value::Procedure(Procedure::VMCont(cont)) => gc_mark_continuation(cont.id)
-    Value::Procedure(Procedure::Closure(_, _, _)) => ()  // 環境内の継続もマークが必要だが、単純化
+    Value::Procedure(Procedure::Closure(_, _, _)) => ()  // Continuations within the environment also require marking, but simplified
     Value::Procedure(Procedure::VMClosure(closure)) => {
-      // キャプチャ内の値をスキャン
+      // Scan values ​​in capture
       for capture in closure.captures {
         gc_mark_value(capture)
       }
@@ -142,39 +142,39 @@ fn gc_mark_value(value : Value) -> Unit {
   }
 }
 
-/// VM 状態をスキャンして到達可能な継続をマーク
+/// Scan VM state and mark continuation reachable
 pub fn gc_mark_from_vm(vm : VMState) -> Unit {
-  // スタック内の値をスキャン
+  // Scan values ​​in stack
   for value in vm.stack {
     gc_mark_value(value)
   }
 
-  // コールスタック内のフレームは継続を直接参照しない
+  // Frames in the call stack do not directly reference continuations
 
-  // グローバル環境内の値をスキャン
+  // Scan values ​​in the global environment
   vm.globals.each(fn(_name, value) { gc_mark_value(value) })
 }
 
-/// マークされていない継続を解放（スイープ）
+/// Release unmarked continuations (sweep)
 pub fn gc_sweep_continuations() -> Int {
   let mut freed_count = 0
 
-  // 生き残る継続を新しい配列に収集
+  // Collect surviving continuations into a new array
   let survivors : Array[ContinuationMark] = []
 
   for mark in continuation_marks {
     if not(mark.marked) {
-      // マークされていない継続を削除
+      // Delete unmarked continuation
       gc_remove_from_continuation_store(mark.cont_id)
       freed_count = freed_count + 1
     } else {
-      // マークをリセットして次のGCサイクルに備える
+      // Reset marks and prepare for next GC cycle
       mark.marked = false
       survivors.push(mark)
     }
   }
 
-  // 継続マーク配列を更新
+  // Update continuation mark array
   continuation_marks.clear()
   for s in survivors {
     continuation_marks.push(s)
@@ -183,10 +183,10 @@ pub fn gc_sweep_continuations() -> Int {
   freed_count
 }
 
-/// 継続ストアから削除（value.mbt の continuation_store にアクセス）
+/// Delete from continuation store (access continuation_store in value.mbt)
 fn gc_remove_from_continuation_store(cont_id : Int) -> Unit {
-  // continuation_store は value.mbt で定義されている
-  // 新しい配列を作成して該当ID以外を保持
+  // continuation_store is defined in value.mbt
+  // Create a new array and hold other IDs
   let survivors : Array[(Int, ContinuationState)] = []
   for entry in continuation_store {
     if entry.0 != cont_id {
@@ -199,7 +199,7 @@ fn gc_remove_from_continuation_store(cont_id : Int) -> Unit {
   }
 }
 
-/// GC を実行（mark and sweep）
+/// Run GC (mark and sweep)
 pub fn gc_run(vm : VMState) -> Int {
   gc_stats.gc_runs = gc_stats.gc_runs + 1
 
@@ -213,29 +213,29 @@ pub fn gc_run(vm : VMState) -> Int {
   freed
 }
 
-/// GC 閾値設定
+/// GC threshold setting
 pub(all) struct GCConfig {
-  /// GC をトリガーするアロケーション数の閾値
+  /// Allocation count threshold that triggers GC
   mut allocation_threshold : Int
-  /// 継続の数の閾値
+  /// Threshold number of continuations
   mut continuation_threshold : Int
-  /// GC を有効にするかどうか
+  /// Whether to enable GC
   mut enabled : Bool
 }
 
-/// グローバル GC 設定
+/// Global GC settings
 let gc_config : GCConfig = {
   allocation_threshold: 10000,
   continuation_threshold: 100,
   enabled: true,
 }
 
-/// GC 設定を取得
+/// Get GC settings
 pub fn get_gc_config() -> GCConfig {
   gc_config
 }
 
-/// GC 設定を更新
+/// Update GC settings
 pub fn set_gc_config(
   allocation_threshold~ : Int = gc_config.allocation_threshold,
   continuation_threshold~ : Int = gc_config.continuation_threshold,
@@ -246,18 +246,18 @@ pub fn set_gc_config(
   gc_config.enabled = enabled
 }
 
-/// GC が必要かチェックし、必要なら実行
+/// Check if GC is required and run if necessary
 pub fn gc_check_and_run(vm : VMState) -> Int {
   if not(gc_config.enabled) {
     return 0
   }
 
-  // 継続の数が閾値を超えたらGC
+  // GC when number of continuations exceeds threshold
   if continuation_marks.length() > gc_config.continuation_threshold {
     return gc_run(vm)
   }
 
-  // アロケーション数が閾値を超えたらGC
+  // GC when the number of allocations exceeds the threshold
   let total_allocs = gc_stats.values_allocated +
     gc_stats.closures_allocated +
     gc_stats.pairs_allocated +
@@ -271,7 +271,7 @@ pub fn gc_check_and_run(vm : VMState) -> Int {
   0
 }
 
-/// VM 状態をクリア
+/// Clear VM state
 pub fn gc_clear_vm(vm : VMState) -> Unit {
   vm.stack.clear()
   vm.call_stack.clear()
@@ -279,14 +279,14 @@ pub fn gc_clear_vm(vm : VMState) -> Unit {
   vm.ip = 0
 }
 
-/// 全ての継続をクリア（VM リセット時に使用）
+/// Clear all continuations (used when resetting VM)
 pub fn gc_clear_all_continuations() -> Unit {
   continuation_marks.clear()
   continuation_store.clear()
   continuation_counter.val = 0
 }
 
-/// GC 情報を文字列として取得（デバッグ用）
+/// Get GC information as a string (for debugging)
 pub fn gc_stats_to_string() -> String {
   let stats = gc_stats
   let mut result = "GC Stats:\n"

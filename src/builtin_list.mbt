@@ -1,8 +1,8 @@
-/// リスト操作組み込み関数
+/// List operation built-in functions
 ///
-/// Scheme のリスト操作を実装する。
+/// Implement Scheme list operations.
 
-/// 組み込み関数: cons
+/// Built-in function: cons
 fn builtin_cons(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 2 {
     return Err(EvalError::ArityError("cons: requires exactly 2 arguments"))
@@ -10,7 +10,7 @@ fn builtin_cons(args : Array[Value]) -> Result[Value, EvalError] {
   Ok(Value::Pair(args[0], args[1]))
 }
 
-/// 組み込み関数: car
+/// Built-in function: car
 fn builtin_car(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("car: requires exactly 1 argument"))
@@ -21,7 +21,7 @@ fn builtin_car(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: cdr
+/// Built-in function: cdr
 fn builtin_cdr(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("cdr: requires exactly 1 argument"))
@@ -32,9 +32,9 @@ fn builtin_cdr(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: set-car!
-/// (set-car! pair obj) - ペアの car を obj に設定
-/// 注: 不変環境モデルのため、新しいペアを返す
+/// Built-in function: set-car!
+/// (set-car! pair obj) - Set the pair car to obj
+/// Note: Because of the immutable environment model, a new pair is returned
 fn builtin_set_car(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 2 {
     return Err(EvalError::ArityError("set-car!: requires exactly 2 arguments"))
@@ -45,9 +45,9 @@ fn builtin_set_car(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: set-cdr!
-/// (set-cdr! pair obj) - ペアの cdr を obj に設定
-/// 注: 不変環境モデルのため、新しいペアを返す
+/// Built-in function: set-cdr!
+/// (set-cdr! pair obj) - Set the cdr of the pair to obj
+/// Note: Because of the immutable environment model, a new pair is returned
 fn builtin_set_cdr(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 2 {
     return Err(EvalError::ArityError("set-cdr!: requires exactly 2 arguments"))
@@ -58,7 +58,7 @@ fn builtin_set_cdr(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: caar
+/// Built-in function: caar
 fn builtin_caar(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("caar: requires exactly 1 argument"))
@@ -69,7 +69,7 @@ fn builtin_caar(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: cadr
+/// Built-in function: cadr
 fn builtin_cadr(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("cadr: requires exactly 1 argument"))
@@ -80,7 +80,7 @@ fn builtin_cadr(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: cdar
+/// Built-in function: cdar
 fn builtin_cdar(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("cdar: requires exactly 1 argument"))
@@ -91,7 +91,7 @@ fn builtin_cdar(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: cddr
+/// Built-in function: cddr
 fn builtin_cddr(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("cddr: requires exactly 1 argument"))
@@ -102,7 +102,7 @@ fn builtin_cddr(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: caaar
+/// Built-in function: caaar
 fn builtin_caaar(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("caaar: requires exactly 1 argument"))
@@ -113,7 +113,7 @@ fn builtin_caaar(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: caadr
+/// Built-in function: caadr
 fn builtin_caadr(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("caadr: requires exactly 1 argument"))
@@ -124,7 +124,7 @@ fn builtin_caadr(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: cadar
+/// Built-in function: cadar
 fn builtin_cadar(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("cadar: requires exactly 1 argument"))
@@ -135,7 +135,7 @@ fn builtin_cadar(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: caddr
+/// Built-in function: caddr
 fn builtin_caddr(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("caddr: requires exactly 1 argument"))
@@ -146,7 +146,7 @@ fn builtin_caddr(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: cdaar
+/// Built-in function: cdaar
 fn builtin_cdaar(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("cdaar: requires exactly 1 argument"))
@@ -157,7 +157,7 @@ fn builtin_cdaar(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: cdadr
+/// Built-in function: cdadr
 fn builtin_cdadr(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("cdadr: requires exactly 1 argument"))
@@ -168,7 +168,7 @@ fn builtin_cdadr(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: cddar
+/// Built-in function: cddar
 fn builtin_cddar(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("cddar: requires exactly 1 argument"))
@@ -179,7 +179,7 @@ fn builtin_cddar(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: cdddr
+/// Built-in function: cdddr
 fn builtin_cdddr(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("cdddr: requires exactly 1 argument"))
@@ -190,7 +190,7 @@ fn builtin_cdddr(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: symbol?
+/// Built-in function: symbol?
 fn builtin_symbol_p(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("symbol?: requires exactly 1 argument"))
@@ -201,7 +201,7 @@ fn builtin_symbol_p(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: list
+/// Built-in functions: list
 fn builtin_list(args : Array[Value]) -> Result[Value, EvalError] {
   let mut result = Value::Nil
   let mut i = args.length()
@@ -214,7 +214,7 @@ fn builtin_list(args : Array[Value]) -> Result[Value, EvalError] {
   Ok(result)
 }
 
-/// 組み込み関数: length
+/// Built-in function: length
 fn builtin_length(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("length: requires exactly 1 argument"))
@@ -239,7 +239,7 @@ fn builtin_length(args : Array[Value]) -> Result[Value, EvalError] {
   Ok(Value::Number(Number::Int(len)))
 }
 
-/// 組み込み関数: append
+/// Built-in functions: append
 fn builtin_append(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() == 0 {
     return Ok(Value::Nil)
@@ -248,7 +248,7 @@ fn builtin_append(args : Array[Value]) -> Result[Value, EvalError] {
     return Ok(args[0])
   }
 
-  // 最後以外のリストを配列に集める
+  // Gather non-last list into array
   let lists : Array[Value] = []
   let mut i = 0
   let len = args.length() - 1
@@ -259,10 +259,10 @@ fn builtin_append(args : Array[Value]) -> Result[Value, EvalError] {
     ()
   }
 
-  // 最後の要素
+  // Last Element
   let mut result = args[args.length() - 1]
 
-  // 後ろから前に向かって連結
+  // Back to Forward Concatenation
   let mut j = lists.length()
   let _ = while j > 0 {
     j = j - 1
@@ -277,7 +277,7 @@ fn builtin_append(args : Array[Value]) -> Result[Value, EvalError] {
   Ok(result)
 }
 
-/// 2つのリストを連結する補助関数
+/// Auxiliary function to concatenate two lists
 fn append_two_lists(list1 : Value, list2 : Value) -> Result[Value, EvalError] {
   match list1 {
     Value::Nil => Ok(list2)
@@ -292,7 +292,7 @@ fn append_two_lists(list1 : Value, list2 : Value) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: reverse
+/// Built-in functions: reverse
 fn builtin_reverse(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("reverse: requires exactly 1 argument"))
@@ -317,7 +317,7 @@ fn builtin_reverse(args : Array[Value]) -> Result[Value, EvalError] {
   Ok(result)
 }
 
-/// 組み込み関数: list-ref
+/// Built-in function: list-ref
 fn builtin_list_ref(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 2 {
     return Err(EvalError::ArityError("list-ref: requires exactly 2 arguments"))
@@ -352,7 +352,7 @@ fn builtin_list_ref(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: list-tail
+/// Built-in function: list-tail
 fn builtin_list_tail(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 2 {
     return Err(EvalError::ArityError("list-tail: requires exactly 2 arguments"))
@@ -384,8 +384,8 @@ fn builtin_list_tail(args : Array[Value]) -> Result[Value, EvalError] {
   Ok(current)
 }
 
-/// 組み込み関数: assq
-/// (assq obj alist) - alist から obj を eq? で検索
+/// Built-in function: assq
+/// (assq obj alist) - Search for obj from alist by eq?
 fn builtin_assq(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 2 {
     return Err(EvalError::ArityError("assq: requires exactly 2 arguments"))
@@ -398,7 +398,7 @@ fn builtin_assq(args : Array[Value]) -> Result[Value, EvalError] {
       Value::Pair(pair, rest) => {
         match pair {
           Value::Pair(key, _) => {
-            // eq? による比較
+            // comparison by eq?
             if values_eq(obj, key) {
               return Ok(pair)
             }
@@ -418,8 +418,8 @@ fn builtin_assq(args : Array[Value]) -> Result[Value, EvalError] {
   Ok(Value::Bool(false))
 }
 
-/// 組み込み関数: assv
-/// (assv obj alist) - alist から obj を eqv? で検索
+/// Built-in function: assv
+/// (assv obj alist) - Search for obj from alist by eqv?
 fn builtin_assv(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 2 {
     return Err(EvalError::ArityError("assv: requires exactly 2 arguments"))
@@ -432,7 +432,7 @@ fn builtin_assv(args : Array[Value]) -> Result[Value, EvalError] {
       Value::Pair(pair, rest) => {
         match pair {
           Value::Pair(key, _) => {
-            // eqv? による比較
+            // comparison by eqv?
             if values_eqv(obj, key) {
               return Ok(pair)
             }
@@ -452,8 +452,8 @@ fn builtin_assv(args : Array[Value]) -> Result[Value, EvalError] {
   Ok(Value::Bool(false))
 }
 
-/// 組み込み関数: assoc
-/// (assoc obj alist) - alist から obj を equal? で検索
+/// Built-in function: assoc
+/// (assoc obj alist) - Search for obj from alist by equal?
 fn builtin_assoc(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 2 {
     return Err(EvalError::ArityError("assoc: requires exactly 2 arguments"))
@@ -466,7 +466,7 @@ fn builtin_assoc(args : Array[Value]) -> Result[Value, EvalError] {
       Value::Pair(pair, rest) => {
         match pair {
           Value::Pair(key, _) => {
-            // equal? による比較
+            // comparison by equal?
             if values_equal(obj, key) {
               return Ok(pair)
             }
@@ -487,8 +487,8 @@ fn builtin_assoc(args : Array[Value]) -> Result[Value, EvalError] {
   Ok(Value::Bool(false))
 }
 
-/// 組み込み関数: memq
-/// (memq obj list) - list から obj を eq? で検索し、見つかった位置から始まるリストを返す
+/// Built-in function: memq
+/// (memq obj list) - eq obj from list? Search in and return a list starting at the location found
 fn builtin_memq(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 2 {
     return Err(EvalError::ArityError("memq: requires exactly 2 arguments"))
@@ -512,8 +512,8 @@ fn builtin_memq(args : Array[Value]) -> Result[Value, EvalError] {
   Ok(Value::Bool(false))
 }
 
-/// 組み込み関数: memv
-/// (memv obj list) - list から obj を eqv? で検索し、見つかった位置から始まるリストを返す
+/// Built-in function: memv
+/// (memv obj list) - eqv obj from list? Search in and return a list starting at the location found
 fn builtin_memv(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 2 {
     return Err(EvalError::ArityError("memv: requires exactly 2 arguments"))
@@ -537,8 +537,8 @@ fn builtin_memv(args : Array[Value]) -> Result[Value, EvalError] {
   Ok(Value::Bool(false))
 }
 
-/// 組み込み関数: member
-/// (member obj list) - list から obj を equal? で検索し、見つかった位置から始まるリストを返す
+/// Built-in function: member
+/// (member obj list) - equal obj from list? Search in and return a list starting at the location found
 fn builtin_member(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 2 {
     return Err(EvalError::ArityError("member: requires exactly 2 arguments"))
@@ -563,7 +563,7 @@ fn builtin_member(args : Array[Value]) -> Result[Value, EvalError] {
   Ok(Value::Bool(false))
 }
 
-/// eq? による値の比較（最も厳密）
+/// comparison of values by eq? (most stringent)
 fn values_eq(a : Value, b : Value) -> Bool {
   match (a, b) {
     (Value::Nil, Value::Nil) => true
@@ -574,8 +574,8 @@ fn values_eq(a : Value, b : Value) -> Bool {
   }
 }
 
-/// 組み込み関数: symbol->string
-/// (symbol->string sym) - シンボルを文字列に変換
+/// Built-in function: symbol- > string
+/// (symbol- > string sym) - Convert symbol to string
 fn builtin_symbol_to_string(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(
@@ -588,8 +588,8 @@ fn builtin_symbol_to_string(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: string->symbol
-/// (string->symbol str) - 文字列をシンボルに変換
+/// Built-in functions: string- > symbol
+/// (string- > symbol str) - Convert string to symbol
 fn builtin_string_to_symbol(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(
@@ -602,7 +602,7 @@ fn builtin_string_to_symbol(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// Value のリストを配列に変換する。
+/// Converts a list of values to an array.
 fn list_to_array(list : Value) -> Result[Array[Value], EvalError] {
   let items : Array[Value] = []
   let mut current = list
@@ -621,7 +621,7 @@ fn list_to_array(list : Value) -> Result[Array[Value], EvalError] {
   Ok(items)
 }
 
-/// 配列を Value のリストに変換する。
+/// Converts an array to a list of values.
 fn array_to_list(items : Array[Value]) -> Result[Value, EvalError] {
   let mut result = Value::Nil
   let mut i = items.length()

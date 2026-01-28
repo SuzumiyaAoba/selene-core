@@ -1,6 +1,6 @@
-/// ベクトル操作関数のテスト
+/// Testing vector manipulation functions
 
-/// vector? の基本的な動作
+/// Basic operation of vector?
 test "vector? basic" {
   let env = initial_env()
   let expr = parse_one("(vector? (vector 1 2 3))")
@@ -10,7 +10,7 @@ test "vector? basic" {
   }
 }
 
-/// vector? で非ベクトルを判定
+/// Determine non-vector with vector?
 test "vector? with non-vector" {
   let env = initial_env()
   let expr = parse_one("(vector? (list 1 2 3))")
@@ -20,7 +20,7 @@ test "vector? with non-vector" {
   }
 }
 
-/// make-vector の基本的な動作
+/// Basic operation of make-vector
 test "make-vector basic" {
   let env = initial_env()
   let expr = parse_one("(make-vector 5 0)")
@@ -38,7 +38,7 @@ test "make-vector basic" {
   }
 }
 
-/// make-vector でデフォルト値（Nil）
+/// Default value (Nil) in make-vector
 test "make-vector default value" {
   let env = initial_env()
   let expr = parse_one("(make-vector 3)")
@@ -56,7 +56,7 @@ test "make-vector default value" {
   }
 }
 
-/// make-vector で空ベクトル
+/// empty vector with make-vector
 test "make-vector zero length" {
   let env = initial_env()
   let expr = parse_one("(make-vector 0)")
@@ -66,7 +66,7 @@ test "make-vector zero length" {
   }
 }
 
-/// vector の基本的な動作
+/// Basic operation of vector
 test "vector basic" {
   let env = initial_env()
   let expr = parse_one("(vector 1 2 3)")
@@ -90,7 +90,7 @@ test "vector basic" {
   }
 }
 
-/// vector で引数なし（空ベクトル）
+/// vector with no arguments (empty vector)
 test "vector empty" {
   let env = initial_env()
   let expr = parse_one("(vector)")
@@ -100,7 +100,7 @@ test "vector empty" {
   }
 }
 
-/// vector-length の基本的な動作
+/// Basic operation of vector-length
 test "vector-length basic" {
   let env = initial_env()
   let expr = parse_one("(vector-length (vector 1 2 3 4 5))")
@@ -110,7 +110,7 @@ test "vector-length basic" {
   }
 }
 
-/// vector-length で空ベクトル
+/// empty vector with vector-length
 test "vector-length empty" {
   let env = initial_env()
   let expr = parse_one("(vector-length (vector))")
@@ -120,7 +120,7 @@ test "vector-length empty" {
   }
 }
 
-/// vector-ref の基本的な動作
+/// Basic operation of vector-ref
 test "vector-ref basic" {
   let env = initial_env()
   let expr = parse_one("(vector-ref (vector 10 20 30) 0)")
@@ -130,7 +130,7 @@ test "vector-ref basic" {
   }
 }
 
-/// vector-ref で中間インデックス
+/// intermediate index with vector-ref
 test "vector-ref middle" {
   let env = initial_env()
   let expr = parse_one("(vector-ref (vector 10 20 30) 1)")
@@ -140,7 +140,7 @@ test "vector-ref middle" {
   }
 }
 
-/// vector-ref で最後のインデックス
+/// Last index in vector-ref
 test "vector-ref last" {
   let env = initial_env()
   let expr = parse_one("(vector-ref (vector 10 20 30) 2)")
@@ -150,7 +150,7 @@ test "vector-ref last" {
   }
 }
 
-/// vector-set! の基本的な動作
+/// Basic operation of vector-set!
 test "vector-set! basic" {
   let env = initial_env()
   let expr = parse_one("(vector-set! (vector 1 2 3) 1 99)")
@@ -174,7 +174,7 @@ test "vector-set! basic" {
   }
 }
 
-/// vector->list の基本的な動作
+/// Basic behavior of vector->list
 test "vector->list basic" {
   let env = initial_env()
   let expr = parse_one("(vector->list (vector 1 2 3))")
@@ -191,7 +191,7 @@ test "vector->list basic" {
   }
 }
 
-/// vector->list で空ベクトル
+/// empty vector with vector->list
 test "vector->list empty" {
   let env = initial_env()
   let expr = parse_one("(vector->list (vector))")
@@ -201,7 +201,7 @@ test "vector->list empty" {
   }
 }
 
-/// list->vector の基本的な動作
+/// Basic operation of list->vector
 test "list->vector basic" {
   let env = initial_env()
   let expr = parse_one("(list->vector (list 1 2 3))")
@@ -225,7 +225,7 @@ test "list->vector basic" {
   }
 }
 
-/// list->vector で空リスト
+/// Empty list with list->vector
 test "list->vector empty" {
   let env = initial_env()
   let expr = parse_one("(list->vector ())")
@@ -235,7 +235,7 @@ test "list->vector empty" {
   }
 }
 
-/// ベクトルとリストの相互変換
+/// Interconversion between vector and list
 test "vector list round-trip" {
   let env = initial_env()
   let expr = parse_one("(vector->list (list->vector (list 1 2 3)))")
@@ -252,7 +252,7 @@ test "vector list round-trip" {
   }
 }
 
-/// リストとベクトルの相互変換
+/// Mutual conversion between list and vector
 test "list vector round-trip" {
   let env = initial_env()
   let expr = parse_one("(list->vector (vector->list (vector 1 2 3)))")
@@ -268,7 +268,7 @@ test "list vector round-trip" {
   }
 }
 
-/// 複雑なベクトル要素
+/// complex vector elements
 test "vector with complex elements" {
   let env = initial_env()
   let expr = parse_one("(vector (list 1 2) (list 3 4) (list 5 6))")
@@ -286,10 +286,10 @@ test "vector with complex elements" {
   }
 }
 
-/// make-vector と vector-set! の組み合わせ
+/// Combination of make-vector and vector-set!
 test "make-vector with vector-set!" {
   let env = initial_env()
-  // (vector-set! (make-vector 3 0) 1 99) で中間の要素を変更
+  // Change the intermediate element with (vector-set! (make-vector 3 0) 1 99)
   let expr = parse_one("(vector-set! (make-vector 3 0) 1 99)")
   match eval(expr, env) {
     Ok(Value::Vector(items)) => {
@@ -303,7 +303,7 @@ test "make-vector with vector-set!" {
   }
 }
 
-/// ヘルパー関数: Value を文字列に変換（vector_test用）
+/// Helper function: Convert Value to string (for vector_test)
 fn vector_test_value_to_string(value : Value) -> String {
   match value {
     Value::Nil => "()"

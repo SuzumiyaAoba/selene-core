@@ -1,6 +1,6 @@
-/// リスト/識別子/整数に対応した最小 S 式パーサ。
+/// A minimal S-expression parser for lists/identifiers/integers.
 
-/// 配列から連結リスト（Pair）を構築する。
+/// Construct a linked list (Pair) from an array.
 fn list_from_array(items : Array[SExpr]) -> SExpr {
   let mut acc = SExpr::Nil
   let mut i = items.length()
@@ -11,8 +11,8 @@ fn list_from_array(items : Array[SExpr]) -> SExpr {
   acc
 }
 
-/// 配列からペア（improper list対応）を構築する。
-/// 最後の要素が指定された場合、それをcdrとする。
+/// Constructs a pair (compatible with improved list) from an array.
+/// If the last element is specified, use it as cdr.
 fn list_from_array_with_tail(items : Array[SExpr], tail : SExpr) -> SExpr {
   let mut acc = tail
   let mut i = items.length()
@@ -25,7 +25,7 @@ fn list_from_array_with_tail(items : Array[SExpr], tail : SExpr) -> SExpr {
   acc
 }
 
-/// トークン列から 1 式を読み、次の位置を返す。
+/// Reads one expression from the token sequence and returns the next position.
 fn parse_expr(tokens : Array[Token], start : Int) -> (SExpr, Int) {
   if start >= tokens.length() {
     panic()
@@ -43,16 +43,16 @@ fn parse_expr(tokens : Array[Token], start : Int) -> (SExpr, Int) {
             // improper list: (a b . c)
             i = i + 1
             let (tail_expr, next_i) = parse_expr(tokens, i)
-            // RParen を期待
+            // Looking forward to RParen
             if next_i < tokens.length() {
               match tokens[next_i] {
                 Token::RParen => {
                   return (list_from_array_with_tail(items, tail_expr), next_i + 1)
                 }
-                _ => panic() // ドットの後の式の後にはRParenが必要
+                _ => panic() // Requires RParen after expression after dot
               }
             } else {
-              panic() // ドットの後の式の後に何もない
+              panic() // Nothing after the expression after the dot
             }
           }
           _ => {
@@ -67,7 +67,7 @@ fn parse_expr(tokens : Array[Token], start : Int) -> (SExpr, Int) {
       panic()
     }
     Token::RParen => panic()
-    Token::Dot => panic() // リスト外でのドット
+    Token::Dot => panic() // dot outside list
     Token::Boolean(b) => (SExpr::Bool(b), start + 1)
     Token::Identifier(name) => (SExpr::Symbol(name), start + 1)
     Token::Number(value) => (SExpr::Number(value), start + 1)
@@ -92,7 +92,7 @@ fn parse_expr(tokens : Array[Token], start : Int) -> (SExpr, Int) {
   }
 }
 
-/// トークン列を S 式列へ変換する。
+/// Convert a token sequence to an S-expression sequence.
 pub fn parse_tokens(tokens : Array[Token]) -> Array[SExpr] {
   let exprs : Array[SExpr] = []
   let mut i = 0
@@ -105,12 +105,12 @@ pub fn parse_tokens(tokens : Array[Token]) -> Array[SExpr] {
   exprs
 }
 
-/// 入力文字列を S 式列へ変換する。
+/// Convert input string to S-expression string.
 pub fn parse(input : String) -> Array[SExpr] {
   parse_tokens(tokenize(input))
 }
 
-/// 入力全体が 1 式であることを前提にパースする。
+/// Parses on the assumption that the entire input is one expression.
 pub fn parse_one(input : String) -> SExpr {
   let tokens = tokenize(input)
   if tokens.length() == 0 {

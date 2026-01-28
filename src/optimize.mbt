@@ -1,20 +1,20 @@
-/// IR 最適化パス
+/// IR optimization pass
 ///
-/// 中間表現に対して最適化を適用する。
-/// - 定数畳み込み (constant folding)
-/// - 定数条件の簡約 (constant conditional simplification)
-/// - 不要コード除去 (dead code elimination)
+/// Apply optimization to the intermediate representation.
+/// - constant folding
+/// - constant conditional simplification
+/// - Dead code elimination
 
-/// IR 式を最適化する
+/// Optimize IR expressions
 pub fn optimize(expr : IRExpr) -> IRExpr {
-  // 再帰的に最適化を適用
+  // Apply optimization recursively
   let optimized = optimize_expr(expr)
-  // 複数パスで収束するまで最適化（最大10回）
+  // Optimize in multiple passes until convergence (up to 10 times)
   let mut result = optimized
   let mut i = 0
   while i < 10 {
     let new_result = optimize_expr(result)
-    // 変化がなければ終了（簡易的な等価性チェック）
+    // End if there is no change (simple equality check)
     if ir_expr_equal(result, new_result) {
       break
     }
@@ -24,7 +24,7 @@ pub fn optimize(expr : IRExpr) -> IRExpr {
   result
 }
 
-/// IR 式を1パスで最適化する
+/// Optimize IR expression in one pass
 fn optimize_expr(expr : IRExpr) -> IRExpr {
   match expr {
     IRExpr::Const(_) => expr
@@ -76,7 +76,7 @@ fn optimize_expr(expr : IRExpr) -> IRExpr {
   }
 }
 
-/// 式の配列を最適化する
+/// Optimize arrays of expressions
 fn optimize_exprs(exprs : Array[IRExpr]) -> Array[IRExpr] {
   let result : Array[IRExpr] = []
   for expr in exprs {
@@ -85,29 +85,29 @@ fn optimize_exprs(exprs : Array[IRExpr]) -> Array[IRExpr] {
   result
 }
 
-/// 関数適用を最適化する（インライン展開を含む）
+/// Optimize function application (including inline expansion)
 fn optimize_app(func : IRExpr, args : Array[IRExpr], is_tail : Bool) -> IRExpr {
   let opt_func = optimize_expr(func)
   let opt_args = optimize_exprs(args)
 
-  // Lambda の直接呼び出しをインライン化
+  // Inline direct Lambda calls
   // ((lambda (x) body) arg) => (let ((x arg)) body)
   match opt_func {
     IRExpr::Lambda(info) => {
-      // 引数の数が一致する場合のみインライン化
+      // Inline only if number of arguments match
       if info.arity >= 0 && opt_args.length() == info.arity {
-        // 自由変数がない場合のみインライン化（複雑なクロージャは避ける）
+        // Inline only if there are no free variables (avoid complex closures)
         if info.free_vars.length() == 0 && info.boxed_params.length() == 0 {
-          // ボディサイズが小さい場合のみインライン化
+          // Inline only when body size is small
           if ir_expr_size(info.body) <= 20 {
-            // let バインディングに変換
+            // Convert to let binding
             let bindings : Array[LetBinding] = []
             let mut i = 0
             while i < info.params.length() {
               bindings.push({ name: info.params[i], init: opt_args[i] })
               i = i + 1
             }
-            // body の変数参照インデックスは既に正しいはず
+            // The variable reference index in body should already be correct
             return optimize_expr(IRExpr::Let(bindings, info.body))
           }
         }
@@ -116,7 +116,7 @@ fn optimize_app(func : IRExpr, args : Array[IRExpr], is_tail : Bool) -> IRExpr {
     _ => ()
   }
 
-  // インライン化できない場合は通常の関数呼び出し
+  // If inlining is not possible, normal function call
   if is_tail {
     IRExpr::TailApp(opt_func, opt_args)
   } else {
@@ -124,7 +124,7 @@ fn optimize_app(func : IRExpr, args : Array[IRExpr], is_tail : Bool) -> IRExpr {
   }
 }
 
-/// IR 式のサイズ（ノード数）を計算
+/// Calculate size (number of nodes) of IR expression
 fn ir_expr_size(expr : IRExpr) -> Int {
   match expr {
     IRExpr::Const(_) => 1
@@ -197,37 +197,37 @@ fn ir_expr_size(expr : IRExpr) -> Int {
   }
 }
 
-/// if 式を最適化する
+/// Optimize if expressions
 fn optimize_if(cond : IRExpr, then_branch : IRExpr, else_branch : IRExpr) -> IRExpr {
   let opt_cond = optimize_expr(cond)
   let opt_then = optimize_expr(then_branch)
   let opt_else = optimize_expr(else_branch)
 
-  // 定数条件の簡約
+  // Constant condition reduction
   match opt_cond {
     IRExpr::Const(IRConst::Bool(true)) => opt_then
     IRExpr::Const(IRConst::Bool(false)) => opt_else
-    // #f 以外の値は真
+    // Values ​​other than #f are true
     IRExpr::Const(_) => opt_then
     _ => IRExpr::If(opt_cond, opt_then, opt_else)
   }
 }
 
-/// begin 式を最適化する
+/// Optimize the begin expression
 fn optimize_begin(exprs : Array[IRExpr]) -> IRExpr {
   let optimized = optimize_exprs(exprs)
 
-  // 空の begin は nil
+  // Empty begin is nil
   if optimized.length() == 0 {
     return IRExpr::Const(IRConst::Nil)
   }
 
-  // 単一の式は begin を外す
+  // Single expressions remove begin
   if optimized.length() == 1 {
     return optimized[0]
   }
 
-  // ネストした begin をフラット化し、副作用のない中間式を除去
+  // Flatten nested begin and remove intermediate expressions without side effects
   let flattened : Array[IRExpr] = []
   let len = optimized.length()
   let mut i = 0
@@ -235,7 +235,7 @@ fn optimize_begin(exprs : Array[IRExpr]) -> IRExpr {
     let expr = optimized[i]
     let is_last = i == len - 1
     match expr {
-      // ネストした begin をフラット化
+      // Flatten nested begin
       IRExpr::Begin(inner_exprs) => {
         let inner_len = inner_exprs.length()
         let mut j = 0
@@ -247,7 +247,7 @@ fn optimize_begin(exprs : Array[IRExpr]) -> IRExpr {
           j = j + 1
         }
       }
-      // 最後の式または副作用のある式のみ保持
+      // Keep only the last expression or expressions with side effects
       _ => {
         if is_last || has_side_effect(expr) {
           flattened.push(expr)
@@ -266,19 +266,19 @@ fn optimize_begin(exprs : Array[IRExpr]) -> IRExpr {
   IRExpr::Begin(flattened)
 }
 
-/// lambda 式を最適化する
+/// Optimize lambda expressions
 fn optimize_lambda(info : LambdaInfo) -> IRExpr {
-  // Lambda 内の変数参照を調整
-  // - 自由変数（free_vars に含まれる）: depth=0, index=free_vars リストでの位置
-  // - パラメータ（depth=0）: index に num_captures を加える
+  // Adjust variable references in Lambda
+  // - Free variables (contained in free_vars): depth=0, index=free_vars position in list
+  // - Parameter (depth=0): add num_captures to index
   let adjusted_body = adjust_lambda_var_refs(
     info.body,
     info.params,
     info.free_vars
   )
 
-  // free_vars の VarRef を親スコープから参照できる形に調整
-  // 親スコープから見ると depth を 1 減らす必要がある
+  // Adjust VarRef of free_vars so that it can be referenced from the parent scope.
+  // From the perspective of the parent scope, depth needs to be decreased by 1
   let adjusted_free_vars : Array[VarRef] = []
   for var_ref in info.free_vars {
     adjusted_free_vars.push({
@@ -298,7 +298,7 @@ fn optimize_lambda(info : LambdaInfo) -> IRExpr {
   })
 }
 
-/// Lambda 内の変数参照を調整
+/// Adjust variable references in Lambda
 fn adjust_lambda_var_refs(
   expr : IRExpr,
   params : Array[String],
@@ -306,7 +306,7 @@ fn adjust_lambda_var_refs(
 ) -> IRExpr {
   match expr {
     IRExpr::Var(var_ref) => {
-      // 自由変数リストに含まれるかチェック
+      // Check whether it is included in the free variable list
       let mut free_var_index = -1
       for i in 0..<free_vars.length() {
         if free_vars[i].name == var_ref.name {
@@ -316,27 +316,27 @@ fn adjust_lambda_var_refs(
       }
 
       if free_var_index >= 0 {
-        // 自由変数：depth=0, index=free_vars リストでの位置
+        // Free variables: depth=0, index=free_vars Position in list
         IRExpr::Var({
           name: var_ref.name,
           depth: 0,
           index: free_var_index,
         })
       } else if var_ref.depth == 0 && var_ref.index < params.length() {
-        // このスコープのパラメータ（まだ調整されていない場合のみ）
-        // index に num_captures を加える
-        // 注: 複数パスで重複調整しないよう、index < params.length() をチェック
+        // Parameters for this scope (only if not already tuned)
+        // Add num_captures to index
+        // Note: Check index < params.length() to avoid duplicate adjustments in multiple passes.
         IRExpr::Var({
           name: var_ref.name,
           depth: 0,
           index: var_ref.index + free_vars.length(),
         })
       } else if var_ref.depth == 0 {
-        // 既に調整済みのパラメータ（index >= params.length()）
+        // Already adjusted parameters (index >= params.length())
         expr
       } else {
-        // さらに外側のスコープの変数（ネストした lambda の場合）
-        // そのまま保持（ネストした lambda で処理される）
+        // Variables in further outer scope (for nested lambdas)
+        // Keep as is (processed by nested lambda)
         expr
       }
     }
@@ -354,8 +354,8 @@ fn adjust_lambda_var_refs(
       IRExpr::Begin(adjusted)
     }
     IRExpr::Lambda(_lambda_info) =>
-      // ネストされた lambda はそのまま残す
-      // optimize_expr → optimize_lambda で独自に処理される
+      // Leave nested lambdas alone
+      // optimize_expr → processed independently by optimize_lambda
       expr
     IRExpr::App(func, args) => {
       let adjusted_args : Array[IRExpr] = []
@@ -392,7 +392,7 @@ fn adjust_lambda_var_refs(
       IRExpr::Letrec(adjusted_bindings, adjust_lambda_var_refs(body, params, free_vars))
     }
     IRExpr::Set(var_ref, value) => {
-      // 自由変数リストに含まれるかチェック
+      // Check whether it is included in the free variable list
       let mut free_var_index = -1
       for i in 0..<free_vars.length() {
         if free_vars[i].name == var_ref.name {
@@ -402,13 +402,13 @@ fn adjust_lambda_var_refs(
       }
 
       let adjusted_var = if free_var_index >= 0 {
-        // 自由変数
+        // free variable
         { name: var_ref.name, depth: 0, index: free_var_index }
       } else if var_ref.depth == 0 {
-        // このスコープの変数
+        // variables of this scope
         { name: var_ref.name, depth: 0, index: var_ref.index + free_vars.length() }
       } else {
-        // さらに外側のスコープの変数
+        // variables in further outer scopes
         var_ref
       }
       IRExpr::Set(adjusted_var, adjust_lambda_var_refs(value, params, free_vars))
@@ -444,51 +444,51 @@ fn adjust_lambda_var_refs(
   }
 }
 
-/// let 式を最適化する
+/// Optimize let expressions
 fn optimize_let(bindings : Array[LetBinding], body : IRExpr) -> IRExpr {
-  // バインディングの初期化式を最適化
+  // Optimize binding initialization expressions
   let opt_bindings : Array[LetBinding] = []
   for binding in bindings {
     opt_bindings.push({ name: binding.name, init: optimize_expr(binding.init) })
   }
 
-  // ボディを最適化
+  // Optimize the body
   let opt_body = optimize_expr(body)
 
-  // 空のバインディングは let を外す
+  // Empty binding removes let
   if opt_bindings.length() == 0 {
     return opt_body
   }
 
-  // 不要コード除去: 使用されないバインディングを除去
+  // Eliminate unnecessary code: remove unused bindings
   let used_vars = collect_used_vars(opt_body)
   let live_bindings : Array[LetBinding] = []
   let side_effect_exprs : Array[IRExpr] = []
 
   for binding in opt_bindings {
     if used_vars.contains(binding.name) {
-      // 変数が使用されている場合は保持
+      // Retain if variable is used
       live_bindings.push(binding)
     } else if has_side_effect(binding.init) {
-      // 副作用がある場合は式だけ実行
+      // Execute only the expression if there are side effects
       side_effect_exprs.push(binding.init)
     }
-    // 使用されず副作用もない場合は除去
+    // Remove if not used and have no side effects
   }
 
-  // すべてのバインディングが除去された場合
+  // If all bindings are removed
   if live_bindings.length() == 0 {
     if side_effect_exprs.length() == 0 {
       return opt_body
     }
-    // 副作用のある式を begin で包む
+    // Wrapping expressions with side effects in begin
     side_effect_exprs.push(opt_body)
     return IRExpr::Begin(side_effect_exprs)
   }
 
-  // 副作用のある除去された式がある場合
+  // If you have a removed expression with side effects
   if side_effect_exprs.length() > 0 {
-    // let の body の前に副作用を実行
+    // Execute side effects before body of let
     side_effect_exprs.push(opt_body)
     return IRExpr::Let(live_bindings, IRExpr::Begin(side_effect_exprs))
   }
@@ -496,7 +496,7 @@ fn optimize_let(bindings : Array[LetBinding], body : IRExpr) -> IRExpr {
   IRExpr::Let(live_bindings, opt_body)
 }
 
-/// letrec 式を最適化する
+/// Optimize letrec expressions
 fn optimize_letrec(bindings : Array[LetBinding], body : IRExpr) -> IRExpr {
   let opt_bindings : Array[LetBinding] = []
   for binding in bindings {
@@ -509,8 +509,8 @@ fn optimize_letrec(bindings : Array[LetBinding], body : IRExpr) -> IRExpr {
     return opt_body
   }
 
-  // 不要コード除去: 使用されないバインディングを除去
-  // letrec は相互参照があるため、初期化式内での使用も考慮
+  // Eliminate unnecessary code: remove unused bindings
+  // Since letrec has mutual references, consider using it in initialization expressions.
   let used_in_body = collect_used_vars(opt_body)
   let used_in_inits : Array[String] = []
   for binding in opt_bindings {
@@ -522,7 +522,7 @@ fn optimize_letrec(bindings : Array[LetBinding], body : IRExpr) -> IRExpr {
     }
   }
 
-  // 依存関係グラフを構築し、body から到達可能なバインディングのみ保持
+  // Build a dependency graph and keep only bindings reachable from body
   let reachable = compute_reachable_bindings(opt_bindings, used_in_body)
 
   let live_bindings : Array[LetBinding] = []
@@ -552,20 +552,20 @@ fn optimize_letrec(bindings : Array[LetBinding], body : IRExpr) -> IRExpr {
   IRExpr::Letrec(live_bindings, opt_body)
 }
 
-/// プリミティブ操作を最適化する（定数畳み込み）
+/// Optimize primitive operations (constant folding)
 fn optimize_primop(kind : PrimOpKind, args : Array[IRExpr]) -> IRExpr {
   let opt_args = optimize_exprs(args)
 
-  // すべての引数が定数かチェック
+  // Check if all arguments are constants
   if all_const(opt_args) {
-    // 定数畳み込みを試行
+    // Try constant folding
     match fold_primop(kind, opt_args) {
       Some(result) => return result
       None => ()
     }
   }
 
-  // 部分的な最適化
+  // Partial optimization
   match kind {
     // (+ 0 x) => x, (+ x 0) => x
     PrimOpKind::Add => {
@@ -623,7 +623,7 @@ fn optimize_primop(kind : PrimOpKind, args : Array[IRExpr]) -> IRExpr {
   IRExpr::PrimOp(kind, opt_args)
 }
 
-/// and 式を最適化する
+/// Optimize and expressions
 fn optimize_and(exprs : Array[IRExpr]) -> IRExpr {
   let opt_exprs = optimize_exprs(exprs)
 
@@ -631,25 +631,25 @@ fn optimize_and(exprs : Array[IRExpr]) -> IRExpr {
     return IRExpr::Const(IRConst::Bool(true))
   }
 
-  // 定数の簡約
+  // Constant reduction
   let filtered : Array[IRExpr] = []
   for expr in opt_exprs {
     match expr {
-      // #f があれば全体が #f
+      // If there is #f then the whole is #f
       IRExpr::Const(IRConst::Bool(false)) =>
         return IRExpr::Const(IRConst::Bool(false))
-      // #t は除去可能（最後以外）
+      // #t can be removed (except at the end)
       IRExpr::Const(IRConst::Bool(true)) => {
-        // 最後の式以外の #t は除去
+        // #t except the last expression is removed
         ()
       }
       _ => filtered.push(expr)
     }
   }
 
-  // すべて #t だった場合
+  // If all #t
   if filtered.length() == 0 {
-    // 最後の式が #t なら #t を返す
+    // If the last expression is #t, return #t
     let last_expr = opt_exprs[opt_exprs.length() - 1]
     match last_expr {
       IRExpr::Const(c) => return IRExpr::Const(c)
@@ -664,7 +664,7 @@ fn optimize_and(exprs : Array[IRExpr]) -> IRExpr {
   IRExpr::And(filtered)
 }
 
-/// or 式を最適化する
+/// Optimize the or expression
 fn optimize_or(exprs : Array[IRExpr]) -> IRExpr {
   let opt_exprs = optimize_exprs(exprs)
 
@@ -672,20 +672,20 @@ fn optimize_or(exprs : Array[IRExpr]) -> IRExpr {
     return IRExpr::Const(IRConst::Bool(false))
   }
 
-  // 定数の簡約
+  // Constant reduction
   let filtered : Array[IRExpr] = []
   for expr in opt_exprs {
     match expr {
-      // #t があれば全体が #t（他の真値も同様）
+      // If #t is present, the whole is #t (same for other true values)
       IRExpr::Const(IRConst::Bool(true)) =>
         return IRExpr::Const(IRConst::Bool(true))
-      // 非#f定数は真値
+      // Non-#f constants are true values
       IRExpr::Const(IRConst::Bool(false)) => {
-        // #f は除去
+        // #f is removed
         ()
       }
       IRExpr::Const(c) =>
-        // 他の定数は真値なので即座にそれを返す
+        // Other constants are true values, so return them immediately
         return IRExpr::Const(c)
       _ => filtered.push(expr)
     }
@@ -702,7 +702,7 @@ fn optimize_or(exprs : Array[IRExpr]) -> IRExpr {
   IRExpr::Or(filtered)
 }
 
-/// すべての引数が定数かチェック
+/// Check if all arguments are constants
 fn all_const(exprs : Array[IRExpr]) -> Bool {
   for expr in exprs {
     match expr {
@@ -713,7 +713,7 @@ fn all_const(exprs : Array[IRExpr]) -> Bool {
   true
 }
 
-/// 式が 0 かどうか
+/// whether the expression is 0
 fn is_zero(expr : IRExpr) -> Bool {
   match expr {
     IRExpr::Const(IRConst::Int(0)) => true
@@ -722,7 +722,7 @@ fn is_zero(expr : IRExpr) -> Bool {
   }
 }
 
-/// 式が 1 かどうか
+/// whether the expression is 1
 fn is_one(expr : IRExpr) -> Bool {
   match expr {
     IRExpr::Const(IRConst::Int(1)) => true
@@ -731,22 +731,22 @@ fn is_one(expr : IRExpr) -> Bool {
   }
 }
 
-/// letrec バインディングの依存関係から到達可能なバインディング名を計算
+/// Compute reachable binding name from letrec binding dependencies
 fn compute_reachable_bindings(
   bindings : Array[LetBinding],
   roots : Array[String]
 ) -> Array[String] {
-  // バインディング名のセットを構築
+  // Build a set of binding names
   let binding_names : Array[String] = []
   for binding in bindings {
     binding_names.push(binding.name)
   }
 
-  // 各バインディングの依存先を収集
+  // Collect dependencies of each binding
   let deps : Array[(String, Array[String])] = []
   for binding in bindings {
     let init_vars = collect_used_vars(binding.init)
-    // バインディング名に含まれるもののみ
+    // Only what is in the binding name
     let binding_deps : Array[String] = []
     for v in init_vars {
       if binding_names.contains(v) && not(binding_deps.contains(v)) {
@@ -756,11 +756,11 @@ fn compute_reachable_bindings(
     deps.push((binding.name, binding_deps))
   }
 
-  // roots から到達可能なバインディングを計算（BFS）
+  // Compute bindings reachable from roots (BFS)
   let reachable : Array[String] = []
   let queue : Array[String] = []
 
-  // 初期ルートの追加
+  // Adding an initial route
   for root in roots {
     if binding_names.contains(root) && not(reachable.contains(root)) {
       reachable.push(root)
@@ -771,7 +771,7 @@ fn compute_reachable_bindings(
   // BFS
   while queue.length() > 0 {
     let current = queue.pop().unwrap()
-    // current の依存先を探索
+    // Find dependencies of current
     for dep_entry in deps {
       if dep_entry.0 == current {
         for dep in dep_entry.1 {
@@ -788,20 +788,20 @@ fn compute_reachable_bindings(
   reachable
 }
 
-/// 式で使用されている変数名を収集する
+/// Collect variable names used in expressions
 fn collect_used_vars(expr : IRExpr) -> Array[String] {
   let vars : Array[String] = []
   collect_used_vars_inner(expr, vars)
   vars
 }
 
-/// 変数名収集の内部関数
+/// Internal function for collecting variable names
 fn collect_used_vars_inner(expr : IRExpr, vars : Array[String]) -> Unit {
   match expr {
     IRExpr::Const(_) => ()
     IRExpr::Quote(_) => ()
     IRExpr::Var(var_ref) => {
-      // 現在のスコープの変数のみ（depth == 0）
+      // Only variables in current scope (depth == 0)
       if var_ref.depth == 0 && not(vars.contains(var_ref.name)) {
         vars.push(var_ref.name)
       }
@@ -818,13 +818,13 @@ fn collect_used_vars_inner(expr : IRExpr, vars : Array[String]) -> Unit {
       }
     }
     IRExpr::Lambda(info) => {
-      // Lambda 内の自由変数をチェック
+      // Check free variables in Lambda
       for free_var in info.free_vars {
         if free_var.depth == 0 && not(vars.contains(free_var.name)) {
           vars.push(free_var.name)
         }
       }
-      // Lambda の body は別スコープなので再帰しない
+      // Lambda's body is a separate scope, so it does not recurse
     }
     IRExpr::App(func, args) => {
       collect_used_vars_inner(func, vars)
@@ -839,11 +839,11 @@ fn collect_used_vars_inner(expr : IRExpr, vars : Array[String]) -> Unit {
       }
     }
     IRExpr::Let(bindings, body) => {
-      // バインディングの初期化式
+      // Binding initialization expression
       for binding in bindings {
         collect_used_vars_inner(binding.init, vars)
       }
-      // body 内で使用される変数（ただし let で束縛される変数は外のスコープには影響しない）
+      // Variables used within body (but variables bound with let do not affect the outer scope)
       let body_vars = collect_used_vars(body)
       let bound_names : Array[String] = []
       for binding in bindings {
@@ -856,7 +856,7 @@ fn collect_used_vars_inner(expr : IRExpr, vars : Array[String]) -> Unit {
       }
     }
     IRExpr::Letrec(bindings, body) => {
-      // letrec の初期化式と body
+      // letrec initialization expression and body
       for binding in bindings {
         collect_used_vars_inner(binding.init, vars)
       }
@@ -904,7 +904,7 @@ fn collect_used_vars_inner(expr : IRExpr, vars : Array[String]) -> Unit {
   }
 }
 
-/// 式に副作用があるかどうか（簡易判定）
+/// Whether the formula has side effects (simple determination)
 fn has_side_effect(expr : IRExpr) -> Bool {
   match expr {
     IRExpr::Const(_) => false
@@ -912,14 +912,14 @@ fn has_side_effect(expr : IRExpr) -> Bool {
     IRExpr::GlobalVar(_) => false
     IRExpr::Quote(_) => false
     IRExpr::Lambda(_) => false
-    // set! は副作用
+    // set! is a side effect
     IRExpr::Set(_, _) => true
     IRExpr::GlobalSet(_, _) => true
-    // 関数呼び出しは副作用の可能性
+    // Function calls can have side effects
     IRExpr::App(_, _) => true
     IRExpr::TailApp(_, _) => true
     IRExpr::CallCC(_) => true
-    // 一部の PrimOp は副作用
+    // Some PrimOps have side effects
     IRExpr::PrimOp(kind, _) =>
       match kind {
         PrimOpKind::Display => true
@@ -938,15 +938,15 @@ fn has_side_effect(expr : IRExpr) -> Bool {
         PrimOpKind::WriteChar => true
         _ => false
       }
-    // if, begin, let 等は子要素を見る必要があるが、保守的に副作用ありとする
+    // If, begin, let etc. need to look at child elements, conservatively consider them to have side effects.
     _ => true
   }
 }
 
-/// プリミティブ操作の定数畳み込み
+/// Constant folding for primitive operations
 fn fold_primop(kind : PrimOpKind, args : Array[IRExpr]) -> IRExpr? {
   match kind {
-    // 算術演算
+    // Arithmetic operations
     PrimOpKind::Add => fold_add(args)
     PrimOpKind::Sub => fold_sub(args)
     PrimOpKind::Mul => fold_mul(args)
@@ -956,21 +956,21 @@ fn fold_primop(kind : PrimOpKind, args : Array[IRExpr]) -> IRExpr? {
     PrimOpKind::Modulo => fold_modulo(args)
     PrimOpKind::Abs => fold_abs(args)
 
-    // 比較演算
+    // Relations
     PrimOpKind::NumEq => fold_num_eq(args)
     PrimOpKind::Lt => fold_lt(args)
     PrimOpKind::Gt => fold_gt(args)
     PrimOpKind::Le => fold_le(args)
     PrimOpKind::Ge => fold_ge(args)
 
-    // 数値述語
+    // Numeric predicate
     PrimOpKind::ZeroP => fold_zero_p(args)
     PrimOpKind::PositiveP => fold_positive_p(args)
     PrimOpKind::NegativeP => fold_negative_p(args)
     PrimOpKind::OddP => fold_odd_p(args)
     PrimOpKind::EvenP => fold_even_p(args)
 
-    // 型述語
+    // Type predicate
     PrimOpKind::NullP => fold_null_p(args)
     PrimOpKind::BooleanP => fold_boolean_p(args)
     PrimOpKind::NumberP => fold_number_p(args)
@@ -980,13 +980,13 @@ fn fold_primop(kind : PrimOpKind, args : Array[IRExpr]) -> IRExpr? {
     PrimOpKind::StringP => fold_string_p(args)
     PrimOpKind::CharP => fold_char_p(args)
 
-    // 論理演算
+    // Logical connective
     PrimOpKind::Not => fold_not(args)
 
-    // 文字列
+    // string
     PrimOpKind::StringLength => fold_string_length(args)
 
-    // リスト
+    // list
     PrimOpKind::Car => fold_car(args)
     PrimOpKind::Cdr => fold_cdr(args)
     PrimOpKind::Cons => fold_cons(args)
@@ -996,7 +996,7 @@ fn fold_primop(kind : PrimOpKind, args : Array[IRExpr]) -> IRExpr? {
   }
 }
 
-/// 加算の定数畳み込み
+/// Constant folding of addition
 fn fold_add(args : Array[IRExpr]) -> IRExpr? {
   if args.length() == 0 {
     return Some(IRExpr::Const(IRConst::Int(0)))
@@ -1032,13 +1032,13 @@ fn fold_add(args : Array[IRExpr]) -> IRExpr? {
   }
 }
 
-/// 減算の定数畳み込み
+/// Constant folding for subtraction
 fn fold_sub(args : Array[IRExpr]) -> IRExpr? {
   if args.length() == 0 {
     return None
   }
   if args.length() == 1 {
-    // 単項マイナス
+    // unary minus
     match args[0] {
       IRExpr::Const(IRConst::Int(n)) => return Some(IRExpr::Const(IRConst::Int(-n)))
       IRExpr::Const(IRConst::Real(r)) => return Some(IRExpr::Const(IRConst::Real(-r)))
@@ -1046,7 +1046,7 @@ fn fold_sub(args : Array[IRExpr]) -> IRExpr? {
     }
   }
 
-  // 二項以上
+  // Two terms or more
   let mut result = 0
   let mut has_real = false
   let mut real_result = 0.0
@@ -1093,7 +1093,7 @@ fn fold_sub(args : Array[IRExpr]) -> IRExpr? {
   }
 }
 
-/// 乗算の定数畳み込み
+/// Constant folding of multiplication
 fn fold_mul(args : Array[IRExpr]) -> IRExpr? {
   if args.length() == 0 {
     return Some(IRExpr::Const(IRConst::Int(1)))
@@ -1129,7 +1129,7 @@ fn fold_mul(args : Array[IRExpr]) -> IRExpr? {
   }
 }
 
-/// 除算の定数畳み込み
+/// Constant folding of division
 fn fold_div(args : Array[IRExpr]) -> IRExpr? {
   if args.length() < 2 {
     return None
@@ -1150,7 +1150,7 @@ fn fold_div(args : Array[IRExpr]) -> IRExpr? {
       _ => return None
     }
     if divisor == 0.0 {
-      return None  // 0 除算は畳み込まない
+      return None  // 0 division is not folded
     }
     result = result / divisor
     i = i + 1
@@ -1159,7 +1159,7 @@ fn fold_div(args : Array[IRExpr]) -> IRExpr? {
   Some(IRExpr::Const(IRConst::Real(result)))
 }
 
-/// 整数除算の定数畳み込み
+/// Constant folding for integer division
 fn fold_quotient(args : Array[IRExpr]) -> IRExpr? {
   if args.length() != 2 {
     return None
@@ -1175,7 +1175,7 @@ fn fold_quotient(args : Array[IRExpr]) -> IRExpr? {
   }
 }
 
-/// 剰余の定数畳み込み
+/// Constant folding of the remainder
 fn fold_remainder(args : Array[IRExpr]) -> IRExpr? {
   if args.length() != 2 {
     return None
@@ -1191,7 +1191,7 @@ fn fold_remainder(args : Array[IRExpr]) -> IRExpr? {
   }
 }
 
-/// modulo の定数畳み込み
+/// constant folding of modulo
 fn fold_modulo(args : Array[IRExpr]) -> IRExpr? {
   if args.length() != 2 {
     return None
@@ -1202,7 +1202,7 @@ fn fold_modulo(args : Array[IRExpr]) -> IRExpr? {
         return None
       }
       let r = a % b
-      // modulo は常に b と同符号
+      // modulo always has the same sign as b
       if (r < 0 && b > 0) || (r > 0 && b < 0) {
         Some(IRExpr::Const(IRConst::Int(r + b)))
       } else {
@@ -1213,7 +1213,7 @@ fn fold_modulo(args : Array[IRExpr]) -> IRExpr? {
   }
 }
 
-/// 絶対値の定数畳み込み
+/// Constant folding of absolute values
 fn fold_abs(args : Array[IRExpr]) -> IRExpr? {
   if args.length() != 1 {
     return None
@@ -1237,7 +1237,7 @@ fn fold_abs(args : Array[IRExpr]) -> IRExpr? {
   }
 }
 
-/// 数値等価の定数畳み込み
+/// Constant folding of numerical equivalents
 fn fold_num_eq(args : Array[IRExpr]) -> IRExpr? {
   if args.length() < 2 {
     return Some(IRExpr::Const(IRConst::Bool(true)))
@@ -1264,27 +1264,27 @@ fn fold_num_eq(args : Array[IRExpr]) -> IRExpr? {
   }
 }
 
-/// 小なりの定数畳み込み
+/// Constant less than folding
 fn fold_lt(args : Array[IRExpr]) -> IRExpr? {
   fold_comparison(args, fn(a, b) { a < b })
 }
 
-/// 大なりの定数畳み込み
+/// Constant folding greater than or equal to
 fn fold_gt(args : Array[IRExpr]) -> IRExpr? {
   fold_comparison(args, fn(a, b) { a > b })
 }
 
-/// 小なりイコールの定数畳み込み
+/// Less than equal constant folding
 fn fold_le(args : Array[IRExpr]) -> IRExpr? {
   fold_comparison(args, fn(a, b) { a <= b })
 }
 
-/// 大なりイコールの定数畳み込み
+/// Greater than equal constant folding
 fn fold_ge(args : Array[IRExpr]) -> IRExpr? {
   fold_comparison(args, fn(a, b) { a >= b })
 }
 
-/// 比較操作の汎用定数畳み込み
+/// Generic constant folding for comparison operations
 fn fold_comparison(args : Array[IRExpr], cmp : (Double, Double) -> Bool) -> IRExpr? {
   if args.length() < 2 {
     return Some(IRExpr::Const(IRConst::Bool(true)))
@@ -1311,7 +1311,7 @@ fn fold_comparison(args : Array[IRExpr], cmp : (Double, Double) -> Bool) -> IREx
   Some(IRExpr::Const(IRConst::Bool(true)))
 }
 
-/// 数値を抽出
+/// Extract numbers
 fn extract_number(expr : IRExpr) -> Double? {
   match expr {
     IRExpr::Const(IRConst::Int(n)) => Some(n.to_double())
@@ -1320,7 +1320,7 @@ fn extract_number(expr : IRExpr) -> Double? {
   }
 }
 
-/// zero? の定数畳み込み
+/// Constant folding of zero?
 fn fold_zero_p(args : Array[IRExpr]) -> IRExpr? {
   if args.length() != 1 {
     return None
@@ -1331,7 +1331,7 @@ fn fold_zero_p(args : Array[IRExpr]) -> IRExpr? {
   }
 }
 
-/// positive? の定数畳み込み
+/// Constant folding of positive?
 fn fold_positive_p(args : Array[IRExpr]) -> IRExpr? {
   if args.length() != 1 {
     return None
@@ -1342,7 +1342,7 @@ fn fold_positive_p(args : Array[IRExpr]) -> IRExpr? {
   }
 }
 
-/// negative? の定数畳み込み
+/// Constant folding of negative?
 fn fold_negative_p(args : Array[IRExpr]) -> IRExpr? {
   if args.length() != 1 {
     return None
@@ -1353,7 +1353,7 @@ fn fold_negative_p(args : Array[IRExpr]) -> IRExpr? {
   }
 }
 
-/// odd? の定数畳み込み
+/// Constant folding of odd?
 fn fold_odd_p(args : Array[IRExpr]) -> IRExpr? {
   if args.length() != 1 {
     return None
@@ -1364,7 +1364,7 @@ fn fold_odd_p(args : Array[IRExpr]) -> IRExpr? {
   }
 }
 
-/// even? の定数畳み込み
+/// Constant folding of even?
 fn fold_even_p(args : Array[IRExpr]) -> IRExpr? {
   if args.length() != 1 {
     return None
@@ -1375,7 +1375,7 @@ fn fold_even_p(args : Array[IRExpr]) -> IRExpr? {
   }
 }
 
-/// null? の定数畳み込み
+/// Constant folding of null?
 fn fold_null_p(args : Array[IRExpr]) -> IRExpr? {
   if args.length() != 1 {
     return None
@@ -1387,7 +1387,7 @@ fn fold_null_p(args : Array[IRExpr]) -> IRExpr? {
   }
 }
 
-/// boolean? の定数畳み込み
+/// Constant folding of boolean?
 fn fold_boolean_p(args : Array[IRExpr]) -> IRExpr? {
   if args.length() != 1 {
     return None
@@ -1399,7 +1399,7 @@ fn fold_boolean_p(args : Array[IRExpr]) -> IRExpr? {
   }
 }
 
-/// number? の定数畳み込み
+/// Constant folding of number?
 fn fold_number_p(args : Array[IRExpr]) -> IRExpr? {
   if args.length() != 1 {
     return None
@@ -1412,7 +1412,7 @@ fn fold_number_p(args : Array[IRExpr]) -> IRExpr? {
   }
 }
 
-/// integer? の定数畳み込み
+/// Constant folding of integer?
 fn fold_integer_p(args : Array[IRExpr]) -> IRExpr? {
   if args.length() != 1 {
     return None
@@ -1424,7 +1424,7 @@ fn fold_integer_p(args : Array[IRExpr]) -> IRExpr? {
   }
 }
 
-/// pair? の定数畳み込み
+/// Constant folding of pair?
 fn fold_pair_p(args : Array[IRExpr]) -> IRExpr? {
   if args.length() != 1 {
     return None
@@ -1436,7 +1436,7 @@ fn fold_pair_p(args : Array[IRExpr]) -> IRExpr? {
   }
 }
 
-/// symbol? の定数畳み込み
+/// Constant folding of symbol?
 fn fold_symbol_p(args : Array[IRExpr]) -> IRExpr? {
   if args.length() != 1 {
     return None
@@ -1448,7 +1448,7 @@ fn fold_symbol_p(args : Array[IRExpr]) -> IRExpr? {
   }
 }
 
-/// string? の定数畳み込み
+/// Constant folding of string?
 fn fold_string_p(args : Array[IRExpr]) -> IRExpr? {
   if args.length() != 1 {
     return None
@@ -1460,7 +1460,7 @@ fn fold_string_p(args : Array[IRExpr]) -> IRExpr? {
   }
 }
 
-/// char? の定数畳み込み
+/// Constant folding of char?
 fn fold_char_p(args : Array[IRExpr]) -> IRExpr? {
   if args.length() != 1 {
     return None
@@ -1472,19 +1472,19 @@ fn fold_char_p(args : Array[IRExpr]) -> IRExpr? {
   }
 }
 
-/// not の定数畳み込み
+/// Constant folding of not
 fn fold_not(args : Array[IRExpr]) -> IRExpr? {
   if args.length() != 1 {
     return None
   }
   match args[0] {
     IRExpr::Const(IRConst::Bool(b)) => Some(IRExpr::Const(IRConst::Bool(not(b))))
-    IRExpr::Const(_) => Some(IRExpr::Const(IRConst::Bool(false)))  // #f 以外は真
+    IRExpr::Const(_) => Some(IRExpr::Const(IRConst::Bool(false)))  // True except #f
     _ => None
   }
 }
 
-/// string-length の定数畳み込み
+/// Constant folding of string-length
 fn fold_string_length(args : Array[IRExpr]) -> IRExpr? {
   if args.length() != 1 {
     return None
@@ -1495,7 +1495,7 @@ fn fold_string_length(args : Array[IRExpr]) -> IRExpr? {
   }
 }
 
-/// car の定数畳み込み
+/// Constant folding of car
 fn fold_car(args : Array[IRExpr]) -> IRExpr? {
   if args.length() != 1 {
     return None
@@ -1506,7 +1506,7 @@ fn fold_car(args : Array[IRExpr]) -> IRExpr? {
   }
 }
 
-/// cdr の定数畳み込み
+/// Constant folding of cdr
 fn fold_cdr(args : Array[IRExpr]) -> IRExpr? {
   if args.length() != 1 {
     return None
@@ -1517,7 +1517,7 @@ fn fold_cdr(args : Array[IRExpr]) -> IRExpr? {
   }
 }
 
-/// cons の定数畳み込み
+/// Constant folding of cons
 fn fold_cons(args : Array[IRExpr]) -> IRExpr? {
   if args.length() != 2 {
     return None
@@ -1529,7 +1529,7 @@ fn fold_cons(args : Array[IRExpr]) -> IRExpr? {
   }
 }
 
-/// length の定数畳み込み
+/// Constant folding of length
 fn fold_length(args : Array[IRExpr]) -> IRExpr? {
   if args.length() != 1 {
     return None
@@ -1545,7 +1545,7 @@ fn fold_length(args : Array[IRExpr]) -> IRExpr? {
   }
 }
 
-/// IRConst のリスト長を計算
+/// Calculate list length of IRConst
 fn ir_const_length(c : IRConst) -> Int? {
   let mut len = 0
   let mut current = c
@@ -1556,13 +1556,13 @@ fn ir_const_length(c : IRConst) -> Int? {
         len = len + 1
         current = cdr
       }
-      _ => return None  // proper list でない
+      _ => return None  // Not a proper list
     }
   }
   Some(len)
 }
 
-/// IRExpr の等価性チェック（簡易版）
+/// IRExpr equality check (simplified version)
 fn ir_expr_equal(a : IRExpr, b : IRExpr) -> Bool {
   match (a, b) {
     (IRExpr::Const(c1), IRExpr::Const(c2)) => ir_const_equal(c1, c2)
@@ -1586,12 +1586,12 @@ fn ir_expr_equal(a : IRExpr, b : IRExpr) -> Bool {
       n1 == n2 && ir_expr_equal(e1, e2)
     (IRExpr::CallCC(p1), IRExpr::CallCC(p2)) => ir_expr_equal(p1, p2)
     (IRExpr::Delay(e1), IRExpr::Delay(e2)) => ir_expr_equal(e1, e2)
-    // Lambda, Let, Letrec は構造が複雑なので保守的に false
+    // Lambda, Let, Letrec have complex structures, so conservatively false
     _ => false
   }
 }
 
-/// IRExpr 配列の等価性チェック
+/// IRExpr array equality check
 fn ir_exprs_equal(as1 : Array[IRExpr], as2 : Array[IRExpr]) -> Bool {
   if as1.length() != as2.length() {
     return false
@@ -1606,7 +1606,7 @@ fn ir_exprs_equal(as1 : Array[IRExpr], as2 : Array[IRExpr]) -> Bool {
   true
 }
 
-/// IRConst の等価性チェック
+/// IRConst equality checking
 fn ir_const_equal(a : IRConst, b : IRConst) -> Bool {
   match (a, b) {
     (IRConst::Nil, IRConst::Nil) => true
@@ -1635,9 +1635,9 @@ fn ir_const_equal(a : IRConst, b : IRConst) -> Bool {
   }
 }
 
-/// PrimOpKind の等価性チェック
+/// PrimOpKind equality check
 fn primop_equal(a : PrimOpKind, b : PrimOpKind) -> Bool {
-  // MoonBit では enum の等価性は自動的にサポートされる場合がある
-  // 保守的に文字列化して比較
+  // Enum equality may be automatically supported in MoonBit
+  // Conservatively stringify and compare
   a.to_string() == b.to_string()
 }

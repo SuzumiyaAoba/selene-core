@@ -1,4 +1,4 @@
-/// I/O関数のテスト
+/// Testing I/O functions
 
 test "display - displays string without quotes" {
   let env = initial_env()

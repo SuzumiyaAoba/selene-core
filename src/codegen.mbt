@@ -1,20 +1,20 @@
-/// コード生成 (IR → バイトコード)
+/// Code generation (IR → bytecode)
 ///
-/// 中間表現からバイトコードを生成する
+/// Generate bytecode from intermediate representation
 
-/// コード生成コンテキスト
+/// code generation context
 struct CodegenContext {
-  /// メインビルダー
+  /// main builder
   builder : CodeChunkBuilder
-  /// 生成された子チャンク（ネストした関数）
+  /// Generated child chunks (nested functions)
   chunks : Array[CodeChunk]
-  /// ボックス化されているパラメータのインデックス（depth=0）
+  /// Index of boxed parameter (depth=0)
   boxed_params : Array[Int]
-  /// ボックス化されているローカル変数の名前（depth=0）
+  /// Name of local variable being boxed (depth=0)
   boxed_locals : Array[String]
 }
 
-/// 新しいコンテキストを作成
+/// Create new context
 fn new_context(debug_name : String?) -> CodegenContext {
   {
     builder: new_builder(debug_name),
@@ -24,7 +24,7 @@ fn new_context(debug_name : String?) -> CodegenContext {
   }
 }
 
-/// ボックス化情報を含めて新しいコンテキストを作成
+/// Create a new context with boxing information
 fn new_context_with_boxing(
   debug_name : String?,
   boxed_params : Array[Int],
@@ -38,7 +38,7 @@ fn new_context_with_boxing(
   }
 }
 
-/// IR 式をバイトコードに変換
+/// Convert IR expression to bytecode
 fn codegen_expr(ctx : CodegenContext, expr : IRExpr) -> Unit {
   match expr {
     IRExpr::Const(c) => codegen_const(ctx, c)
@@ -63,17 +63,17 @@ fn codegen_expr(ctx : CodegenContext, expr : IRExpr) -> Unit {
   }
 }
 
-/// 定数をコード生成
+/// Generate code for constants
 fn codegen_const(ctx : CodegenContext, c : IRConst) -> Unit {
   match c {
     IRConst::Pair(car, cdr) => {
-      // ペアは再帰的に構築
+      // Pairs are constructed recursively
       codegen_const(ctx, car)
       codegen_const(ctx, cdr)
       ctx.builder.emit(Opcode::MakePair)
     }
     IRConst::Vector(items) => {
-      // ベクトルは要素を順にプッシュして構築
+      // Vectors are constructed by pushing elements in sequence
       for item in items {
         codegen_const(ctx, item)
       }
@@ -87,14 +87,14 @@ fn codegen_const(ctx : CodegenContext, c : IRConst) -> Unit {
   }
 }
 
-/// ローカル変数参照をコード生成
-/// 注: オプティマイザーが VarRef のインデックスを調整済み
-/// - 自由変数: depth=0, index=キャプチャ位置
-/// - パラメータ: depth=0, index=キャプチャ数+パラメータ位置
+/// Generate code for local variable references
+/// Note: The optimizer has adjusted the index of VarRef
+/// - Free variables: depth=0, index=capture position
+/// - Parameters: depth=0, index=number of captures + parameter position
 fn codegen_var(ctx : CodegenContext, var_ref : VarRef) -> Unit {
   ctx.builder.emit(Opcode::LoadLocal(var_ref.depth, var_ref.index))
 
-  // depth=0 でボックス化されている場合、BoxGet を使って値を取り出す
+  // If boxed with depth=0, use BoxGet to retrieve the value
   if var_ref.depth == 0 {
     let is_boxed = {
       let mut found = false
@@ -120,43 +120,43 @@ fn codegen_var(ctx : CodegenContext, var_ref : VarRef) -> Unit {
   }
 }
 
-/// グローバル変数参照をコード生成
+/// Generate code for global variable references
 fn codegen_global_var(ctx : CodegenContext, name : String) -> Unit {
   let idx = ctx.builder.add_name(name)
   ctx.builder.emit(Opcode::LoadGlobal(idx))
 }
 
-/// if 式をコード生成
+/// Generate code for if expressions
 fn codegen_if(
   ctx : CodegenContext,
   cond_expr : IRExpr,
   then_branch : IRExpr,
   else_branch : IRExpr
 ) -> Unit {
-  // cond_expr を評価
+  // evaluate cond_expr
   codegen_expr(ctx, cond_expr)
-  // false なら else にジャンプ
+  // If false, jump to else
   let else_jump_pos = ctx.builder.current_pos()
-  ctx.builder.emit(Opcode::JumpIfFalse(0))  // 後でパッチ
-  // then 分岐
+  ctx.builder.emit(Opcode::JumpIfFalse(0))  // patch later
+  // then branch
   codegen_expr(ctx, then_branch)
-  // then の後で end にジャンプ
+  // jump to end after then
   let end_jump_pos = ctx.builder.current_pos()
-  ctx.builder.emit(Opcode::Jump(0))  // 後でパッチ
-  // else 分岐
+  ctx.builder.emit(Opcode::Jump(0))  // patch later
+  // else branch
   let else_pos = ctx.builder.current_pos()
   codegen_expr(ctx, else_branch)
   // end
   let end_pos = ctx.builder.current_pos()
-  // ジャンプ先をパッチ
+  // Patch jump destination
   ctx.builder.patch(else_jump_pos, Opcode::JumpIfFalse(else_pos))
   ctx.builder.patch(end_jump_pos, Opcode::Jump(end_pos))
 }
 
-/// begin 式をコード生成
+/// Generate code for begin expressions
 fn codegen_begin(ctx : CodegenContext, exprs : Array[IRExpr]) -> Unit {
   if exprs.length() == 0 {
-    // 空の begin は nil を返す
+    // Empty begin returns nil
     let idx = ctx.builder.add_const(BCValue::Nil)
     ctx.builder.emit(Opcode::Push(idx))
     return
@@ -165,7 +165,7 @@ fn codegen_begin(ctx : CodegenContext, exprs : Array[IRExpr]) -> Unit {
   let mut i = 0
   while i < len {
     codegen_expr(ctx, exprs[i])
-    // 最後の式以外は結果を捨てる
+    // Discard results except for the last expression
     if i < len - 1 {
       ctx.builder.emit(Opcode::Pop)
     }
@@ -173,10 +173,10 @@ fn codegen_begin(ctx : CodegenContext, exprs : Array[IRExpr]) -> Unit {
   }
 }
 
-/// lambda 式をコード生成
+/// Generate code for lambda expressions
 fn codegen_lambda(ctx : CodegenContext, info : LambdaInfo) -> Unit {
-  // キャプチャした変数のうち、親スコープでボックス化されているものを特定
-  // これらはボックス自体がキャプチャされるため、参照時に BoxGet が必要
+  // Identify captured variables that are boxed in parent scope
+  // These require BoxGet when referencing because the box itself is captured.
   let captured_boxed_indices : Array[Int] = []
   let mut cap_i = 0
   while cap_i < info.free_vars.length() {
@@ -194,26 +194,26 @@ fn codegen_lambda(ctx : CodegenContext, info : LambdaInfo) -> Unit {
     cap_i = cap_i + 1
   }
 
-  // パラメータのローカルインデックスを調整（キャプチャの後ろにある）
+  // Adjust local index of parameters (behind capture)
   let adjusted_boxed_params : Array[Int] = []
-  // キャプチャしたボックスのインデックスを追加
+  // Add index of captured box
   for idx in captured_boxed_indices {
     adjusted_boxed_params.push(idx)
   }
-  // Lambda 自体のパラメータでボックス化が必要なものを追加
+  // Add parameters to Lambda itself that require boxing
   for boxed_param_idx in info.boxed_params {
     adjusted_boxed_params.push(info.free_vars.length() + boxed_param_idx)
   }
 
-  // 新しいコンテキストで関数本体をコンパイル（ボックス化情報とキャプチャ情報を含める）
+  // Compile function body in new context (include boxing and capturing information)
   let func_ctx = new_context_with_boxing(None, adjusted_boxed_params, info.boxed_locals.copy())
   func_ctx.builder.arity = info.arity
-  // ローカル変数数：キャプチャ数 + パラメータ数
+  // Number of local variables: number of captures + number of parameters
   func_ctx.builder.num_locals = info.free_vars.length() + info.params.length()
   func_ctx.builder.num_free_vars = info.free_vars.length()
 
-  // Lambda の開始時に、ボックス化が必要なパラメータをボックス化
-  // 注：キャプチャしたボックスは既にボックス化されているのでスキップ
+  // Box parameters that require boxing when starting Lambda
+  // Note: The captured box is already boxed, so skip it
   for boxed_param_idx in info.boxed_params {
     let param_local_idx = info.free_vars.length() + boxed_param_idx
     func_ctx.builder.emit(Opcode::LoadLocal(0, param_local_idx))
@@ -221,36 +221,36 @@ fn codegen_lambda(ctx : CodegenContext, info : LambdaInfo) -> Unit {
     func_ctx.builder.emit(Opcode::StoreLocal(0, param_local_idx))
   }
 
-  // 本体をコンパイル
+  // Compile the body
   codegen_expr(func_ctx, info.body)
   func_ctx.builder.emit(Opcode::Return)
 
-  // 関数チャンクを追加
+  // Add function chunk
   let func_chunk = func_ctx.builder.build()
   let chunk_idx = ctx.chunks.length()
 
-  // 子チャンクがある場合、func_chunk 内のチャンクインデックスをオフセット
-  // func_chunk 内の MakeClosure/MakePromise が参照するチャンクは、
-  // func_ctx.chunks[0], func_ctx.chunks[1], ... にあり、
-  // これらは ctx.chunks に追加される際に chunk_idx+1, chunk_idx+2, ... の位置になる
+  // Offset chunk index in func_chunk if there are child chunks
+  // The chunk referenced by MakeClosure/MakePromise in func_chunk is
+  // located in func_ctx.chunks[0], func_ctx.chunks[1], ...
+  // These will be placed in chunk_idx+1, chunk_idx+2, ... when added to ctx.chunks
   if func_ctx.chunks.length() > 0 {
-    let offset = chunk_idx + 1  // 子チャンクが始まる位置
+    let offset = chunk_idx + 1  // The position where the child chunk starts
     offset_chunk_indices(func_chunk, offset)
   }
 
   ctx.chunks.push(func_chunk)
 
-  // 子コンテキストのチャンクも追加（再帰的にオフセット済み）
+  // Also added chunks of child context (recursively offset)
   for chunk in func_ctx.chunks {
     ctx.chunks.push(chunk)
   }
 
-  // 自由変数をスタックにプッシュ
-  // 注: free_vars の VarRef は optimize で親スコープからの参照に調整済み
-  // MakeClosure が pop して reverse するので、ここでは順番通りにプッシュ
-  // 重要: ボックス化された変数はボックス自体をキャプチャする（BoxGet を呼ばない）
+  // Push free variable onto stack
+  // Note: VarRef of free_vars has been optimized to be a reference from the parent scope.
+  // MakeClosure pops and reverses, so here we push in order.
+  // Important: Boxed variables capture the box itself (do not call BoxGet)
   for var_ref in info.free_vars {
-    // この変数がボックス化されているか判定
+    // Determine if this variable is boxed
     let is_boxed = {
       let mut found = false
       for name in ctx.boxed_locals {
@@ -262,19 +262,19 @@ fn codegen_lambda(ctx : CodegenContext, info : LambdaInfo) -> Unit {
       found
     }
     if is_boxed {
-      // ボックス化されている場合: ボックス自体をプッシュ（BoxGet を呼ばない）
+      // If boxed: push the box itself (do not call BoxGet)
       ctx.builder.emit(Opcode::LoadLocal(var_ref.depth, var_ref.index))
     } else {
-      // ボックス化されていない場合: 通常の変数参照
+      // If unboxed: regular variable reference
       codegen_expr(ctx, IRExpr::Var(var_ref))
     }
   }
 
-  // クロージャを作成（chunk_idx, キャプチャ数）
+  // Create closure (chunk_idx, number of captures)
   ctx.builder.emit(Opcode::MakeClosure(chunk_idx, info.free_vars.length()))
 }
 
-/// チャンク内の MakeClosure/MakePromise のチャンクインデックスをオフセット
+/// Offset chunk index of MakeClosure/MakePromise within chunk
 fn offset_chunk_indices(chunk : CodeChunk, offset : Int) -> Unit {
   let mut i = 0
   while i < chunk.code.length() {
@@ -291,20 +291,20 @@ fn offset_chunk_indices(chunk : CodeChunk, offset : Int) -> Unit {
   }
 }
 
-/// 関数適用をコード生成
+/// Generate code for function application
 fn codegen_app(
   ctx : CodegenContext,
   func : IRExpr,
   args : Array[IRExpr],
   is_tail : Bool
 ) -> Unit {
-  // 関数を評価
+  // evaluate function
   codegen_expr(ctx, func)
-  // 引数を評価
+  // evaluate arguments
   for arg in args {
     codegen_expr(ctx, arg)
   }
-  // 呼び出し
+  // call
   if is_tail {
     ctx.builder.emit(Opcode::TailCall(args.length()))
   } else {
@@ -312,19 +312,19 @@ fn codegen_app(
   }
 }
 
-/// IR 式内で set! される変数名を収集（外側のスコープの変数も含む）
+/// Collect variable names that are set! in IR expressions (including variables in outer scopes)
 fn codegen_collect_set_vars(expr : IRExpr) -> Array[String] {
   let set_vars : Array[String] = []
   codegen_collect_set_vars_inner(expr, set_vars, 0)
   set_vars
 }
 
-/// set! 変数収集の内部関数
-/// current_depth: 現在のスコープ深度（letが増えるごとに+1）
+/// set! Internal function for collecting variables
+/// current_depth: Current scope depth (+1 for each additional let)
 fn codegen_collect_set_vars_inner(expr : IRExpr, set_vars : Array[String], current_depth : Int) -> Unit {
   match expr {
     IRExpr::Set(var_ref, value) => {
-      // depth=0 の変数を収集（現在のスコープ）
+      // Collect variables with depth=0 (current scope)
       if var_ref.depth == 0 {
         let mut found = false
         for v in set_vars {
@@ -354,17 +354,17 @@ fn codegen_collect_set_vars_inner(expr : IRExpr, set_vars : Array[String], curre
       }
     }
     IRExpr::Lambda(info) => {
-      // Lambda 内でキャプチャした変数に対する set! を検出
-      // 最適化後は、キャプチャした変数は depth=0 として参照される
-      // free_vars に含まれる変数名で、body 内で set! されるものを収集
+      // Detect set! on captured variables in Lambda
+      // After optimization, captured variables are referenced as depth=0
+      // Collect variable names included in free_vars that are set! in body
       let free_var_names : Array[String] = []
       for fv in info.free_vars {
         free_var_names.push(fv.name)
       }
-      // Lambda body 内の全 set! を収集
+      // Collect all set! in Lambda body
       let lambda_set_vars : Array[String] = []
       codegen_collect_all_set_vars(info.body, lambda_set_vars)
-      // free_vars と一致するものを外側のスコープの set_vars に追加
+      // Add matches to free_vars to set_vars in outer scope
       for sv in lambda_set_vars {
         let mut is_free = false
         for fv_name in free_var_names {
@@ -403,8 +403,8 @@ fn codegen_collect_set_vars_inner(expr : IRExpr, set_vars : Array[String], curre
       for binding in bindings {
         codegen_collect_set_vars_inner(binding.init, set_vars, current_depth)
       }
-      // body は新しいスコープだが、外側のスコープの変数が set! される可能性はない
-      // （depth > 0 でアクセスするため）
+      // body is a new scope, but variables in outer scopes cannot be set!
+      // (to access with depth > 0)
       codegen_collect_set_vars_inner(body, set_vars, current_depth + 1)
     }
     IRExpr::Letrec(bindings, body) => {
@@ -434,7 +434,7 @@ fn codegen_collect_set_vars_inner(expr : IRExpr, set_vars : Array[String], curre
   }
 }
 
-/// 式内の全ての set! される変数名を収集（深度を無視）
+/// Collect all set! variable names in the expression (ignoring depth)
 fn codegen_collect_all_set_vars(expr : IRExpr, set_vars : Array[String]) -> Unit {
   match expr {
     IRExpr::Set(var_ref, value) => {
@@ -465,7 +465,7 @@ fn codegen_collect_all_set_vars(expr : IRExpr, set_vars : Array[String]) -> Unit
       }
     }
     IRExpr::Lambda(info) => {
-      // ネストした lambda の body も再帰的に探索
+      // Recursively explore bodies of nested lambdas
       codegen_collect_all_set_vars(info.body, set_vars)
     }
     IRExpr::App(func, args) => {
@@ -513,7 +513,7 @@ fn codegen_collect_all_set_vars(expr : IRExpr, set_vars : Array[String]) -> Unit
   }
 }
 
-/// let 式をコード生成
+/// Generate code for let expressions
 fn codegen_let(
   ctx : CodegenContext,
   bindings : Array[LetBinding],
@@ -521,15 +521,15 @@ fn codegen_let(
 ) -> Unit {
   let num_bindings = bindings.length()
   if num_bindings == 0 {
-    // バインディングがない場合は本体のみ評価
+    // If there is no binding, only the body is evaluated
     codegen_expr(ctx, body)
     return
   }
 
-  // body 内で set! される変数を収集
+  // Collect variables set! in body
   let set_vars = codegen_collect_set_vars(body)
 
-  // ボックス化が必要なバインディングを特定
+  // Identify bindings that need to be boxed
   let needs_boxing : Array[Bool] = []
   for binding in bindings {
     let mut need = false
@@ -542,27 +542,27 @@ fn codegen_let(
     needs_boxing.push(need)
   }
 
-  // ローカル変数スロットを確保
+  // Reserve local variable slot
   ctx.builder.emit(Opcode::AllocateLocals(num_bindings))
 
-  // 各バインディングの初期値を評価してローカル変数に格納
+  // Evaluate the initial value of each binding and store it in a local variable
   let mut i = 0
   while i < num_bindings {
     codegen_expr(ctx, bindings[i].init)
     if needs_boxing[i] {
-      // ボックス化が必要な場合、MakeBox してから格納
+      // If boxing is required, MakeBox and then store
       ctx.builder.emit(Opcode::MakeBox)
-      // boxed_locals に追加
+      // Add to boxed_locals
       ctx.boxed_locals.push(bindings[i].name)
     }
     ctx.builder.emit(Opcode::InitLocal(0, i))
     i = i + 1
   }
 
-  // 本体を評価
+  // Evaluate the main unit
   codegen_expr(ctx, body)
 
-  // スコープを抜けるので boxed_locals から削除
+  // Delete from boxed_locals as it goes out of scope
   for binding in bindings {
     let mut idx = -1
     for j in 0..<ctx.boxed_locals.length() {
@@ -577,7 +577,7 @@ fn codegen_let(
   }
 }
 
-/// letrec 式をコード生成
+/// Generate code for letrec expressions
 fn codegen_letrec(
   ctx : CodegenContext,
   bindings : Array[LetBinding],
@@ -589,7 +589,7 @@ fn codegen_letrec(
     return
   }
 
-  // body と init 式内で set! される変数を収集
+  // Collect variables set! in body and init expressions
   let set_vars = codegen_collect_set_vars(body)
   for binding in bindings {
     let init_set_vars = codegen_collect_set_vars(binding.init)
@@ -607,7 +607,7 @@ fn codegen_letrec(
     }
   }
 
-  // ボックス化が必要なバインディングを特定
+  // Identify bindings that need to be boxed
   let needs_boxing : Array[Bool] = []
   for binding in bindings {
     let mut need = false
@@ -620,10 +620,10 @@ fn codegen_letrec(
     needs_boxing.push(need)
   }
 
-  // まず未初期化のスロットを確保
+  // First, reserve an uninitialized slot
   ctx.builder.emit(Opcode::AllocateLocals(num_bindings))
 
-  // ボックス化が必要な変数を boxed_locals に追加（参照時に BoxGet を使うため）
+  // Add variables that need to be boxed to boxed_locals (to use BoxGet when referencing)
   let mut i = 0
   while i < num_bindings {
     if needs_boxing[i] {
@@ -632,22 +632,22 @@ fn codegen_letrec(
     i = i + 1
   }
 
-  // 各バインディングを初期化
+  // Initialize each binding
   i = 0
   while i < num_bindings {
     codegen_expr(ctx, bindings[i].init)
     if needs_boxing[i] {
-      // ボックス化が必要な場合
+      // When boxing is required
       ctx.builder.emit(Opcode::MakeBox)
     }
     ctx.builder.emit(Opcode::InitLocal(0, i))
     i = i + 1
   }
 
-  // 本体を評価
+  // Evaluate the main unit
   codegen_expr(ctx, body)
 
-  // スコープを抜けるので boxed_locals から削除
+  // Delete from boxed_locals as it goes out of scope
   for binding in bindings {
     let mut idx = -1
     for j in 0..<ctx.boxed_locals.length() {
@@ -662,10 +662,10 @@ fn codegen_letrec(
   }
 }
 
-/// set! 式をコード生成
-/// 注: オプティマイザーが VarRef のインデックスを調整済み
+/// Generate code for set! expression
+/// Note: The optimizer has adjusted the index of VarRef
 fn codegen_set(ctx : CodegenContext, var_ref : VarRef, value : IRExpr) -> Unit {
-  // depth=0 でボックス化されている場合の処理を判定
+  // Determine processing when boxed with depth=0
   let is_boxed = if var_ref.depth == 0 {
     let mut found = false
     for idx in ctx.boxed_params {
@@ -688,79 +688,79 @@ fn codegen_set(ctx : CodegenContext, var_ref : VarRef, value : IRExpr) -> Unit {
   }
 
   if is_boxed {
-    // ボックス化されている場合
-    ctx.builder.emit(Opcode::LoadLocal(var_ref.depth, var_ref.index))  // ボックスをロード
-    codegen_expr(ctx, value)  // 新しい値を評価
-    ctx.builder.emit(Opcode::BoxSet)  // ボックスを更新
-    // set! は void を返す（R5RS）
+    // If boxed
+    ctx.builder.emit(Opcode::LoadLocal(var_ref.depth, var_ref.index))  // load box
+    codegen_expr(ctx, value)  // evaluate new value
+    ctx.builder.emit(Opcode::BoxSet)  // update box
+    // set! returns void (R5RS)
     let void_idx = ctx.builder.add_const(BCValue::Nil)
     ctx.builder.emit(Opcode::Push(void_idx))
   } else {
-    // ボックス化されていない場合
+    // If not boxed
     codegen_expr(ctx, value)
-    ctx.builder.emit(Opcode::Dup)  // set! は代入した値を返す
+    ctx.builder.emit(Opcode::Dup)  // set! returns the assigned value
     ctx.builder.emit(Opcode::StoreLocal(var_ref.depth, var_ref.index))
   }
 }
 
-/// グローバル set! をコード生成
+/// Generate code for global set!
 fn codegen_global_set(ctx : CodegenContext, name : String, value : IRExpr) -> Unit {
   codegen_expr(ctx, value)
-  ctx.builder.emit(Opcode::Dup)  // set! は代入した値を返す
+  ctx.builder.emit(Opcode::Dup)  // set! returns the assigned value
   let idx = ctx.builder.add_name(name)
   ctx.builder.emit(Opcode::StoreGlobal(idx))
 }
 
-/// プリミティブ操作をコード生成
+/// Generate code for primitive operations
 fn codegen_primop(
   ctx : CodegenContext,
   kind : PrimOpKind,
   args : Array[IRExpr]
 ) -> Unit {
-  // 引数を評価
+  // evaluate arguments
   for arg in args {
     codegen_expr(ctx, arg)
   }
-  // プリミティブ呼び出し
+  // primitive call
   ctx.builder.emit(Opcode::PrimCall(kind, args.length()))
 }
 
-/// call/cc をコード生成
+/// Generate code for call/cc
 fn codegen_call_cc(ctx : CodegenContext, proc : IRExpr) -> Unit {
-  // 手続きを評価
+  // Evaluate the procedure
   codegen_expr(ctx, proc)
-  // 継続をキャプチャして呼び出す
+  // Capture and call a continuation
   ctx.builder.emit(Opcode::CaptureCC)
 }
 
-/// quote をコード生成
+/// Generate code for quote
 fn codegen_quote(ctx : CodegenContext, c : IRConst) -> Unit {
   codegen_const(ctx, c)
 }
 
-/// delay をコード生成
+/// Generate code for delay
 fn codegen_delay(ctx : CodegenContext, body : IRExpr) -> Unit {
-  // 新しいコンテキストで遅延本体をコンパイル
+  // Compile lazy body in new context
   let delay_ctx = new_context(None)
   delay_ctx.builder.arity = 0
   codegen_expr(delay_ctx, body)
   delay_ctx.builder.emit(Opcode::Return)
 
-  // プロミスチャンクを追加
+  // Add promise chunk
   let chunk = delay_ctx.builder.build()
   let chunk_idx = ctx.chunks.length()
   ctx.chunks.push(chunk)
 
-  // 子コンテキストのチャンクも追加
+  // Also added child context chunks
   for c in delay_ctx.chunks {
     ctx.chunks.push(c)
   }
 
-  // プロミスを作成
+  // Create a promise
   ctx.builder.emit(Opcode::MakePromise(chunk_idx))
 }
 
-/// and 式をコード生成
+/// Generate code for and expressions
 fn codegen_and(ctx : CodegenContext, exprs : Array[IRExpr]) -> Unit {
   if exprs.length() == 0 {
     // (and) => #t
@@ -775,24 +775,24 @@ fn codegen_and(ctx : CodegenContext, exprs : Array[IRExpr]) -> Unit {
 
   while i < len - 1 {
     codegen_expr(ctx, exprs[i])
-    // false ならそのまま結果として返す（ジャンプ）
+    // If false, return as result (jump)
     let jump_pos = ctx.builder.current_pos()
-    ctx.builder.emit(Opcode::AndJump(0))  // 後でパッチ
+    ctx.builder.emit(Opcode::AndJump(0))  // patch later
     jump_positions.push(jump_pos)
     i = i + 1
   }
 
-  // 最後の式
+  // last expression
   codegen_expr(ctx, exprs[len - 1])
 
-  // ジャンプ先をパッチ（すべて end を指す）
+  // Patch jump destination (all point to end)
   let end_pos = ctx.builder.current_pos()
   for pos in jump_positions {
     ctx.builder.patch(pos, Opcode::AndJump(end_pos))
   }
 }
 
-/// or 式をコード生成
+/// Generate code for or expression
 fn codegen_or(ctx : CodegenContext, exprs : Array[IRExpr]) -> Unit {
   if exprs.length() == 0 {
     // (or) => #f
@@ -807,24 +807,24 @@ fn codegen_or(ctx : CodegenContext, exprs : Array[IRExpr]) -> Unit {
 
   while i < len - 1 {
     codegen_expr(ctx, exprs[i])
-    // true ならそのまま結果として返す（ジャンプ）
+    // If true, return as result (jump)
     let jump_pos = ctx.builder.current_pos()
-    ctx.builder.emit(Opcode::OrJump(0))  // 後でパッチ
+    ctx.builder.emit(Opcode::OrJump(0))  // patch later
     jump_positions.push(jump_pos)
     i = i + 1
   }
 
-  // 最後の式
+  // last expression
   codegen_expr(ctx, exprs[len - 1])
 
-  // ジャンプ先をパッチ（すべて end を指す）
+  // Patch jump destination (all point to end)
   let end_pos = ctx.builder.current_pos()
   for pos in jump_positions {
     ctx.builder.patch(pos, Opcode::OrJump(end_pos))
   }
 }
 
-/// IR をコンパイル済みモジュールに変換
+/// Convert IR to compiled module
 pub fn generate(ir : IRExpr) -> CompiledModule {
   let ctx = new_context(Some("main"))
   codegen_expr(ctx, ir)
@@ -833,7 +833,7 @@ pub fn generate(ir : IRExpr) -> CompiledModule {
   { main: main_chunk, chunks: ctx.chunks }
 }
 
-/// SExpr を直接コンパイル済みモジュールに変換（最適化付き）
+/// Convert SExpr directly to compiled module (with optimizations)
 pub fn compile_to_module(expr : SExpr) -> Result[CompiledModule, CompileError] {
   match compile_toplevel(expr) {
     Ok(ir) => {
@@ -844,7 +844,7 @@ pub fn compile_to_module(expr : SExpr) -> Result[CompiledModule, CompileError] {
   }
 }
 
-/// SExpr を最適化付きでコンパイル済みモジュールに変換
+/// Convert SExpr to compiled module with optimizations
 pub fn compile_to_module_optimized(expr : SExpr) -> Result[CompiledModule, CompileError] {
   match compile_toplevel(expr) {
     Ok(ir) => {

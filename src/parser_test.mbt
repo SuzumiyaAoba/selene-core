@@ -1,4 +1,4 @@
-/// S 式をスナップショット用の文字列に変換する。
+/// Convert an S expression to a string for snapshots.
 fn sexpr_snapshot(expr : SExpr) -> String {
   match expr {
     SExpr::Nil => "Nil"
@@ -32,7 +32,7 @@ fn sexpr_snapshot(expr : SExpr) -> String {
   }
 }
 
-/// パーサ結果のスナップショットを固定する。
+/// Freeze a snapshot of parser results.
 test "parser snapshot" {
   let expr = parse_one("(define x 42)")
   inspect(

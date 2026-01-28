@@ -1,9 +1,9 @@
-/// 文字操作組み込み関数
+/// Character manipulation built-in functions
 ///
-/// Scheme の文字操作を実装する。
+/// Implement Scheme character manipulation.
 
-/// 組み込み関数: char?
-/// (char? obj) - obj が文字かどうかを判定
+/// Built-in function: char?
+/// (char? obj) - Determine if obj is a character
 fn builtin_char_p(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("char?: requires exactly 1 argument"))
@@ -14,8 +14,8 @@ fn builtin_char_p(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: char=?
-/// (char=? char1 char2) - 文字が等しいかを判定
+/// Built-in function: char =?
+/// (char =? char1 char2) - Determine if the characters are equal
 fn builtin_char_eq(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 2 {
     return Err(EvalError::ArityError("char=?: requires exactly 2 arguments"))
@@ -26,8 +26,8 @@ fn builtin_char_eq(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: char<?
-/// (char<? char1 char2) - char1 が char2 より小さいかを判定
+/// Built-in function: char <?
+/// (char <? char1 char2) - Determine if char1 is less than char2
 fn builtin_char_lt(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 2 {
     return Err(EvalError::ArityError("char<?: requires exactly 2 arguments"))
@@ -38,8 +38,8 @@ fn builtin_char_lt(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: char>?
-/// (char>? char1 char2) - char1 が char2 より大きいかを判定
+/// Built-in function: char >?
+/// (char >? char1 char2) - Determine if char1 is greater than char2
 fn builtin_char_gt(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 2 {
     return Err(EvalError::ArityError("char>?: requires exactly 2 arguments"))
@@ -50,8 +50,8 @@ fn builtin_char_gt(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: char<=?
-/// (char<=? char1 char2) - char1 が char2 以下かを判定
+/// Built-in function: char < =?
+/// (char < =? char1 char2) - Determine if char1 is less than or equal to char2
 fn builtin_char_le(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 2 {
     return Err(EvalError::ArityError("char<=?: requires exactly 2 arguments"))
@@ -62,8 +62,8 @@ fn builtin_char_le(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: char>=?
-/// (char>=? char1 char2) - char1 が char2 以上かを判定
+/// Built-in function: char > =?
+/// (char > =? char1 char2) - Determine if char1 is char2 or higher
 fn builtin_char_ge(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 2 {
     return Err(EvalError::ArityError("char>=?: requires exactly 2 arguments"))
@@ -74,8 +74,8 @@ fn builtin_char_ge(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: char-alphabetic?
-/// (char-alphabetic? char) - 文字がアルファベットかを判定
+/// Built-in function: char-alphabetic?
+/// (char-alphabetic? char) - Determines if a character is an alphabet
 fn builtin_char_alphabetic_p(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(
@@ -95,8 +95,8 @@ fn builtin_char_alphabetic_p(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: char-numeric?
-/// (char-numeric? char) - 文字が数字かを判定
+/// Built-in function: char-numeric?
+/// (char-numeric? char) - Determines if a letter is a number
 fn builtin_char_numeric_p(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(
@@ -113,8 +113,8 @@ fn builtin_char_numeric_p(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: char-whitespace?
-/// (char-whitespace? char) - 文字が空白文字かを判定
+/// Built-in function: char-whitespace?
+/// (char-whitespace? char) - Determines if a character is a whitespace character
 fn builtin_char_whitespace_p(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(
@@ -133,8 +133,8 @@ fn builtin_char_whitespace_p(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: char-upper-case?
-/// (char-upper-case? char) - 文字が大文字かを判定
+/// Built-in function: char-upper-case?
+/// (char-upper-case? char) - Determine if characters are uppercase
 fn builtin_char_upper_case_p(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(
@@ -154,8 +154,8 @@ fn builtin_char_upper_case_p(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: char-lower-case?
-/// (char-lower-case? char) - 文字が小文字かを判定
+/// Built-in function: char-lower-case?
+/// (char-lower-case? char) - Determines if the character is lowercase
 fn builtin_char_lower_case_p(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(
@@ -175,8 +175,8 @@ fn builtin_char_lower_case_p(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: char-upcase
-/// (char-upcase char) - 文字を大文字に変換
+/// Built-in function: char-upcase
+/// (char-upcase char) - convert characters to uppercase
 fn builtin_char_upcase(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("char-upcase: requires exactly 1 argument"))
@@ -185,7 +185,7 @@ fn builtin_char_upcase(args : Array[Value]) -> Result[Value, EvalError] {
     Value::Char(c) => {
       let code = c.to_int()
       if code >= 97 && code <= 122 {
-        // 小文字 -> 大文字
+        // Lowercase - > Uppercase
         Ok(Value::Char(Char::from_int(code - 32)))
       } else {
         Ok(Value::Char(c))
@@ -195,8 +195,8 @@ fn builtin_char_upcase(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: char-downcase
-/// (char-downcase char) - 文字を小文字に変換
+/// Built-in function: char-downcase
+/// (char-downcase char) - Convert letters to lowercase
 fn builtin_char_downcase(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(
@@ -207,7 +207,7 @@ fn builtin_char_downcase(args : Array[Value]) -> Result[Value, EvalError] {
     Value::Char(c) => {
       let code = c.to_int()
       if code >= 65 && code <= 90 {
-        // 大文字 -> 小文字
+        // Uppercase/Lowercase
         Ok(Value::Char(Char::from_int(code + 32)))
       } else {
         Ok(Value::Char(c))
@@ -217,8 +217,8 @@ fn builtin_char_downcase(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: char->integer
-/// (char->integer char) - 文字を整数（文字コード）に変換
+/// Built-in function: char- > integer
+/// (char- > integer char) - Converts a character to an integer (character code)
 fn builtin_char_to_integer(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(
@@ -231,8 +231,8 @@ fn builtin_char_to_integer(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: integer->char
-/// (integer->char n) - 整数（文字コード）を文字に変換
+/// Built-in function: integer- > char
+/// (integer- > char n) - Converts an integer (character code) to a character
 fn builtin_integer_to_char(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(

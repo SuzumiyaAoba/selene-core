@@ -1,8 +1,8 @@
-/// I/O 組み込み関数
+/// I/O built-in functions
 ///
-/// Scheme の入出力操作を実装する。
+/// Implement the input/output operation of Scheme.
 
-/// 値を表示用文字列に変換する（displayで使用）
+/// Converts a value to a display string (used in display)
 fn value_to_display_string(value : Value) -> String {
   match value {
     Value::Nil => "()"
@@ -17,7 +17,7 @@ fn value_to_display_string(value : Value) -> String {
         r.to_string() + i.to_string() + "i"
       }
     Value::Char(c) => c.to_string()
-    Value::String(s) => s // displayは文字列を引用符なしで出力
+    Value::String(s) => s // display outputs the string without quotes
     Value::Symbol(s) => s
     Value::Pair(car, cdr) => {
       let mut result = "("
@@ -90,7 +90,7 @@ fn value_to_display_string(value : Value) -> String {
   }
 }
 
-/// 値を書き込み用文字列に変換する（writeで使用）
+/// Converts a value to a string for writing (used in write)
 fn value_to_write_string(value : Value) -> String {
   match value {
     Value::Nil => "()"
@@ -105,7 +105,7 @@ fn value_to_write_string(value : Value) -> String {
         r.to_string() + i.to_string() + "i"
       }
     Value::Char(c) => "#\\" + c.to_string()
-    Value::String(s) => "\"" + s + "\"" // writeは文字列を引用符付きで出力
+    Value::String(s) => "\"" + s + "\"" // write outputs a string with quotes
     Value::Symbol(s) => s
     Value::Pair(car, cdr) => {
       let mut result = "("
@@ -178,51 +178,51 @@ fn value_to_write_string(value : Value) -> String {
   }
 }
 
-/// 組み込み関数: display
-/// (display obj) - objを人間が読みやすい形式で出力する（文字列は引用符なし）
-/// 注: MoonBitではprintlnのみが利用可能なため、改行付きで出力されます
+/// Built-in functions: display
+/// (display obj) - outputs obj in a human-readable format (strings are unquoted)
+/// Note: Only println is available on MoonBit, so it will be output with line breaks
 fn builtin_display(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("display: requires exactly 1 argument"))
   }
   let output = value_to_display_string(args[0])
   println(output)
-  Ok(Value::Nil) // displayは未定義値を返す（Nilで代用）
+  Ok(Value::Nil) // display returns an undefined value (substituted by Nil)
 }
 
-/// 組み込み関数: newline
-/// (newline) - 改行を出力する
+/// Built-in function: newline
+/// (newline) - Output line breaks
 fn builtin_newline(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 0 {
     return Err(EvalError::ArityError("newline: requires exactly 0 arguments"))
   }
   println("")
-  Ok(Value::Nil) // newlineは未定義値を返す（Nilで代用）
+  Ok(Value::Nil) // newline returns an undefined value (substituted by Nil)
 }
 
-/// 組み込み関数: write
-/// (write obj) - objを機械が読める形式で出力する（文字列は引用符付き）
-/// 注: MoonBitではprintlnのみが利用可能なため、改行付きで出力されます
+/// Built-in function: write
+/// (write obj) - outputs obj in a machine-readable format (strings are quoted)
+/// Note: Only println is available on MoonBit, so it will be output with line breaks
 fn builtin_write(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("write: requires exactly 1 argument"))
   }
   let output = value_to_write_string(args[0])
   println(output)
-  Ok(Value::Nil) // writeは未定義値を返す（Nilで代用）
+  Ok(Value::Nil) // write returns an undefined value (substituted by Nil)
 }
 
-/// 組み込み関数: read
-/// (read) - 標準入力から1つのS式を読み取って返す
-/// 注: このバージョンはJS バックエンド専用です
+/// Built-in function: read
+/// (read) - reads back one S equation from standard input
+/// Note: This version is for JS backend only
 fn builtin_read(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 0 {
     return Err(EvalError::ArityError("read: requires exactly 0 arguments"))
   }
-  // JS FFI経由で標準入力から一行読み取る
+  // Read one line from standard input via JS FFI
   let line = read_line()
-  // パースしてS式に変換
+  // Parse and Convert to S-Formula
   let sexpr = parse_one(line)
-  // S式をValueに変換（評価せずにデータとして返す）
+  // Convert S-expression to Value (return as data without evaluation)
   Ok(sexpr_to_value(sexpr))
 }

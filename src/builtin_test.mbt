@@ -1,6 +1,6 @@
-/// 組み込み手続きのテスト。
+/// Testing embedded procedures.
 
-/// ブール値リテラルの評価。
+/// Evaluation of Boolean literals.
 test "eval boolean literals" {
   let env = initial_env()
   let expr_t = parse_one("#t")
@@ -15,7 +15,7 @@ test "eval boolean literals" {
   }
 }
 
-/// cons操作のテスト。
+/// testing of cons operations.
 test "builtin cons" {
   let env = initial_env()
   let expr = parse_one("(cons 1 2)")
@@ -25,7 +25,7 @@ test "builtin cons" {
   }
 }
 
-/// car操作のテスト。
+/// test car operation.
 test "builtin car" {
   let env = initial_env()
   let expr = parse_one("(car (cons 1 2))")
@@ -35,7 +35,7 @@ test "builtin car" {
   }
 }
 
-/// cdr操作のテスト。
+/// testing of cdr operations.
 test "builtin cdr" {
   let env = initial_env()
   let expr = parse_one("(cdr (cons 1 2))")
@@ -45,7 +45,7 @@ test "builtin cdr" {
   }
 }
 
-/// リスト構築のテスト。
+/// Testing list construction.
 test "build list with cons" {
   let env = initial_env()
   let expr = parse_one("(cons 1 (cons 2 (cons 3 ())))")
@@ -55,7 +55,7 @@ test "build list with cons" {
   }
 }
 
-/// null?のテスト。
+/// test for null?
 test "builtin null?" {
   let env = initial_env()
   let expr1 = parse_one("(null? ())")
@@ -70,7 +70,7 @@ test "builtin null?" {
   }
 }
 
-/// pair?のテスト。
+/// test of pair?
 test "builtin pair?" {
   let env = initial_env()
   let expr1 = parse_one("(pair? (cons 1 2))")
@@ -85,7 +85,7 @@ test "builtin pair?" {
   }
 }
 
-/// number?のテスト。
+/// a test of number?.
 test "builtin number?" {
   let env = initial_env()
   let expr1 = parse_one("(number? 42)")
@@ -100,7 +100,7 @@ test "builtin number?" {
   }
 }
 
-/// boolean?のテスト。
+/// test of boolean?
 test "builtin boolean?" {
   let env = initial_env()
   let expr1 = parse_one("(boolean? #t)")
@@ -115,7 +115,7 @@ test "builtin boolean?" {
   }
 }
 
-/// 数値比較 = のテスト。
+/// Numerical comparison = test of.
 test "builtin =" {
   let env = initial_env()
   let expr1 = parse_one("(= 1 1)")
@@ -130,7 +130,7 @@ test "builtin =" {
   }
 }
 
-/// 数値比較 < のテスト。
+/// Test for numerical comparison <.
 test "builtin <" {
   let env = initial_env()
   let expr1 = parse_one("(< 1 2)")
@@ -145,7 +145,7 @@ test "builtin <" {
   }
 }
 
-/// 数値比較 > のテスト。
+/// Numerical Comparison > Testing.
 test "builtin >" {
   let env = initial_env()
   let expr1 = parse_one("(> 3 2)")
@@ -160,7 +160,7 @@ test "builtin >" {
   }
 }
 
-/// notのテスト。
+/// tests for not.
 test "builtin not" {
   let env = initial_env()
   let expr1 = parse_one("(not #f)")
@@ -180,7 +180,7 @@ test "builtin not" {
   }
 }
 
-/// eq?のテスト。
+/// testing eq?.
 test "builtin eq?" {
   let env = initial_env()
   let expr1 = parse_one("(eq? 1 1)")

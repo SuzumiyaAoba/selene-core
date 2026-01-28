@@ -1,18 +1,18 @@
-/// VM REPL コンテキスト
+/// VM REPL context
 ///
-/// 複数の式を順次実行し、グローバル環境とチャンクを共有する
+/// Run multiple expressions sequentially and share chunks with the global environment
 
-/// REPL コンテキスト
+/// REPL context
 pub(all) struct VMReplContext {
-  /// グローバル変数（値）
+  /// global variable (value)
   globals : @hashmap.T[String, Value]
-  /// コンパイラ用グローバル変数（名前のみ）
+  /// Global variables for compiler (name only)
   compiler_globals : @hashmap.T[String, Unit]
-  /// 累積されたチャンク
+  /// accumulated chunks
   chunks : Array[CodeChunk]
 }
 
-/// 新しい REPL コンテキストを作成
+/// Create a new REPL context
 pub fn new_repl_context() -> VMReplContext {
   {
     globals: create_initial_globals(),
@@ -21,45 +21,45 @@ pub fn new_repl_context() -> VMReplContext {
   }
 }
 
-/// REPL コンテキストで式を評価
+/// Evaluate expressions in REPL context
 pub fn repl_eval(ctx : VMReplContext, input : String) -> Result[Value, String] {
   let expr = parse_one(input)
   repl_eval_expr(ctx, expr)
 }
 
-/// REPL コンテキストで SExpr を評価
+/// Evaluate SExpr in REPL context
 pub fn repl_eval_expr(ctx : VMReplContext, expr : SExpr) -> Result[Value, String] {
-  // コンパイル
+  // compile
   match compile_toplevel_with_globals(expr, ctx.compiler_globals) {
     Ok(ir) => {
-      // 最適化
+      // optimization
       let optimized = optimize(ir)
-      // コード生成
+      // code generation
       let compiled_module = generate(optimized)
 
-      // チャンクのオフセットを計算（既存のチャンク数）
+      // Calculate chunk offset (number of existing chunks)
       let chunk_offset = ctx.chunks.length()
 
-      // 新しいチャンクを累積リストに追加（オフセット調整付き）
+      // Add new chunk to cumulative list (with offset adjustment)
       for chunk in compiled_module.chunks {
         let adjusted = adjust_chunk_refs(chunk, chunk_offset)
         ctx.chunks.push(adjusted)
       }
 
-      // メインチャンクのチャンク参照をオフセット調整
+      // Offset adjustment of chunk reference of main chunk
       let adjusted_main = adjust_chunk_refs(compiled_module.main, chunk_offset)
 
-      // VM 用のモジュールを構築（累積チャンクを使用）
+      // Build module for VM (using cumulative chunks)
       let vm_module : CompiledModule = {
         main: adjusted_main,
         chunks: ctx.chunks,
       }
 
-      // VM で実行
+      // Run in VM
       let vm = new_vm_state_with_globals(vm_module, ctx.globals)
       match vm_run(vm) {
         Ok(value) => {
-          // GlobalSet の場合はグローバル変数を登録
+          // For GlobalSet, register global variables
           match optimized {
             IRExpr::GlobalSet(name, _) => {
               ctx.compiler_globals.set(name, ())
@@ -75,7 +75,7 @@ pub fn repl_eval_expr(ctx : VMReplContext, expr : SExpr) -> Result[Value, String
   }
 }
 
-/// チャンク内のチャンク参照をオフセット調整
+/// Offset adjustment of chunk references within chunks
 fn adjust_chunk_refs(chunk : CodeChunk, offset : Int) -> CodeChunk {
   if offset == 0 {
     return chunk

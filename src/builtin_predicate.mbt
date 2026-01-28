@@ -1,8 +1,8 @@
-/// 述語組み込み関数
+/// Predicate built-in functions
 ///
-/// Scheme の型チェックと等価性テストを実装する。
+/// Implement Scheme type checking and equivalence testing.
 
-/// 組み込み関数: null?
+/// Built-in function: null?
 fn builtin_null_p(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("null?: requires exactly 1 argument"))
@@ -13,7 +13,7 @@ fn builtin_null_p(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: procedure?
+/// Built-in function: procedure?
 fn builtin_procedure_p(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("procedure?: requires exactly 1 argument"))
@@ -24,7 +24,7 @@ fn builtin_procedure_p(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: list?
+/// Built-in function: list?
 fn builtin_list_p(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("list?: requires exactly 1 argument"))
@@ -39,7 +39,7 @@ fn builtin_list_p(args : Array[Value]) -> Result[Value, EvalError] {
   Ok(Value::Bool(is_list(args[0])))
 }
 
-/// 組み込み関数: integer?
+/// Built-in function: integer?
 fn builtin_integer_p(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("integer?: requires exactly 1 argument"))
@@ -47,14 +47,14 @@ fn builtin_integer_p(args : Array[Value]) -> Result[Value, EvalError] {
   match args[0] {
     Value::Number(Number::Int(_)) => Ok(Value::Bool(true))
     Value::Number(Number::Real(r)) => {
-      // 整数値を持つ実数も integer? は #t を返す
+      // Are real numbers with integer values also integer? returns # t
       Ok(Value::Bool(r.floor() == r))
     }
     _ => Ok(Value::Bool(false))
   }
 }
 
-/// 組み込み関数: real?
+/// Built-in functions: real?
 fn builtin_real_p(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("real?: requires exactly 1 argument"))
@@ -65,7 +65,7 @@ fn builtin_real_p(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: zero?
+/// Built-in function: zero?
 fn builtin_zero_p(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("zero?: requires exactly 1 argument"))
@@ -77,7 +77,7 @@ fn builtin_zero_p(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: positive?
+/// Built-in functions: positive?
 fn builtin_positive_p(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("positive?: requires exactly 1 argument"))
@@ -89,7 +89,7 @@ fn builtin_positive_p(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: negative?
+/// Built-in functions: negative?
 fn builtin_negative_p(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("negative?: requires exactly 1 argument"))
@@ -101,7 +101,7 @@ fn builtin_negative_p(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: odd?
+/// Built-in function: odd?
 fn builtin_odd_p(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("odd?: requires exactly 1 argument"))
@@ -119,7 +119,7 @@ fn builtin_odd_p(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: even?
+/// Built-in functions: even?
 fn builtin_even_p(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("even?: requires exactly 1 argument"))
@@ -137,7 +137,7 @@ fn builtin_even_p(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: pair?
+/// Built-in function: pair?
 fn builtin_pair_p(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("pair?: requires exactly 1 argument"))
@@ -148,7 +148,7 @@ fn builtin_pair_p(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: number?
+/// Built-in function: number?
 fn builtin_number_p(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("number?: requires exactly 1 argument"))
@@ -159,7 +159,7 @@ fn builtin_number_p(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: boolean?
+/// Built-in function: boolean?
 fn builtin_boolean_p(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("boolean?: requires exactly 1 argument"))
@@ -170,12 +170,12 @@ fn builtin_boolean_p(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: eq?
+/// Built-in function: eq?
 fn builtin_eq_p(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 2 {
     return Err(EvalError::ArityError("eq?: requires exactly 2 arguments"))
   }
-  // 簡易実装: 数値とブール値の等価性チェック
+  // Simple Implementation: Numeric and Boolean Equivalence Check
   let result = match (args[0], args[1]) {
     (Value::Nil, Value::Nil) => true
     (Value::Bool(a), Value::Bool(b)) => a == b
@@ -186,8 +186,8 @@ fn builtin_eq_p(args : Array[Value]) -> Result[Value, EvalError] {
   Ok(Value::Bool(result))
 }
 
-/// 組み込み関数: eqv?
-/// eq? よりも緩い等価性チェック（数値も含む）
+/// Built-in function: eqv?
+/// equivalence checks laxer than eq? (including numeric values)
 fn builtin_eqv_p(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 2 {
     return Err(EvalError::ArityError("eqv?: requires exactly 2 arguments"))
@@ -215,14 +215,14 @@ fn builtin_eqv_p(args : Array[Value]) -> Result[Value, EvalError] {
   Ok(Value::Bool(result))
 }
 
-/// 物理的同一性をチェックするヘルパー関数
-/// MoonBit では参照比較が難しいため、常に false を返す
+/// Helper function to check physical identity
+/// MoonBit is difficult to reference and compare, so always return false
 fn physical_identity[T](_a : T, _b : T) -> Bool {
   false
 }
 
-/// 組み込み関数: equal?
-/// 構造的等価性をチェック（深い比較）
+/// Built-in functions: equal?
+/// Check Structural Equivalence (Deep Comparison)
 fn builtin_equal_p(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 2 {
     return Err(EvalError::ArityError("equal?: requires exactly 2 arguments"))
@@ -230,7 +230,7 @@ fn builtin_equal_p(args : Array[Value]) -> Result[Value, EvalError] {
   Ok(Value::Bool(values_equal(args[0], args[1])))
 }
 
-/// 2つの Value が構造的に等しいかチェックする
+/// Check if the two values are structurally equal
 fn values_equal(a : Value, b : Value) -> Bool {
   match (a, b) {
     (Value::Nil, Value::Nil) => true
@@ -273,7 +273,7 @@ fn values_equal(a : Value, b : Value) -> Bool {
   }
 }
 
-/// 組み込み関数: not
+/// Built-in functions: not
 fn builtin_not(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("not: requires exactly 1 argument"))

@@ -1,6 +1,6 @@
-/// VM REPL のテスト
+/// Testing the VM REPL
 
-/// VM での基本的な算術演算
+/// Basic arithmetic operations in VM
 test "vm repl: basic arithmetic" {
   let ctx = new_repl_context()
 
@@ -12,7 +12,7 @@ test "vm repl: basic arithmetic" {
   }
 }
 
-/// VM での乗算
+/// Multiplication in VM
 test "vm repl: multiplication" {
   let ctx = new_repl_context()
 
@@ -24,7 +24,7 @@ test "vm repl: multiplication" {
   }
 }
 
-/// VM での define と参照
+/// define and reference in VM
 test "vm repl: define and reference" {
   let ctx = new_repl_context()
 
@@ -39,7 +39,7 @@ test "vm repl: define and reference" {
   }
 }
 
-/// VM での複数の define
+/// Multiple defines on VM
 test "vm repl: multiple defines" {
   let ctx = new_repl_context()
 
@@ -56,7 +56,7 @@ test "vm repl: multiple defines" {
   }
 }
 
-/// VM での関数定義と呼び出し
+/// Defining and calling functions in the VM
 test "vm repl: function definition and call" {
   let ctx = new_repl_context()
 
@@ -71,7 +71,7 @@ test "vm repl: function definition and call" {
   }
 }
 
-/// VM での if 式
+/// if expressions in VMs
 test "vm repl: if expression" {
   let ctx = new_repl_context()
 
@@ -90,7 +90,7 @@ test "vm repl: if expression" {
   }
 }
 
-/// VM での let 式
+/// let expressions in the VM
 test "vm repl: let expression" {
   let ctx = new_repl_context()
 
@@ -102,7 +102,7 @@ test "vm repl: let expression" {
   }
 }
 
-/// VM でのリスト操作
+/// List operations on VMs
 test "vm repl: list operations" {
   let ctx = new_repl_context()
 
@@ -121,7 +121,7 @@ test "vm repl: list operations" {
   }
 }
 
-/// VM での再帰関数（階乗）
+/// Recursive functions (factorial) in VM
 test "vm repl: recursive function - factorial" {
   let ctx = new_repl_context()
 
@@ -136,7 +136,7 @@ test "vm repl: recursive function - factorial" {
   }
 }
 
-/// VM での再帰関数（フィボナッチ）
+/// Recursive functions (Fibonacci) in VM
 test "vm repl: recursive function - fibonacci" {
   let ctx = new_repl_context()
 
@@ -151,7 +151,7 @@ test "vm repl: recursive function - fibonacci" {
   }
 }
 
-/// VM での高階関数
+/// Higher-order functions in VM
 test "vm repl: higher order function" {
   let ctx = new_repl_context()
 
@@ -168,7 +168,7 @@ test "vm repl: higher order function" {
   }
 }
 
-/// VM でのクロージャ - 単純なケース
+/// Closures in VMs - simple case
 test "vm repl: simple closure" {
   let ctx = new_repl_context()
 
@@ -195,11 +195,11 @@ test "vm repl: simple closure" {
   }
 }
 
-/// VM でのネストされたクロージャ
+/// Nested closures in VMs
 test "vm repl: nested closure" {
   let ctx = new_repl_context()
 
-  // まず、返すだけのネストされたクロージャ
+  // First, a nested closure that just returns
   // ((lambda (n) (lambda (x) x)) 5) => #<procedure>
   let result1 = repl_eval(ctx, "((lambda (n) (lambda (x) x)) 5)")
   match result1 {
@@ -208,7 +208,7 @@ test "vm repl: nested closure" {
     Err(e) => fail!("Error in step 1: " + e)
   }
 
-  // 次に、外側のパラメータを返すだけ
+  // Then just return the outer parameters
   // ((lambda (n) (lambda (x) n)) 5) => #<procedure>
   let result2a = repl_eval(ctx, "((lambda (n) (lambda (x) n)) 5)")
   match result2a {
@@ -217,8 +217,8 @@ test "vm repl: nested closure" {
     Err(e) => fail!("Error in step 2a: " + e)
   }
 
-  // 外側のパラメータを参照 - 段階的にテスト
-  // step 2b: 内側の closure を呼び出す（引数を使わない）
+  // Reference outer parameters - test step by step
+  // step 2b: call inner closure (without arguments)
   let result2b = repl_eval(ctx, "(((lambda (n) (lambda (x) 42)) 5) 10)")
   match result2b {
     Ok(Value::Number(Number::Int(n))) => {
@@ -229,7 +229,7 @@ test "vm repl: nested closure" {
     Err(e) => fail!("Error in step 2b: " + e)
   }
 
-  // step 2c: 内側の closure で引数を使う
+  // step 2c: use arguments in inner closure
   let result2c = repl_eval(ctx, "(((lambda (n) (lambda (x) x)) 5) 10)")
   match result2c {
     Ok(Value::Number(Number::Int(n))) => {
@@ -240,7 +240,7 @@ test "vm repl: nested closure" {
     Err(e) => fail!("Error in step 2c: " + e)
   }
 
-  // step 2: 外側のパラメータを参照
+  // step 2: refer to outer parameters
   // (((lambda (n) (lambda (x) n)) 5) 10) => 5
   let result2 = repl_eval(ctx, "(((lambda (n) (lambda (x) n)) 5) 10)")
   match result2 {
@@ -252,7 +252,7 @@ test "vm repl: nested closure" {
     Err(e) => fail!("Error in step 2: " + e)
   }
 
-  // 最後に、両方を使う
+  // Finally, use both
   // (((lambda (n) (lambda (x) (+ n x))) 5) 10) => 15
   let result3 = repl_eval(ctx, "(((lambda (n) (lambda (x) (+ n x))) 5) 10)")
   match result3 {
@@ -265,9 +265,9 @@ test "vm repl: nested closure" {
   }
 }
 
-/// シンプルな2引数関数テスト（クロージャなし）
+/// Simple 2-argument function test (no closure)
 test "vm: simple two arg function" {
-  // クロージャを使わない単純な2引数関数
+  // A simple two-argument function without closures
   let expr = parse_one("((lambda (a b) (+ a b)) 5 10)")
   let result = vm_eval(expr)
   match result {
@@ -280,9 +280,9 @@ test "vm: simple two arg function" {
   }
 }
 
-/// list を使ったキャプチャ/パラメータアクセス
+/// Capture/parameter access using list
 test "vm: list capture vs param" {
-  // (list n x) で両方の値を確認
+  // Check both values ​​with (list n x)
   let expr = parse_one("(((lambda (n) (lambda (x) (list n x))) 5) 10)")
   let result = vm_eval(expr)
   match result {
@@ -306,9 +306,9 @@ test "vm: list capture vs param" {
   }
 }
 
-/// PrimOp 内でのキャプチャ/パラメータアクセス
+/// Capture/parameter access within PrimOp
 test "vm: primop capture vs param" {
-  // キャプチャ + 定数
+  // capture + constant
   let expr1 = parse_one("(((lambda (n) (lambda (x) (+ n 0))) 5) 10)")
   let result1 = vm_eval(expr1)
   match result1 {
@@ -320,7 +320,7 @@ test "vm: primop capture vs param" {
     Err(e) => fail!("Error in (+ n 0): " + e)
   }
 
-  // 定数 + パラメータ
+  // constant + parameter
   let expr2 = parse_one("(((lambda (n) (lambda (x) (+ 0 x))) 5) 10)")
   let result2 = vm_eval(expr2)
   match result2 {
@@ -332,7 +332,7 @@ test "vm: primop capture vs param" {
     Err(e) => fail!("Error in (+ 0 x): " + e)
   }
 
-  // キャプチャ + パラメータ
+  // capture + parameters
   let expr3 = parse_one("(((lambda (n) (lambda (x) (+ n x))) 5) 10)")
   let result3 = vm_eval(expr3)
   match result3 {
@@ -345,9 +345,9 @@ test "vm: primop capture vs param" {
   }
 }
 
-/// キャプチャのデバッグテスト
+/// Capture debug test
 test "vm: capture debug" {
-  // キャプチャした n だけを返す
+  // Return only captured n
   let expr1 = parse_one("(((lambda (n) (lambda (x) n)) 5) 10)")
   let result1 = vm_eval(expr1)
   match result1 {
@@ -359,7 +359,7 @@ test "vm: capture debug" {
     Err(e) => fail!("Error getting n: " + e)
   }
 
-  // パラメータ x だけを返す
+  // return only parameter x
   let expr2 = parse_one("(((lambda (n) (lambda (x) x)) 5) 10)")
   let result2 = vm_eval(expr2)
   match result2 {
@@ -371,7 +371,7 @@ test "vm: capture debug" {
     Err(e) => fail!("Error getting x: " + e)
   }
 
-  // n と x を加算
+  // Add n and x
   let expr3 = parse_one("(((lambda (n) (lambda (x) (+ n x))) 5) 10)")
   let result3 = vm_eval(expr3)
   match result3 {
@@ -384,11 +384,11 @@ test "vm: capture debug" {
   }
 }
 
-/// REPL でのクロージャキャプチャ（単独テスト）
+/// Closure capture in REPL (single test)
 test "vm repl: isolated capture test" {
   let ctx = new_repl_context()
 
-  // キャプチャのみを使う場合
+  // When using only capture
   let result = repl_eval(ctx, "(((lambda (n) (lambda (x) n)) 5) 10)")
   match result {
     Ok(Value::Number(Number::Int(n))) => assert_eq!(n, 5)
@@ -397,7 +397,7 @@ test "vm repl: isolated capture test" {
   }
 }
 
-/// VM での比較演算
+/// Comparison operations in VM
 test "vm repl: comparison" {
   let ctx = new_repl_context()
 
@@ -423,7 +423,7 @@ test "vm repl: comparison" {
   }
 }
 
-/// make-adder パターンのテスト
+/// Testing the make-adder pattern
 test "vm repl: make-adder pattern" {
   let ctx = new_repl_context()
 
@@ -452,7 +452,7 @@ test "vm repl: make-adder pattern" {
     Err(e) => fail!("Error: " + e)
   }
 
-  // add5 と add10 は別のクロージャ
+  // add5 and add10 are different closures
   // (+ (add5 0) (add10 0)) => 15
   let result3 = repl_eval(ctx, "(+ (add5 0) (add10 0))")
   match result3 {
@@ -462,11 +462,11 @@ test "vm repl: make-adder pattern" {
   }
 }
 
-/// set! とクロージャの相互作用テスト
+/// Testing the interaction between set! and closures
 test "vm repl: closure with set!" {
   let ctx = new_repl_context()
 
-  // 単純な set! テスト（クロージャなし）
+  // A simple set! test (no closure)
   let _ = repl_eval(ctx, "(define x 0)")
   let _ = repl_eval(ctx, "(set! x 10)")
   let result1 = repl_eval(ctx, "x")
@@ -477,20 +477,20 @@ test "vm repl: closure with set!" {
   }
 }
 
-/// カウンターパターン: set! を使ったクロージャ
+/// Counter pattern: Closure using set!
 test "vm repl: counter pattern" {
   let ctx = new_repl_context()
 
-  // make-counter を定義
+  // define make-counter
   let _ = repl_eval(
     ctx,
     "(define (make-counter) (let ((count 0)) (lambda () (set! count (+ count 1)) count)))",
   )
 
-  // カウンターを作成
+  // create counter
   let _ = repl_eval(ctx, "(define counter (make-counter))")
 
-  // 最初の呼び出し: 1
+  // First call: 1
   let result1 = repl_eval(ctx, "(counter)")
   match result1 {
     Ok(Value::Number(Number::Int(n))) => {
@@ -501,7 +501,7 @@ test "vm repl: counter pattern" {
     Err(e) => fail!("Error in counter (1): " + e)
   }
 
-  // 2回目の呼び出し: 2
+  // Second call: 2
   let result2 = repl_eval(ctx, "(counter)")
   match result2 {
     Ok(Value::Number(Number::Int(n))) => {
@@ -512,7 +512,7 @@ test "vm repl: counter pattern" {
     Err(e) => fail!("Error in counter (2): " + e)
   }
 
-  // 3回目の呼び出し: 3
+  // 3rd call: 3
   let result3 = repl_eval(ctx, "(counter)")
   match result3 {
     Ok(Value::Number(Number::Int(n))) => {

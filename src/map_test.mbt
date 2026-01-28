@@ -1,6 +1,6 @@
-/// map と for-each 関数のテスト
+/// Testing map and for-each functions
 
-/// map の基本的な動作
+/// Basic operation of map
 test "map basic" {
   let env = initial_env()
   let expr = parse_one("(map (lambda (x) (* x 2)) (list 1 2 3))")
@@ -17,10 +17,10 @@ test "map basic" {
   }
 }
 
-/// map で組み込み関数を使用
+/// Use built-in functions with map
 test "map with builtin function" {
   let env = initial_env()
-  // 負の数リテラルは未サポートのため、(- 0 N) を使用
+  // Negative number literals are not supported, so use (- 0 N)
   let expr = parse_one("(map abs (list (- 0 1) 2 (- 0 3) 4))")
   match eval(expr, env) {
     Ok(result) => {
@@ -38,7 +38,7 @@ test "map with builtin function" {
   }
 }
 
-/// map で複数のリスト
+/// Multiple lists with map
 test "map with multiple lists" {
   let env = initial_env()
   let expr = parse_one("(map + (list 1 2 3) (list 10 20 30))")
@@ -55,7 +55,7 @@ test "map with multiple lists" {
   }
 }
 
-/// map で3つのリスト
+/// 3 lists with map
 test "map with three lists" {
   let env = initial_env()
   let expr = parse_one("(map (lambda (x y z) (+ x (+ y z))) (list 1 2) (list 10 20) (list 100 200))")
@@ -72,7 +72,7 @@ test "map with three lists" {
   }
 }
 
-/// map で空のリスト
+/// empty list with map
 test "map with empty list" {
   let env = initial_env()
   let expr = parse_one("(map (lambda (x) (* x 2)) ())")
@@ -82,10 +82,10 @@ test "map with empty list" {
   }
 }
 
-/// map でラムダ式
+/// Lambda expression in map
 test "map with lambda" {
   let env = initial_env()
-  // 負の数リテラルは未サポートのため、(- 0 N) を使用
+  // Negative number literals are not supported, so use (- 0 N)
   let expr = parse_one("(map (lambda (x) (if (< x 0) 0 x)) (list (- 0 1) 2 (- 0 3) 4))")
   match eval(expr, env) {
     Ok(result) => {
@@ -103,7 +103,7 @@ test "map with lambda" {
   }
 }
 
-/// for-each の基本的な動作（副作用はテストできないが、エラーがないことを確認）
+/// Basic behavior of for-each (you can't test for side effects, but make sure there are no errors)
 test "for-each basic" {
   let env = initial_env()
   let expr = parse_one("(for-each (lambda (x) (* x 2)) (list 1 2 3))")
@@ -113,7 +113,7 @@ test "for-each basic" {
   }
 }
 
-/// for-each で複数のリスト
+/// Multiple lists with for-each
 test "for-each with multiple lists" {
   let env = initial_env()
   let expr = parse_one("(for-each (lambda (x y) (+ x y)) (list 1 2 3) (list 10 20 30))")
@@ -123,7 +123,7 @@ test "for-each with multiple lists" {
   }
 }
 
-/// for-each で空のリスト
+/// Empty list with for-each
 test "for-each with empty list" {
   let env = initial_env()
   let expr = parse_one("(for-each (lambda (x) (* x 2)) ())")
@@ -133,7 +133,7 @@ test "for-each with empty list" {
   }
 }
 
-/// map でネストされたリスト操作
+/// Nested list operations with map
 test "map nested" {
   let env = initial_env()
   let expr = parse_one("(map (lambda (lst) (car lst)) (list (list 1 2) (list 3 4) (list 5 6)))")
@@ -150,7 +150,7 @@ test "map nested" {
   }
 }
 
-/// map と変数
+/// map and variables
 test "map with variable" {
   let env = initial_env()
   let expr = parse_one("(let ((double (lambda (x) (* x 2)))) (map double (list 1 2 3)))")
@@ -167,7 +167,7 @@ test "map with variable" {
   }
 }
 
-/// map でリストの合計を計算
+/// Compute list sum with map
 test "map for calculation" {
   let env = initial_env()
   let expr = parse_one("(map (lambda (x y) (* x y)) (list 1 2 3) (list 2 3 4))")
@@ -184,7 +184,7 @@ test "map for calculation" {
   }
 }
 
-/// ヘルパー関数: Value を文字列に変換（map_test用）
+/// Helper function: Convert Value to string (for map_test)
 fn map_value_to_string(value : Value) -> String {
   match value {
     Value::Nil => "()"

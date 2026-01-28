@@ -1,8 +1,8 @@
-/// case 特殊形式と連想リスト/メンバーシップ関数のテスト。
+/// testing case special formats and associative lists/membership functions.
 
-// === case 特殊形式 ===
+// = = = case special form = = =
 
-/// case は key を評価して datum とマッチさせる。
+/// the case evaluates the key to match the datum.
 test "case basic match" {
   let env = initial_env()
   let expr = parse_one("(case 2 ((1) 'one) ((2) 'two) ((3) 'three))")
@@ -13,7 +13,7 @@ test "case basic match" {
   }
 }
 
-/// case で複数の datum を持つ節。
+/// clause with multiple datums in case.
 test "case multiple datums" {
   let env = initial_env()
   let expr = parse_one("(case 5 ((1 2 3) 'small) ((4 5 6) 'medium) ((7 8 9) 'large))")
@@ -24,7 +24,7 @@ test "case multiple datums" {
   }
 }
 
-/// case の else 節。
+/// else clause of the case.
 test "case else clause" {
   let env = initial_env()
   let expr = parse_one("(case 10 ((1) 'one) ((2) 'two) (else 'other))")
@@ -35,7 +35,7 @@ test "case else clause" {
   }
 }
 
-/// case でマッチしない場合は未定義値（nil）。
+/// undefined value (nil) if case does not match.
 test "case no match no else" {
   let env = initial_env()
   let expr = parse_one("(case 10 ((1) 'one) ((2) 'two))")
@@ -46,7 +46,7 @@ test "case no match no else" {
   }
 }
 
-/// case でシンボルをマッチ。
+/// match symbols with case.
 test "case match symbol" {
   let env = initial_env()
   let expr = parse_one("(case 'apple ((orange) 1) ((apple) 2) ((banana) 3))")
@@ -57,7 +57,7 @@ test "case match symbol" {
   }
 }
 
-/// case の key は式として評価される。
+/// the key of the case is evaluated as an expression.
 test "case evaluates key" {
   let env = initial_env()
   let expr = parse_one("(case (+ 1 1) ((1) 'one) ((2) 'two) ((3) 'three))")
@@ -68,7 +68,7 @@ test "case evaluates key" {
   }
 }
 
-/// case の body は複数の式を持てる。
+/// the body of a case can have multiple expressions.
 test "case multiple body expressions" {
   let env = initial_env()
   let expr = parse_one("(case 1 ((1) (+ 1 2) (+ 3 4)) ((2) 0))")
@@ -79,12 +79,12 @@ test "case multiple body expressions" {
   }
 }
 
-// === 連想リスト関数 ===
+// = = = associative list function = = =
 
-/// assq は eq? で検索する。
+/// search for assq by eq?
 test "assq found" {
   let env = initial_env()
-  // list でリストを構築（dotted pair ではなく通常のペアを使用）
+  // build list with list (use normal pair instead of dotted pair)
   let expr = parse_one("(assq 'b (list (list 'a 1) (list 'b 2) (list 'c 3)))")
   let result = eval(expr, env)
   match result {
@@ -93,7 +93,7 @@ test "assq found" {
   }
 }
 
-/// assq で見つからない場合は #f。
+/// # f if not found in assq.
 test "assq not found" {
   let env = initial_env()
   let expr = parse_one("(assq 'd (list (list 'a 1) (list 'b 2) (list 'c 3)))")
@@ -104,7 +104,7 @@ test "assq not found" {
   }
 }
 
-/// assv は eqv? で検索する（数値も検索可能）。
+/// search for assv by eqv? (numbers are also searchable).
 test "assv with numbers" {
   let env = initial_env()
   let expr = parse_one("(assv 2 (list (list 1 'a) (list 2 'b) (list 3 'c)))")
@@ -115,7 +115,7 @@ test "assv with numbers" {
   }
 }
 
-/// assoc は equal? で検索する（リストも検索可能）。
+/// search for assoc with equal? (list can also be searched).
 test "assoc with lists" {
   let env = initial_env()
   let expr = parse_one("(assoc '(1 2) (list (list '(1) 'a) (list '(1 2) 'b) (list '(1 2 3) 'c)))")
@@ -126,7 +126,7 @@ test "assoc with lists" {
   }
 }
 
-/// assoc で見つからない場合は #f。
+/// # f if not found in assoc.
 test "assoc not found" {
   let env = initial_env()
   let expr = parse_one("(assoc '(1 2 3 4) (list (list '(1) 'a) (list '(1 2) 'b) (list '(1 2 3) 'c)))")
@@ -137,9 +137,9 @@ test "assoc not found" {
   }
 }
 
-// === メンバーシップ関数 ===
+// = = = Membership function = = =
 
-/// memq は eq? で検索し、見つかった位置からのリストを返す。
+/// memq searches for eq? and returns a list from the location found.
 test "memq found" {
   let env = initial_env()
   let expr = parse_one("(memq 'b '(a b c))")
@@ -150,7 +150,7 @@ test "memq found" {
   }
 }
 
-/// memq で見つからない場合は #f。
+/// # f if not found in memq.
 test "memq not found" {
   let env = initial_env()
   let expr = parse_one("(memq 'd '(a b c))")
@@ -161,7 +161,7 @@ test "memq not found" {
   }
 }
 
-/// memv は eqv? で検索する（数値も検索可能）。
+/// search memv by eqv? (numeric values are also searchable).
 test "memv with numbers" {
   let env = initial_env()
   let expr = parse_one("(memv 2 '(1 2 3))")
@@ -172,7 +172,7 @@ test "memv with numbers" {
   }
 }
 
-/// member は equal? で検索する（リストも検索可能）。
+/// search for member with equal? (list is also searchable).
 test "member with lists" {
   let env = initial_env()
   let expr = parse_one("(member '(2) '((1) (2) (3)))")
@@ -183,7 +183,7 @@ test "member with lists" {
   }
 }
 
-/// member で見つからない場合は #f。
+/// # f if not found in member.
 test "member not found" {
   let env = initial_env()
   let expr = parse_one("(member '(4) '((1) (2) (3)))")
@@ -194,9 +194,9 @@ test "member not found" {
   }
 }
 
-// === シンボル変換関数 ===
+// = = = Symbol conversion function = = =
 
-/// symbol->string はシンボルを文字列に変換する。
+/// symbol - > string converts a symbol into a string.
 test "symbol->string" {
   let env = initial_env()
   let expr = parse_one("(symbol->string 'hello)")
@@ -207,7 +207,7 @@ test "symbol->string" {
   }
 }
 
-/// string->symbol は文字列をシンボルに変換する。
+/// string - > symbol converts a string into a symbol.
 test "string->symbol" {
   let env = initial_env()
   let expr = parse_one("(string->symbol \"world\")")
@@ -218,7 +218,7 @@ test "string->symbol" {
   }
 }
 
-/// 変換の往復。
+/// Return of the conversion.
 test "symbol string round trip" {
   let env = initial_env()
   let expr = parse_one("(string->symbol (symbol->string 'foo))")
@@ -229,7 +229,7 @@ test "symbol string round trip" {
   }
 }
 
-/// symbol->string に非シンボルを渡すとエラー。
+/// error passing non-symbol to symbol- > string.
 test "symbol->string with non-symbol" {
   let env = initial_env()
   let expr = parse_one("(symbol->string 42)")
@@ -240,7 +240,7 @@ test "symbol->string with non-symbol" {
   }
 }
 
-/// string->symbol に非文字列を渡すとエラー。
+/// error passing non-string to string- > symbol.
 test "string->symbol with non-string" {
   let env = initial_env()
   let expr = parse_one("(string->symbol 'foo)")

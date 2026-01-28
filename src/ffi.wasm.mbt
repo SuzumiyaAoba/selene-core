@@ -1,68 +1,68 @@
-/// wasm バックエンド用のスタブ実装
-/// 標準入力の読み取りは wasm では利用できません
+/// Stub implementation for wasm backend
+/// Reading standard input is not available in wasm
 
-/// 標準入力から一行読み取る（プロンプト付き、スタブ実装）
-/// wasm バックエンドでは常に空文字列を返します
+/// Read a line from standard input (prompted, stub implementation)
+/// wasm backend always returns empty string
 pub fn read_line_with_prompt(_prompt : String) -> String {
-  ""  // wasm では stdin 読み取りは利用不可
+  ""  // stdin reading not available in wasm
 }
 
-/// 標準入力から一行読み取る（スタブ実装）
-/// wasm バックエンドでは常に空文字列を返します
+/// Read one line from standard input (stub implementation)
+/// wasm backend always returns empty string
 pub fn read_line() -> String {
-  ""  // wasm では stdin 読み取りは利用不可
+  ""  // stdin reading not available in wasm
 }
 
 // =============================================================================
-// ポート操作スタブ（wasm では利用不可）
+// Port operation stubs (not available in wasm)
 // =============================================================================
 
-/// ファイルを入力用に開く（常に失敗）
+/// Open file for input (always fails)
 pub fn open_input_file(_filename : String, _port_id : Int) -> Int {
-  -1  // wasm ではファイル操作は利用不可
+  -1  // File operations are not available in wasm
 }
 
-/// ファイルを出力用に開く（常に失敗）
+/// Open file for output (always fails)
 pub fn open_output_file(_filename : String, _port_id : Int) -> Int {
-  -1  // wasm ではファイル操作は利用不可
+  -1  // File operations are not available in wasm
 }
 
-/// ポートを閉じる（常に失敗）
+/// Close port (always fails)
 pub fn close_port(_port_id : Int) -> Bool {
-  false  // wasm ではファイル操作は利用不可
+  false  // File operations are not available in wasm
 }
 
-/// ポートから1文字読み取る（常にEOF）
+/// Read one character from port (always EOF)
 pub fn read_char_from_port(_port_id : Int) -> Int {
-  -1  // wasm ではファイル操作は利用不可
+  -1  // File operations are not available in wasm
 }
 
-/// ポートから1文字先読み（常にEOF）
+/// Read ahead one character from port (always EOF)
 pub fn peek_char_from_port(_port_id : Int) -> Int {
-  -1  // wasm ではファイル操作は利用不可
+  -1  // File operations are not available in wasm
 }
 
-/// ポートに1文字書き込む（常に失敗）
+/// Write one character to port (always fails)
 pub fn write_char_to_port(_port_id : Int, _char_code : Int) -> Bool {
-  false  // wasm ではファイル操作は利用不可
+  false  // File operations are not available in wasm
 }
 
-/// ポートに文字列を書き込む（常に失敗）
+/// Write string to port (always fails)
 pub fn write_string_to_port(_port_id : Int, _str : String) -> Bool {
-  false  // wasm ではファイル操作は利用不可
+  false  // File operations are not available in wasm
 }
 
-/// ポートがEOFに達したかどうか（常にtrue）
+/// Whether the port has reached EOF (always true)
 pub fn is_eof(_port_id : Int) -> Bool {
-  true  // wasm ではファイル操作は利用不可
+  true  // File operations are not available in wasm
 }
 
-/// ファイル全体を読み込む（常に空文字列）
+/// Read the entire file (always empty string)
 pub fn read_file(_filename : String) -> String {
-  ""  // wasm ではファイル操作は利用不可
+  ""  // File operations are not available in wasm
 }
 
-/// ファイルが存在するかどうか（常にfalse）
+/// whether the file exists (always false)
 pub fn file_exists(_filename : String) -> Bool {
-  false  // wasm ではファイル操作は利用不可
+  false  // File operations are not available in wasm
 }

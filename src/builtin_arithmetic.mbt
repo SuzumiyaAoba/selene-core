@@ -1,8 +1,8 @@
-/// 算術演算組み込み関数
+/// Arithmetic built-in functions
 ///
-/// Scheme の基本的な算術演算を実装する。
+/// Implement basic arithmetic operations of Scheme.
 
-/// 数値を期待するヘルパー関数
+/// A helper function that expects a number
 fn expect_number(value : Value) -> Result[Number, EvalError] {
   match value {
     Value::Number(n) => Ok(n)
@@ -10,17 +10,17 @@ fn expect_number(value : Value) -> Result[Number, EvalError] {
   }
 }
 
-/// 数値を Double に変換する
+/// Convert a number to Double
 fn number_to_double(n : Number) -> Double {
   match n {
     Number::Int(x) => x.to_double()
     Number::Rational(num, den) => num.to_double() / den.to_double()
     Number::Real(x) => x
-    Number::Complex(r, _) => r // 実部のみ
+    Number::Complex(r, _) => r // Real parts only
   }
 }
 
-/// 数値が複素数かどうか
+/// Whether the number is complex or not
 fn is_complex(n : Number) -> Bool {
   match n {
     Number::Complex(_, _) => true
@@ -28,7 +28,7 @@ fn is_complex(n : Number) -> Bool {
   }
 }
 
-/// 数値から複素数の実部と虚部を取得
+/// Get the real and imaginary parts of a complex number from a number
 fn to_complex_parts(n : Number) -> (Double, Double) {
   match n {
     Number::Int(x) => (x.to_double(), 0.0)
@@ -38,7 +38,7 @@ fn to_complex_parts(n : Number) -> (Double, Double) {
   }
 }
 
-/// 複素数の結果を正規化（虚部が0なら実数に）
+/// Normalize the result of a complex number (to a real number if the imaginary part is 0)
 fn normalize_complex(r : Double, i : Double) -> Number {
   if i == 0.0 {
     Number::Real(r)
@@ -47,9 +47,9 @@ fn normalize_complex(r : Double, i : Double) -> Number {
   }
 }
 
-/// 整数演算（拡張版：有理数・複素数対応）
+/// Integer operation (extended version: rational and complex numbers)
 fn add_numbers(a : Number, b : Number) -> Number {
-  // 複素数が含まれる場合
+  // If complex numbers are included
   if is_complex(a) || is_complex(b) {
     let (ar, ai) = to_complex_parts(a)
     let (br, bi) = to_complex_parts(b)
@@ -60,7 +60,7 @@ fn add_numbers(a : Number, b : Number) -> Number {
     (Number::Real(x), Number::Real(y)) => Number::Real(x + y)
     (Number::Int(x), Number::Real(y)) => Number::Real(x.to_double() + y)
     (Number::Real(x), Number::Int(y)) => Number::Real(x + y.to_double())
-    // 有理数の加算
+    // Addition of Rational Numbers
     (Number::Rational(n1, d1), Number::Rational(n2, d2)) =>
       normalize_rational(n1 * d2 + n2 * d1, d1 * d2)
     (Number::Int(x), Number::Rational(n, d)) =>
@@ -71,7 +71,7 @@ fn add_numbers(a : Number, b : Number) -> Number {
       Number::Real(x + n.to_double() / d.to_double())
     (Number::Rational(n, d), Number::Real(y)) =>
       Number::Real(n.to_double() / d.to_double() + y)
-    // 複素数は上で処理済み
+    // Complex numbers processed above
     (Number::Complex(_, _), _) => Number::Int(0) // unreachable
     (_, Number::Complex(_, _)) => Number::Int(0) // unreachable
   }
@@ -140,7 +140,7 @@ fn div_numbers(a : Number, b : Number) -> Number {
   }
   match (a, b) {
     (Number::Int(x), Number::Int(y)) =>
-      // 整数除算で割り切れない場合は有理数を返す
+      // Returns a rational number if it is not divisible by an integer division
       if x % y == 0 {
         Number::Int(x / y)
       } else {
@@ -176,7 +176,7 @@ fn min_numbers(a : Number, b : Number) -> Number {
   if av < bv { a } else { b }
 }
 
-/// 組み込み関数: +
+/// Built-in functions: +
 fn builtin_add(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() == 0 {
     return Ok(Value::Number(Number::Int(0)))
@@ -200,7 +200,7 @@ fn builtin_add(args : Array[Value]) -> Result[Value, EvalError] {
   Ok(Value::Number(result))
 }
 
-/// 組み込み関数: -
+/// Built-in functions: -
 fn builtin_sub(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() == 0 {
     return Err(EvalError::ArityError("-: requires at least 1 argument"))
@@ -240,7 +240,7 @@ fn builtin_sub(args : Array[Value]) -> Result[Value, EvalError] {
   Ok(Value::Number(result))
 }
 
-/// 組み込み関数: *
+/// Built-in functions: *
 fn builtin_mul(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() == 0 {
     return Ok(Value::Number(Number::Int(1)))
@@ -264,7 +264,7 @@ fn builtin_mul(args : Array[Value]) -> Result[Value, EvalError] {
   Ok(Value::Number(result))
 }
 
-/// 組み込み関数: /
+/// Built-in functions:/
 fn builtin_div(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() == 0 {
     return Err(EvalError::ArityError("/: requires at least 1 argument"))
@@ -307,7 +307,7 @@ fn builtin_div(args : Array[Value]) -> Result[Value, EvalError] {
   Ok(Value::Number(result))
 }
 
-/// 組み込み関数: quotient
+/// Built-in function: quotient
 fn builtin_quotient(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 2 {
     return Err(EvalError::ArityError("quotient: requires exactly 2 arguments"))
@@ -331,7 +331,7 @@ fn builtin_quotient(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: remainder
+/// Built-in function: remainder
 fn builtin_remainder(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 2 {
     return Err(EvalError::ArityError("remainder: requires exactly 2 arguments"))
@@ -355,7 +355,7 @@ fn builtin_remainder(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: modulo
+/// Built-in function: modulo
 fn builtin_modulo(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 2 {
     return Err(EvalError::ArityError("modulo: requires exactly 2 arguments"))
@@ -382,7 +382,7 @@ fn builtin_modulo(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: abs
+/// Built-in function: abs
 fn builtin_abs(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("abs: requires exactly 1 argument"))
@@ -398,7 +398,7 @@ fn builtin_abs(args : Array[Value]) -> Result[Value, EvalError] {
         Number::Rational(n, d) => Number::Rational(if n < 0 { -n } else { n }, d)
         Number::Real(x) => Number::Real(if x < 0.0 { -x } else { x })
         Number::Complex(r, i) => {
-          // 複素数の絶対値は実数になる
+          // The absolute value of a complex number becomes a real number
           let mag = (r * r + i * i).sqrt()
           Number::Real(mag)
         }
@@ -407,7 +407,7 @@ fn builtin_abs(args : Array[Value]) -> Result[Value, EvalError] {
   )
 }
 
-/// 組み込み関数: max
+/// Built-in functions: max
 fn builtin_max(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() == 0 {
     return Err(EvalError::ArityError("max: requires at least 1 argument"))
@@ -431,7 +431,7 @@ fn builtin_max(args : Array[Value]) -> Result[Value, EvalError] {
   Ok(Value::Number(result))
 }
 
-/// 組み込み関数: min
+/// Built-in function: min
 fn builtin_min(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() == 0 {
     return Err(EvalError::ArityError("min: requires at least 1 argument"))
@@ -455,8 +455,8 @@ fn builtin_min(args : Array[Value]) -> Result[Value, EvalError] {
   Ok(Value::Number(result))
 }
 
-/// 組み込み関数: gcd
-/// (gcd n1 n2 ...) - 最大公約数を計算
+/// Built-in function: gcd
+/// (gcd n1n2...) - calculate maximum common factor
 fn builtin_gcd(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() == 0 {
     return Ok(Value::Number(Number::Int(0)))
@@ -492,8 +492,8 @@ fn builtin_gcd(args : Array[Value]) -> Result[Value, EvalError] {
   Ok(Value::Number(Number::Int(result)))
 }
 
-/// 組み込み関数: lcm
-/// (lcm n1 n2 ...) - 最小公倍数を計算
+/// Built-in functions: lcm
+/// (lcm n1n2...) - calculate least common multiple
 fn builtin_lcm(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() == 0 {
     return Ok(Value::Number(Number::Int(1)))
@@ -539,24 +539,24 @@ fn builtin_lcm(args : Array[Value]) -> Result[Value, EvalError] {
   Ok(Value::Number(Number::Int(result)))
 }
 
-/// 数値比較の補助関数
+/// Auxiliary function for numerical comparison
 fn compare_numbers(op : String, a : Number, b : Number) -> Bool {
-  // 複素数は = のみ比較可能
+  // Complex numbers can only be compared with =
   match (a, b) {
     (Number::Complex(ar, ai), Number::Complex(br, bi)) => {
       match op {
         "=" => ar == br && ai == bi
-        _ => false // 複素数は順序比較できない
+        _ => false // Complex numbers cannot be compared in order
       }
     }
     (Number::Complex(_, _), _) | (_, Number::Complex(_, _)) => {
       match op {
-        "=" => false // 複素数と非複素数は等しくない
+        "=" => false // Complex and non-complex numbers are not equal
         _ => false
       }
     }
     _ => {
-      // 実数に変換して比較
+      // Convert to real numbers and compare
       let av = number_to_double(a)
       let bv = number_to_double(b)
       match op {
@@ -571,7 +571,7 @@ fn compare_numbers(op : String, a : Number, b : Number) -> Bool {
   }
 }
 
-/// 組み込み関数: =
+/// Built-in functions: =
 fn builtin_num_eq(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() < 2 {
     return Err(EvalError::ArityError("=: requires at least 2 arguments"))
@@ -597,7 +597,7 @@ fn builtin_num_eq(args : Array[Value]) -> Result[Value, EvalError] {
   Ok(Value::Bool(true))
 }
 
-/// 組み込み関数: <
+/// Built-in functions: <
 fn builtin_lt(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() < 2 {
     return Err(EvalError::ArityError("<: requires at least 2 arguments"))
@@ -624,7 +624,7 @@ fn builtin_lt(args : Array[Value]) -> Result[Value, EvalError] {
   Ok(Value::Bool(true))
 }
 
-/// 組み込み関数: >
+/// Built-in functions: >
 fn builtin_gt(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() < 2 {
     return Err(EvalError::ArityError(">: requires at least 2 arguments"))
@@ -651,7 +651,7 @@ fn builtin_gt(args : Array[Value]) -> Result[Value, EvalError] {
   Ok(Value::Bool(true))
 }
 
-/// 組み込み関数: <=
+/// Built-in functions: < =
 fn builtin_le(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() < 2 {
     return Err(EvalError::ArityError("<=: requires at least 2 arguments"))
@@ -678,7 +678,7 @@ fn builtin_le(args : Array[Value]) -> Result[Value, EvalError] {
   Ok(Value::Bool(true))
 }
 
-/// 組み込み関数: >=
+/// Built-in functions: > =
 fn builtin_ge(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() < 2 {
     return Err(EvalError::ArityError(">=: requires at least 2 arguments"))

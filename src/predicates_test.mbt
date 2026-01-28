@@ -1,8 +1,8 @@
-/// 述語関数のテスト。
+/// Testing predicate functions.
 
-// === 数値述語 ===
+// === Numeric predicate ===
 
-/// integer? は整数に対して #t を返す。
+/// integer? returns #t for an integer.
 test "integer? with integer" {
   let env = initial_env()
   let expr = parse_one("(integer? 42)")
@@ -13,7 +13,7 @@ test "integer? with integer" {
   }
 }
 
-/// integer? は小数点以下がない実数に対して #t を返す。
+/// integer? returns #t for a real number with no decimal point.
 test "integer? with whole real" {
   let env = initial_env()
   // sqrt(9) = 3.0
@@ -25,10 +25,10 @@ test "integer? with whole real" {
   }
 }
 
-/// integer? は小数点以下がある実数に対して #f を返す。
+/// integer? returns #f for real numbers with decimal places.
 test "integer? with fractional real" {
   let env = initial_env()
-  // sqrt(2) は小数点以下がある
+  // sqrt(2) has a decimal point
   let expr = parse_one("(integer? (sqrt 2))")
   let result = eval(expr, env)
   match result {
@@ -37,7 +37,7 @@ test "integer? with fractional real" {
   }
 }
 
-/// integer? は非数値に対して #f を返す。
+/// integer? returns #f for non-numeric values.
 test "integer? with non-number" {
   let env = initial_env()
   let expr = parse_one("(integer? \"hello\")")
@@ -48,7 +48,7 @@ test "integer? with non-number" {
   }
 }
 
-/// real? は整数に対して #t を返す。
+/// real? returns #t for integers.
 test "real? with integer" {
   let env = initial_env()
   let expr = parse_one("(real? 42)")
@@ -59,10 +59,10 @@ test "real? with integer" {
   }
 }
 
-/// real? は実数に対して #t を返す。
+/// real? returns #t for real numbers.
 test "real? with real" {
   let env = initial_env()
-  // sqrt(2) は実数
+  // sqrt(2) is a real number
   let expr = parse_one("(real? (sqrt 2))")
   let result = eval(expr, env)
   match result {
@@ -71,7 +71,7 @@ test "real? with real" {
   }
 }
 
-/// real? は非数値に対して #f を返す。
+/// real? returns #f for non-numeric values.
 test "real? with non-number" {
   let env = initial_env()
   let expr = parse_one("(real? #t)")
@@ -82,7 +82,7 @@ test "real? with non-number" {
   }
 }
 
-/// zero? はゼロに対して #t を返す。
+/// zero? returns #t for zero.
 test "zero? with zero" {
   let env = initial_env()
   let expr = parse_one("(zero? 0)")
@@ -93,7 +93,7 @@ test "zero? with zero" {
   }
 }
 
-/// zero? は非ゼロに対して #f を返す。
+/// zero? returns #f for non-zero.
 test "zero? with non-zero" {
   let env = initial_env()
   let expr = parse_one("(zero? 5)")
@@ -104,7 +104,7 @@ test "zero? with non-zero" {
   }
 }
 
-/// zero? は 0.0 に対して #t を返す。
+/// zero? returns #t for 0.0.
 test "zero? with real zero" {
   let env = initial_env()
   // sin(0) = 0.0
@@ -116,7 +116,7 @@ test "zero? with real zero" {
   }
 }
 
-/// positive? は正の数に対して #t を返す。
+/// positive? returns #t for positive numbers.
 test "positive? with positive" {
   let env = initial_env()
   let expr = parse_one("(positive? 5)")
@@ -127,7 +127,7 @@ test "positive? with positive" {
   }
 }
 
-/// positive? はゼロに対して #f を返す。
+/// positive? returns #f for zero.
 test "positive? with zero" {
   let env = initial_env()
   let expr = parse_one("(positive? 0)")
@@ -138,7 +138,7 @@ test "positive? with zero" {
   }
 }
 
-/// positive? は負の数に対して #f を返す。
+/// positive? returns #f for negative numbers.
 test "positive? with negative" {
   let env = initial_env()
   let expr = parse_one("(positive? (- 0 5))")
@@ -149,7 +149,7 @@ test "positive? with negative" {
   }
 }
 
-/// negative? は負の数に対して #t を返す。
+/// negative? returns #t for negative numbers.
 test "negative? with negative" {
   let env = initial_env()
   let expr = parse_one("(negative? (- 0 5))")
@@ -160,7 +160,7 @@ test "negative? with negative" {
   }
 }
 
-/// negative? はゼロに対して #f を返す。
+/// negative? returns #f for zero.
 test "negative? with zero" {
   let env = initial_env()
   let expr = parse_one("(negative? 0)")
@@ -171,7 +171,7 @@ test "negative? with zero" {
   }
 }
 
-/// negative? は正の数に対して #f を返す。
+/// negative? returns #f for positive numbers.
 test "negative? with positive" {
   let env = initial_env()
   let expr = parse_one("(negative? 5)")
@@ -182,7 +182,7 @@ test "negative? with positive" {
   }
 }
 
-/// odd? は奇数に対して #t を返す。
+/// odd? returns #t for odd numbers.
 test "odd? with odd" {
   let env = initial_env()
   let expr = parse_one("(odd? 3)")
@@ -193,7 +193,7 @@ test "odd? with odd" {
   }
 }
 
-/// odd? は偶数に対して #f を返す。
+/// odd? returns #f for even numbers.
 test "odd? with even" {
   let env = initial_env()
   let expr = parse_one("(odd? 4)")
@@ -204,7 +204,7 @@ test "odd? with even" {
   }
 }
 
-/// odd? は負の奇数に対しても #t を返す。
+/// odd? returns #t even for negative odd numbers.
 test "odd? with negative odd" {
   let env = initial_env()
   let expr = parse_one("(odd? (- 0 3))")
@@ -215,7 +215,7 @@ test "odd? with negative odd" {
   }
 }
 
-/// even? は偶数に対して #t を返す。
+/// even? returns #t for even numbers.
 test "even? with even" {
   let env = initial_env()
   let expr = parse_one("(even? 4)")
@@ -226,7 +226,7 @@ test "even? with even" {
   }
 }
 
-/// even? は奇数に対して #f を返す。
+/// even? returns #f for odd numbers.
 test "even? with odd" {
   let env = initial_env()
   let expr = parse_one("(even? 3)")
@@ -237,7 +237,7 @@ test "even? with odd" {
   }
 }
 
-/// even? はゼロに対して #t を返す。
+/// even? returns #t for zero.
 test "even? with zero" {
   let env = initial_env()
   let expr = parse_one("(even? 0)")
@@ -248,9 +248,9 @@ test "even? with zero" {
   }
 }
 
-// === 等価述語 ===
+// === equality predicate ===
 
-/// eqv? は同じ整数に対して #t を返す。
+/// eqv? returns #t for the same integer.
 test "eqv? with same integers" {
   let env = initial_env()
   let expr = parse_one("(eqv? 42 42)")
@@ -261,7 +261,7 @@ test "eqv? with same integers" {
   }
 }
 
-/// eqv? は異なる整数に対して #f を返す。
+/// eqv? returns #f for different integers.
 test "eqv? with different integers" {
   let env = initial_env()
   let expr = parse_one("(eqv? 42 43)")
@@ -272,7 +272,7 @@ test "eqv? with different integers" {
   }
 }
 
-/// eqv? は同じシンボルに対して #t を返す。
+/// eqv? returns #t for the same symbol.
 test "eqv? with same symbols" {
   let env = initial_env()
   let expr = parse_one("(eqv? 'foo 'foo)")
@@ -283,7 +283,7 @@ test "eqv? with same symbols" {
   }
 }
 
-/// eqv? は同じブール値に対して #t を返す。
+/// eqv? returns #t for the same boolean value.
 test "eqv? with same booleans" {
   let env = initial_env()
   let expr = parse_one("(eqv? #t #t)")
@@ -294,7 +294,7 @@ test "eqv? with same booleans" {
   }
 }
 
-/// equal? は同じリストに対して #t を返す。
+/// equal? ​​returns #t for the same list.
 test "equal? with same lists" {
   let env = initial_env()
   let expr = parse_one("(equal? '(1 2 3) '(1 2 3))")
@@ -305,7 +305,7 @@ test "equal? with same lists" {
   }
 }
 
-/// equal? は異なるリストに対して #f を返す。
+/// equal? ​​returns #f for different lists.
 test "equal? with different lists" {
   let env = initial_env()
   let expr = parse_one("(equal? '(1 2 3) '(1 2 4))")
@@ -316,7 +316,7 @@ test "equal? with different lists" {
   }
 }
 
-/// equal? はネストしたリストを深く比較する。
+/// equal? ​​deeply compares nested lists.
 test "equal? with nested lists" {
   let env = initial_env()
   let expr = parse_one("(equal? '(1 (2 3) 4) '(1 (2 3) 4))")
@@ -327,7 +327,7 @@ test "equal? with nested lists" {
   }
 }
 
-/// equal? は同じ文字列に対して #t を返す。
+/// equal? ​​returns #t for the same string.
 test "equal? with same strings" {
   let env = initial_env()
   let expr = parse_one("(equal? \"hello\" \"hello\")")
@@ -338,7 +338,7 @@ test "equal? with same strings" {
   }
 }
 
-/// equal? は異なる文字列に対して #f を返す。
+/// equal? ​​returns #f for different strings.
 test "equal? with different strings" {
   let env = initial_env()
   let expr = parse_one("(equal? \"hello\" \"world\")")
@@ -349,7 +349,7 @@ test "equal? with different strings" {
   }
 }
 
-/// equal? は同じベクタに対して #t を返す。
+/// equal? ​​returns #t for the same vector.
 test "equal? with same vectors" {
   let env = initial_env()
   let expr = parse_one("(equal? (vector 1 2 3) (vector 1 2 3))")
@@ -360,7 +360,7 @@ test "equal? with same vectors" {
   }
 }
 
-/// equal? は異なるベクタに対して #f を返す。
+/// equal? ​​returns #f for different vectors.
 test "equal? with different vectors" {
   let env = initial_env()
   let expr = parse_one("(equal? (vector 1 2 3) (vector 1 2 4))")
@@ -371,9 +371,9 @@ test "equal? with different vectors" {
   }
 }
 
-// === リストアクセサ ===
+// === List accessor ===
 
-/// cadr は2番目の要素を返す。
+/// cadr returns the second element.
 test "cadr" {
   let env = initial_env()
   let expr = parse_one("(cadr '(1 2 3))")
@@ -384,7 +384,7 @@ test "cadr" {
   }
 }
 
-/// caddr は3番目の要素を返す。
+/// caddr returns the third element.
 test "caddr" {
   let env = initial_env()
   let expr = parse_one("(caddr '(1 2 3))")
@@ -395,7 +395,7 @@ test "caddr" {
   }
 }
 
-/// cddr は3番目以降のリストを返す。
+/// cddr returns the third and subsequent lists.
 test "cddr" {
   let env = initial_env()
   let expr = parse_one("(cddr '(1 2 3 4))")
@@ -406,7 +406,7 @@ test "cddr" {
   }
 }
 
-/// caar はネストしたリストの最初の要素の最初を返す。
+/// caar returns the beginning of the first element of a nested list.
 test "caar" {
   let env = initial_env()
   let expr = parse_one("(caar '((1 2) 3))")
@@ -417,7 +417,7 @@ test "caar" {
   }
 }
 
-/// cdar はネストしたリストの最初の要素の残りを返す。
+/// cdar returns the remainder of the first element of a nested list.
 test "cdar" {
   let env = initial_env()
   let expr = parse_one("(cdar '((1 2 3) 4))")
@@ -428,7 +428,7 @@ test "cdar" {
   }
 }
 
-/// cdddr は4番目以降のリストを返す。
+/// cdddr returns the list starting from the fourth.
 test "cdddr" {
   let env = initial_env()
   let expr = parse_one("(cdddr '(1 2 3 4 5))")

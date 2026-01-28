@@ -1,6 +1,6 @@
-/// 評価器のテスト。
+/// Testing the evaluator.
 
-/// 数値リテラルの評価。
+/// Evaluation of numeric literals.
 test "eval number literal" {
   let env = initial_env()
   let expr = SExpr::Number(42)
@@ -11,7 +11,7 @@ test "eval number literal" {
   }
 }
 
-/// 変数参照の評価。
+/// Evaluating variable references.
 test "eval variable lookup" {
   let env = empty_env()
   let env = define_var(env, "x", Value::Number(Number::Int(10)))
@@ -23,7 +23,7 @@ test "eval variable lookup" {
   }
 }
 
-/// 組み込み演算子の適用。
+/// Applying built-in operators.
 test "eval builtin addition" {
   let env = initial_env()
   let expr = parse_one("(+ 1 2)")
@@ -34,7 +34,7 @@ test "eval builtin addition" {
   }
 }
 
-/// lambda式の評価。
+/// Evaluation of lambda expressions.
 test "eval lambda" {
   let env = initial_env()
   let expr = parse_one("((lambda (x) (+ x 1)) 5)")
@@ -45,7 +45,7 @@ test "eval lambda" {
   }
 }
 
-/// 複数パラメータのlambda。
+/// Multi-parameter lambda.
 test "eval lambda with multiple params" {
   let env = initial_env()
   let expr = parse_one("((lambda (x y) (* x y)) 3 4)")
@@ -56,7 +56,7 @@ test "eval lambda with multiple params" {
   }
 }
 
-/// begin式の評価。
+/// Evaluating the begin expression.
 test "eval begin" {
   let env = initial_env()
   let expr = parse_one("(begin (+ 1 2) (* 3 4))")
@@ -67,7 +67,7 @@ test "eval begin" {
   }
 }
 
-/// ネストしたlambda（クロージャのテスト）。
+/// Nested lambdas (testing closures).
 test "eval nested lambda closure" {
   let env = initial_env()
   let expr = parse_one("((lambda (x) (lambda (y) (+ x y))) 5)")
@@ -78,7 +78,7 @@ test "eval nested lambda closure" {
   }
 }
 
-/// クロージャの変数捕捉。
+/// Closure variable capture.
 test "eval closure captures environment" {
   let env = initial_env()
   // ((lambda (x) ((lambda (y) (+ x y)) 3)) 5) => 8
@@ -90,7 +90,7 @@ test "eval closure captures environment" {
   }
 }
 
-/// quote式の評価。
+/// Evaluation of quote expression.
 test "eval quote" {
   let env = initial_env()
   let expr = parse_one("(quote (1 2 3))")

@@ -1,6 +1,6 @@
-/// 最適化パスのテスト
+/// Testing optimization passes
 
-/// 定数畳み込み: 加算
+/// Constant folding: addition
 test "optimize: constant folding - add" {
   // (+ 1 2) => 3
   let expr = IRExpr::PrimOp(PrimOpKind::Add, [
@@ -14,7 +14,7 @@ test "optimize: constant folding - add" {
   }
 }
 
-/// 定数畳み込み: 乗算
+/// Constant folding: Multiplication
 test "optimize: constant folding - mul" {
   // (* 3 4) => 12
   let expr = IRExpr::PrimOp(PrimOpKind::Mul, [
@@ -28,7 +28,7 @@ test "optimize: constant folding - mul" {
   }
 }
 
-/// 定数畳み込み: 減算
+/// Constant folding: subtraction
 test "optimize: constant folding - sub" {
   // (- 10 3) => 7
   let expr = IRExpr::PrimOp(PrimOpKind::Sub, [
@@ -42,7 +42,7 @@ test "optimize: constant folding - sub" {
   }
 }
 
-/// 定数畳み込み: 比較
+/// Constant folding: comparison
 test "optimize: constant folding - comparison" {
   // (< 1 2) => #t
   let expr = IRExpr::PrimOp(PrimOpKind::Lt, [
@@ -56,7 +56,7 @@ test "optimize: constant folding - comparison" {
   }
 }
 
-/// 定数畳み込み: 比較（偽）
+/// Constant folding: comparison (false)
 test "optimize: constant folding - comparison false" {
   // (> 1 2) => #f
   let expr = IRExpr::PrimOp(PrimOpKind::Gt, [
@@ -70,7 +70,7 @@ test "optimize: constant folding - comparison false" {
   }
 }
 
-/// 定数条件の簡約: if #t
+/// Constant condition reduction: if #t
 test "optimize: constant if - true" {
   // (if #t 1 2) => 1
   let expr = IRExpr::If(
@@ -85,7 +85,7 @@ test "optimize: constant if - true" {
   }
 }
 
-/// 定数条件の簡約: if #f
+/// Constant condition reduction: if #f
 test "optimize: constant if - false" {
   // (if #f 1 2) => 2
   let expr = IRExpr::If(
@@ -100,7 +100,7 @@ test "optimize: constant if - false" {
   }
 }
 
-/// and の簡約: (and #f ...) => #f
+/// and reduction: (and #f ...) => #f
 test "optimize: and with false" {
   // (and #f x) => #f
   let expr = IRExpr::And([
@@ -114,7 +114,7 @@ test "optimize: and with false" {
   }
 }
 
-/// or の簡約: (or #t ...) => #t
+/// or reduction: (or #t ...) => #t
 test "optimize: or with true" {
   // (or #t x) => #t
   let expr = IRExpr::Or([
@@ -128,7 +128,7 @@ test "optimize: or with true" {
   }
 }
 
-/// 部分的最適化: (+ 0 x) => x
+/// Partial optimization: (+ 0 x) => x
 test "optimize: add zero" {
   // (+ 0 x) => x
   let expr = IRExpr::PrimOp(PrimOpKind::Add, [
@@ -142,7 +142,7 @@ test "optimize: add zero" {
   }
 }
 
-/// 部分的最適化: (* 1 x) => x
+/// Partial optimization: (* 1 x) => x
 test "optimize: mul one" {
   // (* 1 x) => x
   let expr = IRExpr::PrimOp(PrimOpKind::Mul, [
@@ -156,7 +156,7 @@ test "optimize: mul one" {
   }
 }
 
-/// 部分的最適化: (* 0 x) => 0
+/// Partial optimization: (* 0 x) => 0
 test "optimize: mul zero" {
   // (* 0 x) => 0
   let expr = IRExpr::PrimOp(PrimOpKind::Mul, [
@@ -170,7 +170,7 @@ test "optimize: mul zero" {
   }
 }
 
-/// begin の最適化: 単一式
+/// begin optimization: single expression
 test "optimize: begin single" {
   // (begin 1) => 1
   let expr = IRExpr::Begin([IRExpr::Const(IRConst::Int(1))])
@@ -181,7 +181,7 @@ test "optimize: begin single" {
   }
 }
 
-/// ネストした定数畳み込み
+/// nested constant folding
 test "optimize: nested constant folding" {
   // (+ (+ 1 2) (* 3 4)) => 15
   let expr = IRExpr::PrimOp(PrimOpKind::Add, [
@@ -201,7 +201,7 @@ test "optimize: nested constant folding" {
   }
 }
 
-/// 述語の定数畳み込み: zero?
+/// Constant folding of predicate: zero?
 test "optimize: zero?" {
   // (zero? 0) => #t
   let expr = IRExpr::PrimOp(PrimOpKind::ZeroP, [IRExpr::Const(IRConst::Int(0))])
@@ -212,7 +212,7 @@ test "optimize: zero?" {
   }
 }
 
-/// 述語の定数畳み込み: null?
+/// Constant folding of predicate: null?
 test "optimize: null?" {
   // (null? '()) => #t
   let expr = IRExpr::PrimOp(PrimOpKind::NullP, [IRExpr::Const(IRConst::Nil)])
@@ -223,7 +223,7 @@ test "optimize: null?" {
   }
 }
 
-/// 述語の定数畳み込み: number?
+/// Constant folding of predicate: number?
 test "optimize: number?" {
   // (number? 42) => #t
   let expr = IRExpr::PrimOp(PrimOpKind::NumberP, [IRExpr::Const(IRConst::Int(42))])
@@ -234,7 +234,7 @@ test "optimize: number?" {
   }
 }
 
-/// リスト操作の定数畳み込み: car
+/// Constant folding for list operations: car
 test "optimize: car" {
   // (car '(1 . 2)) => 1
   let expr = IRExpr::PrimOp(PrimOpKind::Car, [
@@ -247,7 +247,7 @@ test "optimize: car" {
   }
 }
 
-/// リスト操作の定数畳み込み: cdr
+/// Constant folding for list operations: cdr
 test "optimize: cdr" {
   // (cdr '(1 . 2)) => 2
   let expr = IRExpr::PrimOp(PrimOpKind::Cdr, [
@@ -260,7 +260,7 @@ test "optimize: cdr" {
   }
 }
 
-/// 文字列の定数畳み込み: string-length
+/// Constant folding of strings: string-length
 test "optimize: string-length" {
   // (string-length "hello") => 5
   let expr = IRExpr::PrimOp(PrimOpKind::StringLength, [
@@ -273,7 +273,7 @@ test "optimize: string-length" {
   }
 }
 
-/// 複合最適化: if + 定数畳み込み
+/// Complex optimization: if + constant folding
 test "optimize: if with constant condition from computation" {
   // (if (< 1 2) 10 20) => 10
   let expr = IRExpr::If(
@@ -291,9 +291,9 @@ test "optimize: if with constant condition from computation" {
   }
 }
 
-/// 不要コード除去: 未使用の let バインディング
+/// Eliminate unnecessary code: unused let bindings
 test "optimize: dead code elimination - unused let binding" {
-  // (let ((x 1) (y 2)) y) => y=2 のみ残す
+  // (let ((x 1) (y 2)) y) => leave only y=2
   let expr = IRExpr::Let(
     [
       { name: "x", init: IRExpr::Const(IRConst::Int(1)) },
@@ -302,10 +302,10 @@ test "optimize: dead code elimination - unused let binding" {
     IRExpr::Var({ name: "y", depth: 0, index: 1 })
   )
   let result = optimize(expr)
-  // x は使用されていないので除去される
+  // x is unused and is removed
   match result {
     IRExpr::Let(bindings, _body) => {
-      // x が除去されているはず
+      // x should have been removed
       assert_eq!(bindings.length(), 1)
       assert_eq!(bindings[0].name, "y")
     }
@@ -313,7 +313,7 @@ test "optimize: dead code elimination - unused let binding" {
   }
 }
 
-/// 不要コード除去: すべてのバインディングが未使用
+/// Redundant code removal: all bindings are unused
 test "optimize: dead code elimination - all bindings unused" {
   // (let ((x 1) (y 2)) 3) => 3
   let expr = IRExpr::Let(
@@ -324,14 +324,14 @@ test "optimize: dead code elimination - all bindings unused" {
     IRExpr::Const(IRConst::Int(3))
   )
   let result = optimize(expr)
-  // すべてのバインディングが除去される
+  // all bindings are removed
   match result {
     IRExpr::Const(IRConst::Int(n)) => assert_eq!(n, 3)
     _ => fail!("Expected Const(Int(3))")
   }
 }
 
-/// 不要コード除去: 副作用のある未使用バインディングは保持
+/// Eliminate unnecessary code: keep unused bindings with side effects
 test "optimize: dead code elimination - keep side effects" {
   // (let ((x (display 1))) 2) => (begin (display 1) 2)
   let expr = IRExpr::Let(
@@ -341,14 +341,14 @@ test "optimize: dead code elimination - keep side effects" {
     IRExpr::Const(IRConst::Int(2))
   )
   let result = optimize(expr)
-  // display は副作用があるので begin で実行される
+  // Since display has side effects, it is executed with begin.
   match result {
     IRExpr::Begin(_exprs) => ()  // OK
     _ => fail!("Expected Begin (side effect preserved)")
   }
 }
 
-/// 不要コード除去: 使用される変数は保持
+/// Eliminate unnecessary code: Used variables are retained
 test "optimize: dead code elimination - used binding kept" {
   // (let ((x 1)) x) => (let ((x 1)) x)
   let expr = IRExpr::Let(
@@ -367,7 +367,7 @@ test "optimize: dead code elimination - used binding kept" {
   }
 }
 
-/// インライン展開: 単純な lambda 呼び出し
+/// Inlining: a simple lambda call
 test "optimize: inline expansion - simple lambda" {
   // ((lambda (x) (+ x 1)) 5) => (let ((x 5)) (+ x 1))
   let expr = IRExpr::App(
@@ -385,7 +385,7 @@ test "optimize: inline expansion - simple lambda" {
     [IRExpr::Const(IRConst::Int(5))]
   )
   let result = optimize(expr)
-  // インライン化されて Let に変換される
+  // Inlined and converted to Let
   match result {
     IRExpr::Let(bindings, _body) => {
       assert_eq!(bindings.length(), 1)
@@ -399,7 +399,7 @@ test "optimize: inline expansion - simple lambda" {
   }
 }
 
-/// インライン展開: 複数引数の lambda
+/// Inlining: multi-argument lambda
 test "optimize: inline expansion - multiple args" {
   // ((lambda (x y) (+ x y)) 3 4) => (let ((x 3) (y 4)) (+ x y))
   let expr = IRExpr::App(
@@ -427,7 +427,7 @@ test "optimize: inline expansion - multiple args" {
   }
 }
 
-/// インライン展開: 末尾呼び出しでもインライン化
+/// Inlining: Inline even at the end of a call
 test "optimize: inline expansion - tail call" {
   // (tail-app (lambda (x) x) 42) => (let ((x 42)) x)
   let expr = IRExpr::TailApp(

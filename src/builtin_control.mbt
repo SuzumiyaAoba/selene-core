@@ -1,34 +1,34 @@
-/// 制御フロー組み込み関数
+/// Control flow built-in functions
 ///
-/// Scheme の制御フロー操作を実装する。
+/// Implement the control flow operation of the Scheme.
 
-/// 組み込み関数: call/cc (call-with-current-continuation)
-/// (call/cc proc) - 現在の継続を捕獲し、procに渡す
+/// Built-in function: call/cc (call-with-current-continuation)
+/// (call/cc proc) - captures the current continuation and passes it to proc
 fn builtin_call_cc(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("call/cc: requires exactly 1 argument"))
   }
 
-  // 引数は1引数の手続きでなければならない
+  // Argument must be a one-argument procedure
   let proc = args[0]
   match proc {
     Value::Procedure(_) => {
-      // 新しい継続を作成
+      // Create a new continuation
       let cont_id = new_continuation_id()
       let cont = Value::Procedure(Procedure::Cont({ id: cont_id }))
 
-      // 手続きに継続を渡して呼び出す
+      // Invoke by passing a continuation to the process
       let result = apply(proc, [cont])
 
-      // 結果を処理
+      // Process Results
       match result {
         Ok(value) => Ok(value)
         Err(EvalError::ContinuationInvoked(id, value)) => {
-          // この call/cc の継続が呼び出された場合
+          // If the continuation of this call/cc is called
           if id == cont_id {
             Ok(value)
           } else {
-            // 別の継続が呼び出された場合は伝播
+            // Propagate if another continuation is called
             Err(EvalError::ContinuationInvoked(id, value))
           }
         }
@@ -39,14 +39,14 @@ fn builtin_call_cc(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: apply
-/// (apply proc arg1 ... argN args) - args はリストでなければならない
+/// Built-in functions: apply
+/// (apply proc arg1... argN args) - args must be a list
 fn builtin_apply(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() < 2 {
     return Err(EvalError::ArityError("apply: requires at least 2 arguments"))
   }
 
-  // 最初の引数は手続きでなければならない
+  // The first argument must be a procedure
   let proc = args[0]
   match proc {
     Value::Procedure(_) => ()
@@ -56,16 +56,16 @@ fn builtin_apply(args : Array[Value]) -> Result[Value, EvalError] {
       )
   }
 
-  // 最後の引数はリストでなければならない
+  // Last argument must be a list
   let last_arg = args[args.length() - 1]
   let last_list_items = match list_to_array(last_arg) {
     Ok(items) => items
     Err(e) => return Err(e)
   }
 
-  // 中間の引数と最後のリストの要素を結合
+  // Merge intermediate arguments with the last list element
   let combined_args : Array[Value] = []
-  // 中間の引数（args[1] から args[length-2]）を追加
+  // Added intermediate arguments (args [1] to args [length-2])
   let mut i = 1
   let last_idx = args.length() - 1
   let _ = while i < last_idx {
@@ -74,23 +74,23 @@ fn builtin_apply(args : Array[Value]) -> Result[Value, EvalError] {
   } else {
     ()
   }
-  // 最後のリストの要素を追加
+  // Add last list element
   for item in last_list_items {
     combined_args.push(item)
   }
 
-  // 手続きを適用
+  // Apply Procedure
   apply(proc, combined_args)
 }
 
-/// 組み込み関数: map
-/// (map proc list1 list2 ...) - 各リストの対応する要素に proc を適用し、結果のリストを返す
+/// Built-in functions: map
+/// (map proc list1 list2...) - applies proc to the corresponding element of each list and returns a list of results
 fn builtin_map(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() < 2 {
     return Err(EvalError::ArityError("map: requires at least 2 arguments"))
   }
 
-  // 最初の引数は手続きでなければならない
+  // The first argument must be a procedure
   let proc = args[0]
   match proc {
     Value::Procedure(_) => ()
@@ -98,7 +98,7 @@ fn builtin_map(args : Array[Value]) -> Result[Value, EvalError] {
       return Err(EvalError::TypeError("map: first argument must be a procedure"))
   }
 
-  // 残りの引数はすべてリストでなければならない
+  // All remaining arguments must be in the list
   let lists : Array[Array[Value]] = []
   let mut i = 1
   let len = args.length()
@@ -113,17 +113,17 @@ fn builtin_map(args : Array[Value]) -> Result[Value, EvalError] {
     ()
   }
 
-  // すべてのリストが同じ長さかチェック（簡易版：最初のリストの長さを使用）
+  // Check if all lists are the same length (simplified version: use the length of the first list)
   if lists.length() == 0 {
     return Ok(Value::Nil)
   }
   let list_len = lists[0].length()
 
-  // 結果リストを構築
+  // Build results list
   let results : Array[Value] = []
   let mut idx = 0
   let _ = while idx < list_len {
-    // 各リストから idx 番目の要素を取得
+    // Get idx th element from each list
     let proc_args : Array[Value] = []
     let mut list_idx = 0
     let _ = while list_idx < lists.length() {
@@ -138,7 +138,7 @@ fn builtin_map(args : Array[Value]) -> Result[Value, EvalError] {
       ()
     }
 
-    // 手続きを適用
+    // Apply Procedure
     let result = match apply(proc, proc_args) {
       Ok(v) => v
       Err(e) => return Err(e)
@@ -149,18 +149,18 @@ fn builtin_map(args : Array[Value]) -> Result[Value, EvalError] {
     ()
   }
 
-  // 配列をリストに変換
+  // Convert Array to List
   array_to_list(results)
 }
 
-/// 組み込み関数: for-each
-/// (for-each proc list1 list2 ...) - 各リストの対応する要素に proc を適用（副作用のため）
+/// Built-in functions: for-each
+/// (for - each proc list 1 list 2...) - apply proc to the corresponding element of each list (due to side effects)
 fn builtin_for_each(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() < 2 {
     return Err(EvalError::ArityError("for-each: requires at least 2 arguments"))
   }
 
-  // 最初の引数は手続きでなければならない
+  // The first argument must be a procedure
   let proc = args[0]
   match proc {
     Value::Procedure(_) => ()
@@ -170,7 +170,7 @@ fn builtin_for_each(args : Array[Value]) -> Result[Value, EvalError] {
       )
   }
 
-  // 残りの引数はすべてリストでなければならない
+  // All remaining arguments must be in the list
   let lists : Array[Array[Value]] = []
   let mut i = 1
   let len = args.length()
@@ -218,14 +218,14 @@ fn builtin_for_each(args : Array[Value]) -> Result[Value, EvalError] {
   Ok(Value::Nil)
 }
 
-/// 組み込み関数: filter
-/// (filter proc list) - proc が真を返す要素のみを含むリストを返す
+/// Built-in functions: filter
+/// (filter proc list) - Returns a list containing only elements for which proc returns true
 fn builtin_filter(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 2 {
     return Err(EvalError::ArityError("filter: requires exactly 2 arguments"))
   }
 
-  // 最初の引数は手続きでなければならない
+  // The first argument must be a procedure
   let proc = args[0]
   match proc {
     Value::Procedure(_) => ()
@@ -235,39 +235,39 @@ fn builtin_filter(args : Array[Value]) -> Result[Value, EvalError] {
       )
   }
 
-  // 2番目の引数はリストでなければならない
+  // The second argument must be a list
   let list_items = match list_to_array(args[1]) {
     Ok(items) => items
     Err(e) => return Err(e)
   }
 
-  // 結果リストを構築
+  // Build results list
   let results : Array[Value] = []
   for item in list_items {
-    // 手続きを各要素に適用
+    // Apply procedures to each element
     let result = match apply(proc, [item]) {
       Ok(v) => v
       Err(e) => return Err(e)
     }
-    // 真値の場合のみ結果に追加（#f 以外はすべて真）
+    // Add to results only if true (all but # f are true)
     match result {
       Value::Bool(false) => ()
       _ => results.push(item)
     }
   }
 
-  // 配列をリストに変換
+  // Convert Array to List
   array_to_list(results)
 }
 
-/// 組み込み関数: fold-left
-/// (fold-left proc init list) - リストを左から畳み込む
+/// Built-in functions: fold-left
+/// (fold-left proc init list) - convolve list from left
 fn builtin_fold_left(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 3 {
     return Err(EvalError::ArityError("fold-left: requires exactly 3 arguments"))
   }
 
-  // 最初の引数は手続きでなければならない
+  // The first argument must be a procedure
   let proc = args[0]
   match proc {
     Value::Procedure(_) => ()
@@ -279,13 +279,13 @@ fn builtin_fold_left(args : Array[Value]) -> Result[Value, EvalError] {
 
   let init = args[1]
 
-  // 3番目の引数はリストでなければならない
+  // The third argument must be a list
   let list_items = match list_to_array(args[2]) {
     Ok(items) => items
     Err(e) => return Err(e)
   }
 
-  // 左から畳み込む: (proc (proc (proc init e1) e2) e3) ...
+  // Convolve from left: (proc (proc init e1) e2) e3)...
   let mut acc = init
   for item in list_items {
     acc = match apply(proc, [acc, item]) {
@@ -297,8 +297,8 @@ fn builtin_fold_left(args : Array[Value]) -> Result[Value, EvalError] {
   Ok(acc)
 }
 
-/// 組み込み関数: fold-right
-/// (fold-right proc init list) - リストを右から畳み込む
+/// Built-in function: fold-right
+/// (fold-right proc init list) - convolve list from right
 fn builtin_fold_right(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 3 {
     return Err(
@@ -306,7 +306,7 @@ fn builtin_fold_right(args : Array[Value]) -> Result[Value, EvalError] {
     )
   }
 
-  // 最初の引数は手続きでなければならない
+  // The first argument must be a procedure
   let proc = args[0]
   match proc {
     Value::Procedure(_) => ()
@@ -318,13 +318,13 @@ fn builtin_fold_right(args : Array[Value]) -> Result[Value, EvalError] {
 
   let init = args[1]
 
-  // 3番目の引数はリストでなければならない
+  // The third argument must be a list
   let list_items = match list_to_array(args[2]) {
     Ok(items) => items
     Err(e) => return Err(e)
   }
 
-  // 右から畳み込む: (proc e1 (proc e2 (proc e3 init))) ...
+  // Convolve from right: (proc e1 (proc e2 (proc e3 init)))...
   let mut acc = init
   let mut i = list_items.length()
   let _ = while i > 0 {
@@ -340,8 +340,8 @@ fn builtin_fold_right(args : Array[Value]) -> Result[Value, EvalError] {
   Ok(acc)
 }
 
-/// 組み込み関数: force
-/// (force promise) - プロミスを強制評価し、結果を返す
+/// Built-in function: force
+/// (force promise) - Force evaluate the promise and return the result
 fn builtin_force(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("force: requires exactly 1 argument"))
@@ -349,21 +349,21 @@ fn builtin_force(args : Array[Value]) -> Result[Value, EvalError] {
 
   match args[0] {
     Value::Promise(promise) => {
-      // 既に評価済みかチェック
+      // Check if you've already rated it
       if promise.forced.val {
         match promise.content.val {
           PromiseContent::Forced(value) => Ok(value)
           _ => Err(EvalError::InvalidSyntax("force: invalid promise state"))
         }
       } else {
-        // 未評価なので評価する
+        // Evaluate because it is unrated
         match promise.content.val {
           PromiseContent::Delayed(expr, env) => {
             let result = match eval(expr, env) {
               Ok(v) => v
               Err(e) => return Err(e)
             }
-            // メモ化: 結果を保存
+            // Memoize: Save Result
             promise.forced.val = true
             promise.content.val = PromiseContent::Forced(result)
             Ok(result)
@@ -372,13 +372,13 @@ fn builtin_force(args : Array[Value]) -> Result[Value, EvalError] {
         }
       }
     }
-    // プロミス以外の値はそのまま返す（R5RS の動作）
+    // Returns the value other than the promise as it is (R5RS operation)
     other => Ok(other)
   }
 }
 
-/// 組み込み関数: promise?
-/// (promise? obj) - obj がプロミスかどうか判定
+/// Built-in function: promise?
+/// (promise? obj) - Determine if obj is a Promise
 fn builtin_promise_p(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("promise?: requires exactly 1 argument"))
@@ -390,20 +390,20 @@ fn builtin_promise_p(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: values
-/// (values obj ...) - 複数の値を返す
+/// Built-in functions: values
+/// (values obj...) - returns multiple values
 fn builtin_values(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() == 1 {
-    // 単一の値の場合はそのまま返す
+    // Returns as is for a single value
     Ok(args[0])
   } else {
-    // 複数の値の場合は MultipleValues でラップ
+    // For multiple values, wrap with MultipleValues
     Ok(Value::MultipleValues(args))
   }
 }
 
-/// 組み込み関数: dynamic-wind
-/// (dynamic-wind before thunk after) - 動的な入出処理を行う
+/// Built-in function: dynamic-wind
+/// (dynamic-wind before thunk after) - Perform dynamic input/output processing
 fn builtin_dynamic_wind(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 3 {
     return Err(
@@ -411,7 +411,7 @@ fn builtin_dynamic_wind(args : Array[Value]) -> Result[Value, EvalError] {
     )
   }
 
-  // すべての引数が手続きでなければならない
+  // All arguments must be procedural
   let before = args[0]
   let thunk = args[1]
   let after = args[2]
@@ -423,31 +423,31 @@ fn builtin_dynamic_wind(args : Array[Value]) -> Result[Value, EvalError] {
       )
   }
 
-  // before を呼び出す
+  // call before
   match apply(before, []) {
     Ok(_) => ()
     Err(e) => return Err(e)
   }
 
-  // thunk を呼び出す
+  // call thunk
   let result = apply(thunk, [])
 
-  // after を呼び出す（thunk が成功しても失敗しても）
+  // call after (whether thunk succeeds or fails)
   match apply(after, []) {
     Ok(_) => ()
     Err(e) => {
-      // after でエラーが発生した場合、それを返す
-      // 注: R5RS では thunk のエラーが優先されるべきだが、簡易実装
+      // if an error occurs after, return it
+      // Note: R5RS should prioritize thunk errors, but simplified implementation
       return Err(e)
     }
   }
 
-  // thunk の結果を返す
+  // returns the result of a thunk
   result
 }
 
-/// 組み込み関数: call-with-values
-/// (call-with-values producer consumer) - producer の結果を consumer に渡す
+/// Built-in functions: call-with-values
+/// (call-with-values producer consumer) - Pass the producer's result to the consumer
 fn builtin_call_with_values(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 2 {
     return Err(
@@ -455,7 +455,7 @@ fn builtin_call_with_values(args : Array[Value]) -> Result[Value, EvalError] {
     )
   }
 
-  // 両方の引数が手続きでなければならない
+  // Both arguments must be procedural
   let producer = args[0]
   let consumer = args[1]
   match (producer, consumer) {
@@ -466,20 +466,20 @@ fn builtin_call_with_values(args : Array[Value]) -> Result[Value, EvalError] {
       )
   }
 
-  // producer を引数なしで呼び出す
+  // call producer without arguments
   let produced = match apply(producer, []) {
     Ok(v) => v
     Err(e) => return Err(e)
   }
 
-  // producer の結果を consumer に渡す
+  // pass the results of the producer to the consumer
   match produced {
     Value::MultipleValues(values) => {
-      // 複数の値を consumer の引数として渡す
+      // Pass multiple values as arguments to consumer
       apply(consumer, values)
     }
     single_value => {
-      // 単一の値を consumer に渡す
+      // Pass a single value to consumer
       apply(consumer, [single_value])
     }
   }

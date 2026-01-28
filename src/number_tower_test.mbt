@@ -1,10 +1,10 @@
-/// 数値塔（有理数・複素数）のテスト
+/// Test of numerical tower (rational numbers/complex numbers)
 
 // =============================================================================
-// 有理数テスト
+// rational number test
 // =============================================================================
 
-/// 有理数の生成（除算）
+/// Generation of rational numbers (division)
 test "rational from division" {
   let env = initial_env()
   let expr = parse_one("(/ 1 2)")
@@ -15,7 +15,7 @@ test "rational from division" {
   }
 }
 
-/// 有理数の正規化（既約分数）
+/// Normalization of rational numbers (irreducible fractions)
 test "rational normalization" {
   let env = initial_env()
   let expr = parse_one("(/ 4 8)")
@@ -26,7 +26,7 @@ test "rational normalization" {
   }
 }
 
-/// 有理数の加算
+/// Addition of Rational Numbers
 test "rational addition" {
   let env = initial_env()
   let expr = parse_one("(+ (/ 1 2) (/ 1 3))")
@@ -37,7 +37,7 @@ test "rational addition" {
   }
 }
 
-/// 有理数の減算
+/// Subtraction of rational numbers
 test "rational subtraction" {
   let env = initial_env()
   let expr = parse_one("(- (/ 1 2) (/ 1 3))")
@@ -48,7 +48,7 @@ test "rational subtraction" {
   }
 }
 
-/// 有理数の乗算
+/// Multiplication of rational numbers
 test "rational multiplication" {
   let env = initial_env()
   let expr = parse_one("(* (/ 1 2) (/ 2 3))")
@@ -59,7 +59,7 @@ test "rational multiplication" {
   }
 }
 
-/// 有理数の除算
+/// Division of rational numbers
 test "rational division" {
   let env = initial_env()
   let expr = parse_one("(/ (/ 1 2) (/ 1 3))")
@@ -70,7 +70,7 @@ test "rational division" {
   }
 }
 
-/// numerator 関数
+/// numerator function
 test "numerator function" {
   let env = initial_env()
   let expr = parse_one("(numerator (/ 3 4))")
@@ -81,7 +81,7 @@ test "numerator function" {
   }
 }
 
-/// denominator 関数
+/// denominator function
 test "denominator function" {
   let env = initial_env()
   let expr = parse_one("(denominator (/ 3 4))")
@@ -92,7 +92,7 @@ test "denominator function" {
   }
 }
 
-/// 整数の numerator
+/// numerator of integers
 test "numerator with integer" {
   let env = initial_env()
   let expr = parse_one("(numerator 5)")
@@ -103,7 +103,7 @@ test "numerator with integer" {
   }
 }
 
-/// 整数の denominator
+/// integer denominator
 test "denominator with integer" {
   let env = initial_env()
   let expr = parse_one("(denominator 5)")
@@ -114,7 +114,7 @@ test "denominator with integer" {
   }
 }
 
-/// rational? 述語
+/// rational? predicate
 test "rational? predicate" {
   let env = initial_env()
   let expr = parse_one("(rational? (/ 1 2))")
@@ -148,10 +148,10 @@ test "exact? with rational" {
 }
 
 // =============================================================================
-// 複素数テスト
+// complex number test
 // =============================================================================
 
-/// make-rectangular で複素数を作成
+/// Create complex numbers with make-rectangular
 test "make-rectangular" {
   let env = initial_env()
   let expr = parse_one("(make-rectangular 3 4)")
@@ -162,7 +162,7 @@ test "make-rectangular" {
   }
 }
 
-/// 虚部が0なら実数
+/// If the imaginary part is 0, then the real number
 test "make-rectangular with zero imag" {
   let env = initial_env()
   let expr = parse_one("(make-rectangular 5 0)")
@@ -207,7 +207,7 @@ test "imag-part function" {
   }
 }
 
-/// 実数の imag-part は 0
+/// real imag-part is 0
 test "imag-part of real" {
   let env = initial_env()
   let expr = parse_one("(imag-part 5)")
@@ -218,7 +218,7 @@ test "imag-part of real" {
   }
 }
 
-/// magnitude (絶対値)
+/// magnitude (absolute value)
 test "magnitude function" {
   let env = initial_env()
   let expr = parse_one("(magnitude (make-rectangular 3 4))")
@@ -235,7 +235,7 @@ test "magnitude function" {
   }
 }
 
-/// complex? 述語（すべての数は複素数）
+/// complex? predicate (all numbers are complex)
 test "complex? predicate" {
   let env = initial_env()
   let expr = parse_one("(complex? 42)")
@@ -257,7 +257,7 @@ test "complex? with complex" {
   }
 }
 
-/// 複素数の加算
+/// Addition of complex numbers
 test "complex addition" {
   let env = initial_env()
   let expr = parse_one("(+ (make-rectangular 1 2) (make-rectangular 3 4))")
@@ -274,7 +274,7 @@ test "complex addition" {
   }
 }
 
-/// 複素数の減算
+/// Subtraction of complex numbers
 test "complex subtraction" {
   let env = initial_env()
   let expr = parse_one("(- (make-rectangular 5 3) (make-rectangular 2 1))")
@@ -291,7 +291,7 @@ test "complex subtraction" {
   }
 }
 
-/// 複素数の乗算
+/// Multiplication of complex numbers
 test "complex multiplication" {
   let env = initial_env()
   // (1+2i) * (3+4i) = 3 + 4i + 6i + 8i^2 = 3 + 10i - 8 = -5 + 10i
@@ -309,7 +309,7 @@ test "complex multiplication" {
   }
 }
 
-/// 複素数の絶対値 (abs)
+/// Absolute value of a complex number (abs)
 test "abs with complex" {
   let env = initial_env()
   let expr = parse_one("(abs (make-rectangular 3 4))")

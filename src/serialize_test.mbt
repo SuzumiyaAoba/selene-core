@@ -1,13 +1,13 @@
-/// シリアライズのテスト
+/// Serialization test
 
-/// 基本的なモジュールのシリアライズ
+/// Basic module serialization
 test "serialize: simple module" {
-  // (+ 1 2) をコンパイル
+  // Compile (+ 1 2)
   let expr = parse_one("(+ 1 2)")
   match compile_to_module(expr) {
     Ok(compiled) => {
       let serialized = serialize_module_to_string(compiled)
-      // ヘッダーの確認
+      // Check the header
       assert_true!(serialized.contains("SELENE_BYTECODE_V1"))
       assert_true!(serialized.contains("main_chunk:"))
       assert_true!(serialized.contains("arity:"))
@@ -17,21 +17,21 @@ test "serialize: simple module" {
   }
 }
 
-/// Lambda を含むモジュールのシリアライズ
+/// Serializing modules containing Lambda
 test "serialize: module with lambda" {
   let expr = parse_one("(lambda (x) x)")
   match compile_to_module(expr) {
     Ok(compiled) => {
       let serialized = serialize_module_to_string(compiled)
       assert_true!(serialized.contains("SELENE_BYTECODE_V1"))
-      // 子チャンクがあるはず
+      // There should be a child chunk
       assert_true!(serialized.contains("chunks:"))
     }
     Err(_) => fail!("Compilation failed")
   }
 }
 
-/// 定数を含むモジュールのシリアライズ
+/// Serializing modules containing constants
 test "serialize: module with constants" {
   let expr = parse_one("42")
   match compile_to_module(expr) {
@@ -45,10 +45,10 @@ test "serialize: module with constants" {
 }
 
 /// ========================================
-/// デシリアライズのテスト
+/// Deserialization test
 /// ========================================
 
-/// 基本的なラウンドトリップテスト
+/// Basic round trip test
 test "deserialize: simple roundtrip" {
   let expr = parse_one("(+ 1 2)")
   match compile_to_module(expr) {
@@ -56,7 +56,7 @@ test "deserialize: simple roundtrip" {
       let serialized = serialize_module_to_string(original)
       match deserialize_module_from_string(serialized) {
         Ok(restored) => {
-          // main chunk の比較
+          // main chunk comparison
           assert_eq!(restored.main.arity, original.main.arity)
           assert_eq!(restored.main.num_free_vars, original.main.num_free_vars)
           assert_eq!(restored.main.num_locals, original.main.num_locals)
@@ -72,7 +72,7 @@ test "deserialize: simple roundtrip" {
   }
 }
 
-/// Lambda を含むラウンドトリップ
+/// Roundtrips involving Lambda
 test "deserialize: lambda roundtrip" {
   let expr = parse_one("(lambda (x y) (+ x y))")
   match compile_to_module(expr) {
@@ -80,9 +80,9 @@ test "deserialize: lambda roundtrip" {
       let serialized = serialize_module_to_string(original)
       match deserialize_module_from_string(serialized) {
         Ok(restored) => {
-          // chunks の数が一致
+          // Match number of chunks
           assert_eq!(restored.chunks.length(), original.chunks.length())
-          // lambda chunk の arity が一致
+          // Lambda chunk arity matches
           if restored.chunks.length() > 0 {
             assert_eq!(restored.chunks[0].arity, original.chunks[0].arity)
           }
@@ -94,7 +94,7 @@ test "deserialize: lambda roundtrip" {
   }
 }
 
-/// 定数のラウンドトリップ
+/// Constant round trip
 test "deserialize: constants roundtrip" {
   let expr = parse_one("(list 1 2 \"hello\" 'world)")
   match compile_to_module(expr) {
@@ -111,7 +111,7 @@ test "deserialize: constants roundtrip" {
   }
 }
 
-/// 制御フローのラウンドトリップ
+/// Control flow round trip
 test "deserialize: control flow roundtrip" {
   let expr = parse_one("(if #t 1 2)")
   match compile_to_module(expr) {
@@ -128,7 +128,7 @@ test "deserialize: control flow roundtrip" {
   }
 }
 
-/// 無効なフォーマットのエラー
+/// invalid format error
 test "deserialize: invalid format" {
   match deserialize_module_from_string("INVALID_HEADER") {
     Err(SerializeError::InvalidFormat(_)) => ()
@@ -141,7 +141,7 @@ test "deserialize: invalid format" {
   }
 }
 
-/// 複雑なプログラムのラウンドトリップ
+/// Roundtrips for complex programs
 test "deserialize: complex program roundtrip" {
   let expr = parse_one("(define (fact n) (if (<= n 1) 1 (* n (fact (- n 1)))))")
   match compile_to_module(expr) {
@@ -159,7 +159,7 @@ test "deserialize: complex program roundtrip" {
   }
 }
 
-/// Bool定数のラウンドトリップ
+/// Bool constant round trip
 test "deserialize: bool constants roundtrip" {
   let expr = parse_one("(if #t #t #f)")
   match compile_to_module(expr) {
@@ -176,7 +176,7 @@ test "deserialize: bool constants roundtrip" {
   }
 }
 
-/// Symbolのラウンドトリップ
+/// Symbol round trip
 test "deserialize: symbol roundtrip" {
   let expr = parse_one("'foo")
   match compile_to_module(expr) {
@@ -194,10 +194,10 @@ test "deserialize: symbol roundtrip" {
 }
 
 /// ========================================
-/// バイナリ形式のテスト
+/// Binary format testing
 /// ========================================
 
-/// バイナリ形式の基本ラウンドトリップ
+/// Basic round trip in binary format
 test "binary: simple roundtrip" {
   let expr = parse_one("(+ 1 2)")
   match compile_to_module(expr) {
@@ -218,7 +218,7 @@ test "binary: simple roundtrip" {
   }
 }
 
-/// バイナリ形式のLambdaラウンドトリップ
+/// Lambda roundtrip in binary format
 test "binary: lambda roundtrip" {
   let expr = parse_one("(lambda (x y) (+ x y))")
   match compile_to_module(expr) {
@@ -238,7 +238,7 @@ test "binary: lambda roundtrip" {
   }
 }
 
-/// バイナリ形式の定数ラウンドトリップ
+/// Constant round trip in binary format
 test "binary: constants roundtrip" {
   let expr = parse_one("(list 1 2 \"hello\" 'world)")
   match compile_to_module(expr) {
@@ -255,7 +255,7 @@ test "binary: constants roundtrip" {
   }
 }
 
-/// バイナリ形式の制御フローラウンドトリップ
+/// Control flow round trip in binary format
 test "binary: control flow roundtrip" {
   let expr = parse_one("(if #t 1 2)")
   match compile_to_module(expr) {
@@ -272,7 +272,7 @@ test "binary: control flow roundtrip" {
   }
 }
 
-/// バイナリ形式の複雑なプログラムラウンドトリップ
+/// Complex program round trip in binary format
 test "binary: complex program roundtrip" {
   let expr = parse_one("(define (fact n) (if (<= n 1) 1 (* n (fact (- n 1)))))")
   match compile_to_module(expr) {
@@ -290,29 +290,29 @@ test "binary: complex program roundtrip" {
   }
 }
 
-/// バイナリ形式の不正データエラー
+/// Bad data error in binary format
 test "binary: invalid format" {
-  // 空データ
+  // empty data
   match deserialize_module_from_binary([]) {
     Err(SerializeError::UnexpectedEnd) => ()
     _ => fail!("Expected UnexpectedEnd error")
   }
 
-  // 不正なマジックナンバー
+  // fraudulent magic number
   match deserialize_module_from_binary([0x00, 0x00, 0x00, 0x00]) {
     Err(SerializeError::InvalidFormat(_)) => ()
     _ => fail!("Expected InvalidFormat error")
   }
 }
 
-/// バイナリサイズがテキストより小さいことを確認
+/// Ensure binary size is smaller than text
 test "binary: smaller than text" {
   let expr = parse_one("(define (fact n) (if (<= n 1) 1 (* n (fact (- n 1)))))")
   match compile_to_module(expr) {
     Ok(compiled) => {
       let text = serialize_module_to_string(compiled)
       let binary = serialize_module_to_binary(compiled)
-      // バイナリはテキストより小さいはず
+      // binary should be smaller than text
       assert_true!(binary.length() < text.length())
     }
     Err(_) => fail!("Compilation failed")

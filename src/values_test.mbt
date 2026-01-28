@@ -1,6 +1,6 @@
-/// 多値 (values/call-with-values) のテスト
+/// Testing for values/call-with-values
 
-/// 単一値を返す values
+/// values ​​returns a single value
 test "values single value" {
   let env = initial_env()
   let expr = parse_one("(call-with-values (lambda () (values 42)) (lambda (x) x))")
@@ -11,7 +11,7 @@ test "values single value" {
   }
 }
 
-/// 複数値を返す values
+/// Returning multiple values ​​values
 test "values multiple values" {
   let env = initial_env()
   let expr = parse_one("(call-with-values (lambda () (values 1 2 3)) (lambda (a b c) (+ a (+ b c))))")
@@ -22,7 +22,7 @@ test "values multiple values" {
   }
 }
 
-/// 値なしの values（ゼロ個の値）
+/// values ​​without values ​​(zero values)
 test "values no values" {
   let env = initial_env()
   let expr = parse_one("(call-with-values (lambda () (values)) (lambda () 99))")
@@ -33,7 +33,7 @@ test "values no values" {
   }
 }
 
-/// プロデューサが通常の値を返す場合
+/// If the producer returns a normal value
 test "call-with-values with normal value producer" {
   let env = initial_env()
   let expr = parse_one("(call-with-values (lambda () 42) (lambda (x) (* x 2)))")
@@ -44,7 +44,7 @@ test "call-with-values with normal value producer" {
   }
 }
 
-/// 複数値を使った計算
+/// Calculations with multiple values
 test "multiple values computation" {
   let env = initial_env()
   let expr = parse_one("(call-with-values (lambda () (values 10 20)) (lambda (a b) (- a b)))")
@@ -55,7 +55,7 @@ test "multiple values computation" {
   }
 }
 
-/// 2つの値をスワップ
+/// swap two values
 test "swap two values" {
   let env = initial_env()
   let expr = parse_one("(call-with-values (lambda () (values 1 2)) (lambda (a b) (values b a)))")
@@ -75,7 +75,7 @@ test "swap two values" {
   }
 }
 
-/// values を consumer で処理
+/// Process values ​​with consumer
 test "values with list construction" {
   let env = initial_env()
   let expr = parse_one("(call-with-values (lambda () (values 1 2 3)) list)")

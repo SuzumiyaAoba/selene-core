@@ -1,6 +1,6 @@
-/// デバッガのテスト
+/// Debugger testing
 
-/// ブレークポイントの追加と削除テスト
+/// Adding and removing breakpoints test
 test "debugger: add and remove breakpoints" {
   let expr = parse_one("(+ 1 2)")
   match compile_to_module(expr) {
@@ -8,7 +8,7 @@ test "debugger: add and remove breakpoints" {
       let vm = new_vm_state(compiled)
       let debugger = new_debugger(vm)
 
-      // ブレークポイント追加
+      // Add breakpoint
       let bp1 = add_breakpoint_main(debugger, 0)
       let bp2 = add_breakpoint_main(debugger, 2)
       let bp3 = add_breakpoint(debugger, 0, 1)
@@ -20,19 +20,19 @@ test "debugger: add and remove breakpoints" {
       let bps = list_breakpoints(debugger)
       assert_eq!(bps.length(), 3)
 
-      // ブレークポイント削除
+      // Delete breakpoint
       assert_true!(remove_breakpoint(debugger, bp2))
       let bps2 = list_breakpoints(debugger)
       assert_eq!(bps2.length(), 2)
 
-      // 存在しないブレークポイントの削除
+      // Delete non-existent breakpoints
       assert_true!(not(remove_breakpoint(debugger, 999)))
     }
     Err(e) => fail!("Compile failed: " + e.to_string())
   }
 }
 
-/// ブレークポイントの有効化/無効化テスト
+/// Breakpoint enable/disable test
 test "debugger: enable and disable breakpoints" {
   let expr = parse_one("(+ 1 2)")
   match compile_to_module(expr) {
@@ -42,12 +42,12 @@ test "debugger: enable and disable breakpoints" {
 
       let bp1 = add_breakpoint_main(debugger, 0)
 
-      // 無効化
+      // Disable
       assert_true!(disable_breakpoint(debugger, bp1))
       let bps = list_breakpoints(debugger)
       assert_true!(not(bps[0].enabled))
 
-      // 有効化
+      // enable
       assert_true!(enable_breakpoint(debugger, bp1))
       let bps2 = list_breakpoints(debugger)
       assert_true!(bps2[0].enabled)
@@ -56,7 +56,7 @@ test "debugger: enable and disable breakpoints" {
   }
 }
 
-/// ブレークポイントクリアテスト
+/// Breakpoint clear test
 test "debugger: clear breakpoints" {
   let expr = parse_one("(+ 1 2)")
   match compile_to_module(expr) {
@@ -77,14 +77,14 @@ test "debugger: clear breakpoints" {
   }
 }
 
-/// ステップ実行テスト
+/// step execution test
 test "debugger: step execution" {
   let expr = parse_one("(+ 1 2)")
   match compile_to_module(expr) {
     Ok(compiled) => {
       let vm = new_vm_state(compiled)
 
-      // トップレベルフレームを追加
+      // Add top level frame
       let initial_frame : VMCallFrame = {
         return_chunk: -1,
         return_ip: 0,
@@ -95,28 +95,28 @@ test "debugger: step execution" {
 
       let debugger = new_debugger(vm)
 
-      // 1命令ステップ
+      // 1 instruction step
       match debug_step(debugger) {
         Ok(DebugEvent::StepComplete) => ()
         Ok(_) => fail!("Expected StepComplete")
         Err(e) => fail!("Step failed: " + e.to_string())
       }
 
-      // IP が進んでいることを確認
+      // Verify IP is advanced
       assert_true!(vm.ip > 0)
     }
     Err(e) => fail!("Compile failed: " + e.to_string())
   }
 }
 
-/// 最後まで実行テスト
+/// Run test until the end
 test "debugger: run to completion" {
   let expr = parse_one("(+ 1 2)")
   match compile_to_module(expr) {
     Ok(compiled) => {
       let vm = new_vm_state(compiled)
 
-      // トップレベルフレームを追加
+      // Add top level frame
       let initial_frame : VMCallFrame = {
         return_chunk: -1,
         return_ip: 0,
@@ -141,7 +141,7 @@ test "debugger: run to completion" {
   }
 }
 
-/// スタック表示テスト
+/// Stack display test
 test "debugger: stack display" {
   let expr = parse_one("42")
   match compile_to_module(expr) {
@@ -149,11 +149,11 @@ test "debugger: stack display" {
       let vm = new_vm_state(compiled)
       let debugger = new_debugger(vm)
 
-      // 空のスタック
+      // empty stack
       let empty_str = debug_stack_to_string(debugger)
       assert_true!(empty_str.contains("empty"))
 
-      // 値をプッシュ
+      // push value
       vm.stack.push(Value::Number(Number::Int(42)))
       vm.stack.push(Value::Bool(true))
 
@@ -165,7 +165,7 @@ test "debugger: stack display" {
   }
 }
 
-/// コールスタック表示テスト
+/// Call stack display test
 test "debugger: call stack display" {
   let expr = parse_one("42")
   match compile_to_module(expr) {
@@ -173,11 +173,11 @@ test "debugger: call stack display" {
       let vm = new_vm_state(compiled)
       let debugger = new_debugger(vm)
 
-      // 空のコールスタック
+      // empty call stack
       let empty_str = debug_call_stack_to_string(debugger)
       assert_true!(empty_str.contains("empty"))
 
-      // フレームを追加
+      // add frame
       let frame : VMCallFrame = {
         return_chunk: -1,
         return_ip: 5,
@@ -193,7 +193,7 @@ test "debugger: call stack display" {
   }
 }
 
-/// 位置情報テスト
+/// Location test
 test "debugger: location info" {
   let expr = parse_one("(+ 1 2)")
   match compile_to_module(expr) {
@@ -205,7 +205,7 @@ test "debugger: location info" {
       assert_true!(location.contains("main"))
       assert_true!(location.contains("0"))
 
-      // 命令を取得
+      // get instructions
       match debug_get_current_instruction(debugger) {
         Some(instr) => assert_true!(instr.length() > 0)
         None => fail!("Expected instruction")
@@ -215,7 +215,7 @@ test "debugger: location info" {
   }
 }
 
-/// 逆アセンブル表示テスト
+/// Disassembly display test
 test "debugger: disassemble" {
   let expr = parse_one("(+ 1 2)")
   match compile_to_module(expr) {
@@ -225,13 +225,13 @@ test "debugger: disassemble" {
 
       let disasm = debug_disassemble(debugger, 2)
       assert_true!(disasm.contains("Disassembly"))
-      assert_true!(disasm.contains("=>"))  // 現在位置マーカー
+      assert_true!(disasm.contains("=>"))  // Current position marker
     }
     Err(e) => fail!("Compile failed: " + e.to_string())
   }
 }
 
-/// デバッグサマリーテスト
+/// Debug summary test
 test "debugger: summary" {
   let expr = parse_one("(+ 1 2)")
   match compile_to_module(expr) {
@@ -249,14 +249,14 @@ test "debugger: summary" {
   }
 }
 
-/// 実行履歴テスト
+/// Execution history test
 test "debugger: execution history" {
   let expr = parse_one("(+ 1 2)")
   match compile_to_module(expr) {
     Ok(compiled) => {
       let vm = new_vm_state(compiled)
 
-      // トップレベルフレームを追加
+      // Add top level frame
       let initial_frame : VMCallFrame = {
         return_chunk: -1,
         return_ip: 0,
@@ -267,7 +267,7 @@ test "debugger: execution history" {
 
       let debugger = new_debugger(vm)
 
-      // 数ステップ実行（失敗しても続行）
+      // Execute several steps (continue even if it fails)
       let mut step_count = 0
       while step_count < 10 {
         match debug_step(debugger) {
@@ -276,7 +276,7 @@ test "debugger: execution history" {
         }
       }
 
-      // 履歴が記録されていることを確認（少なくとも1つ以上）
+      // Make sure history is recorded (at least one)
       assert_true!(debugger.execution_history.length() >= 1)
 
       let history_str = debug_history_to_string(debugger, 5)
@@ -286,7 +286,7 @@ test "debugger: execution history" {
   }
 }
 
-/// グローバル変数表示テスト
+/// Global variable display test
 test "debugger: globals display" {
   let expr = parse_one("42")
   match compile_to_module(expr) {
@@ -294,7 +294,7 @@ test "debugger: globals display" {
       let vm = new_vm_state(compiled)
       let debugger = new_debugger(vm)
 
-      // ユーザー定義のグローバルを追加
+      // Add user-defined global
       vm.globals.set("my-var", Value::Number(Number::Int(123)))
 
       let globals_str = debug_globals_to_string(debugger)
@@ -305,7 +305,7 @@ test "debugger: globals display" {
   }
 }
 
-/// ローカル変数表示テスト
+/// Local variable display test
 test "debugger: locals display" {
   let expr = parse_one("42")
   match compile_to_module(expr) {
@@ -313,11 +313,11 @@ test "debugger: locals display" {
       let vm = new_vm_state(compiled)
       let debugger = new_debugger(vm)
 
-      // フレームなしの場合
+      // Without frame
       let no_frame_str = debug_locals_to_string(debugger)
       assert_true!(no_frame_str.contains("no active frame"))
 
-      // フレームを追加してローカル変数をセット
+      // Add a frame and set local variables
       vm.stack.push(Value::Number(Number::Int(10)))
       vm.stack.push(Value::Number(Number::Int(20)))
 
@@ -337,7 +337,7 @@ test "debugger: locals display" {
   }
 }
 
-/// デバッガ無効時のテスト
+/// Testing with debugger disabled
 test "debugger: disabled" {
   let expr = parse_one("42")
   match compile_to_module(expr) {
@@ -356,14 +356,14 @@ test "debugger: disabled" {
   }
 }
 
-/// 複雑な式でのステップ実行テスト
+/// Stepping tests on complex expressions
 test "debugger: step through lambda" {
   let expr = parse_one("((lambda (x) (+ x 1)) 5)")
   match compile_to_module(expr) {
     Ok(compiled) => {
       let vm = new_vm_state(compiled)
 
-      // トップレベルフレームを追加
+      // Add top level frame
       let initial_frame : VMCallFrame = {
         return_chunk: -1,
         return_ip: 0,
@@ -374,7 +374,7 @@ test "debugger: step through lambda" {
 
       let debugger = new_debugger(vm)
 
-      // 最後まで実行
+      // run to the end
       match debug_run(debugger) {
         Ok(result) => {
           match result {

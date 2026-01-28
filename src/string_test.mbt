@@ -1,6 +1,6 @@
-/// 文字列操作関数のテスト
+/// Testing string manipulation functions
 
-/// string? の基本的な動作
+/// Basic operation of string?
 test "string? basic" {
   let env = initial_env()
   let expr = parse_one("(string? \"hello\")")
@@ -10,7 +10,7 @@ test "string? basic" {
   }
 }
 
-/// string? で非文字列を判定
+/// Determine non-string with string?
 test "string? with non-string" {
   let env = initial_env()
   let expr = parse_one("(string? 42)")
@@ -20,7 +20,7 @@ test "string? with non-string" {
   }
 }
 
-/// char? の基本的な動作
+/// Basic operation of char?
 test "char? basic" {
   let env = initial_env()
   let expr = parse_one("(char? #\\a)")
@@ -30,7 +30,7 @@ test "char? basic" {
   }
 }
 
-/// char? で非文字を判定
+/// Determine non-characters with char?
 test "char? with non-char" {
   let env = initial_env()
   let expr = parse_one("(char? \"a\")")
@@ -40,7 +40,7 @@ test "char? with non-char" {
   }
 }
 
-/// string-length の基本的な動作
+/// Basic behavior of string-length
 test "string-length basic" {
   let env = initial_env()
   let expr = parse_one("(string-length \"hello\")")
@@ -50,7 +50,7 @@ test "string-length basic" {
   }
 }
 
-/// string-length で空文字列
+/// Empty string with string-length
 test "string-length empty" {
   let env = initial_env()
   let expr = parse_one("(string-length \"\")")
@@ -60,7 +60,7 @@ test "string-length empty" {
   }
 }
 
-/// string-ref の基本的な動作
+/// Basic behavior of string-ref
 test "string-ref basic" {
   let env = initial_env()
   let expr = parse_one("(string-ref \"hello\" 0)")
@@ -70,7 +70,7 @@ test "string-ref basic" {
   }
 }
 
-/// string-ref で中間インデックス
+/// Intermediate index with string-ref
 test "string-ref middle" {
   let env = initial_env()
   let expr = parse_one("(string-ref \"hello\" 2)")
@@ -80,7 +80,7 @@ test "string-ref middle" {
   }
 }
 
-/// string-append の基本的な動作
+/// Basic operation of string-append
 test "string-append basic" {
   let env = initial_env()
   let expr = parse_one("(string-append \"hello\" \" \" \"world\")")
@@ -90,7 +90,7 @@ test "string-append basic" {
   }
 }
 
-/// string-append で空文字列
+/// Empty string with string-append
 test "string-append empty" {
   let env = initial_env()
   let expr = parse_one("(string-append \"\" \"hello\" \"\")")
@@ -100,7 +100,7 @@ test "string-append empty" {
   }
 }
 
-/// string-append で引数なし
+/// string-append without arguments
 test "string-append no args" {
   let env = initial_env()
   let expr = parse_one("(string-append)")
@@ -110,7 +110,7 @@ test "string-append no args" {
   }
 }
 
-/// string=? の基本的な動作
+/// Basic behavior of string=?
 test "string=? basic true" {
   let env = initial_env()
   let expr = parse_one("(string=? \"hello\" \"hello\")")
@@ -120,7 +120,7 @@ test "string=? basic true" {
   }
 }
 
-/// string=? で異なる文字列
+/// Different strings with string=?
 test "string=? basic false" {
   let env = initial_env()
   let expr = parse_one("(string=? \"hello\" \"world\")")
@@ -130,7 +130,7 @@ test "string=? basic false" {
   }
 }
 
-/// make-string の基本的な動作
+/// Basic operation of make-string
 test "make-string basic" {
   let env = initial_env()
   let expr = parse_one("(make-string 5 #\\a)")
@@ -140,7 +140,7 @@ test "make-string basic" {
   }
 }
 
-/// make-string でデフォルト文字（スペース）
+/// Default character (space) in make-string
 test "make-string default char" {
   let env = initial_env()
   let expr = parse_one("(make-string 3)")
@@ -150,7 +150,7 @@ test "make-string default char" {
   }
 }
 
-/// make-string で空文字列
+/// empty string with make-string
 test "make-string zero length" {
   let env = initial_env()
   let expr = parse_one("(make-string 0)")
@@ -160,7 +160,7 @@ test "make-string zero length" {
   }
 }
 
-/// substring の基本的な動作
+/// Basic behavior of substring
 test "substring basic" {
   let env = initial_env()
   let expr = parse_one("(substring \"hello world\" 0 5)")
@@ -170,7 +170,7 @@ test "substring basic" {
   }
 }
 
-/// substring で中間部分
+/// middle part with substring
 test "substring middle" {
   let env = initial_env()
   let expr = parse_one("(substring \"hello world\" 6 11)")
@@ -180,7 +180,7 @@ test "substring middle" {
   }
 }
 
-/// substring で空文字列
+/// empty string in substring
 test "substring empty" {
   let env = initial_env()
   let expr = parse_one("(substring \"hello\" 2 2)")
@@ -190,7 +190,7 @@ test "substring empty" {
   }
 }
 
-/// 文字リテラルの基本的なパース
+/// Basic parsing of character literals
 test "char literal basic" {
   let env = initial_env()
   let expr = parse_one("#\\a")
@@ -200,7 +200,7 @@ test "char literal basic" {
   }
 }
 
-/// 文字リテラル - space
+/// Character literal - space
 test "char literal space" {
   let env = initial_env()
   let expr = parse_one("#\\space")
@@ -210,7 +210,7 @@ test "char literal space" {
   }
 }
 
-/// 文字リテラル - newline
+/// Character literals - newline
 test "char literal newline" {
   let env = initial_env()
   let expr = parse_one("#\\newline")
@@ -220,7 +220,7 @@ test "char literal newline" {
   }
 }
 
-/// 文字列リテラルの基本的なパース
+/// Basic parsing of string literals
 test "string literal basic" {
   let env = initial_env()
   let expr = parse_one("\"hello\"")
@@ -230,7 +230,7 @@ test "string literal basic" {
   }
 }
 
-/// 文字列リテラル - エスケープシーケンス
+/// String literals - escape sequences
 test "string literal with escape" {
   let env = initial_env()
   let expr = parse_one("\"hello\\nworld\"")
@@ -240,7 +240,7 @@ test "string literal with escape" {
   }
 }
 
-/// 文字列リテラル - クォートのエスケープ
+/// String literals - escaping quotes
 test "string literal with escaped quote" {
   let env = initial_env()
   let expr = parse_one("\"say \\\"hello\\\"\"")

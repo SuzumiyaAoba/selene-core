@@ -1,6 +1,6 @@
-/// let/let*/letrec 特殊形式のテスト
+/// Testing the let/let*/letrec special form
 
-/// let の基本的な動作を確認
+/// Check the basic operation of let
 test "let basic" {
   let env = initial_env()
   let expr = parse_one("(let ((x 1) (y 2)) (+ x y))")
@@ -10,7 +10,7 @@ test "let basic" {
   }
 }
 
-/// let で複数の式を評価できることを確認
+/// Verify that let can evaluate multiple expressions
 test "let multiple expressions in body" {
   let env = initial_env()
   let expr = parse_one("(let ((x 10)) (+ x 1) (* x 2))")
@@ -20,12 +20,12 @@ test "let multiple expressions in body" {
   }
 }
 
-/// let のバインディングが相互参照できないことを確認
+/// Ensure that let bindings cannot reference each other
 test "let bindings are independent" {
   let env = initial_env()
-  // (let ((x 1) (y x)) y) はエラーになるべき（x は y の初期化時には未定義）
-  // ただし、現在の実装では順番に評価するため、このテストは通らない可能性がある
-  // 正しくは、すべての値を先に評価してから環境を拡張する
+  // (let ((x 1) (y x)) y) should result in an error (x is undefined when y is initialized)
+  // However, the current implementation evaluates in order, so this test may not pass.
+  // Correctly, evaluate all values ​​first and then expand the environment
   let expr = parse_one("(let ((x 1) (y 2)) (+ x y))")
   match eval(expr, env) {
     Ok(Value::Number(Number::Int(n))) => assert_eq(n, 3)
@@ -33,7 +33,7 @@ test "let bindings are independent" {
   }
 }
 
-/// let* の基本的な動作を確認
+/// Check the basic operation of let*
 test "let* basic" {
   let env = initial_env()
   let expr = parse_one("(let* ((x 1) (y 2)) (+ x y))")
@@ -43,7 +43,7 @@ test "let* basic" {
   }
 }
 
-/// let* で前の変数を参照できることを確認
+/// Make sure you can reference the previous variable with let*
 test "let* sequential bindings" {
   let env = initial_env()
   let expr = parse_one("(let* ((x 5) (y (* x 2))) y)")
@@ -53,7 +53,7 @@ test "let* sequential bindings" {
   }
 }
 
-/// let* で順次評価されることを確認
+/// Check that let* is evaluated sequentially
 test "let* sequential evaluation" {
   let env = initial_env()
   let expr = parse_one("(let* ((x 1) (x (+ x 1)) (x (+ x 1))) x)")
@@ -63,7 +63,7 @@ test "let* sequential evaluation" {
   }
 }
 
-/// letrec の基本的な動作を確認
+/// Check the basic operation of letrec
 test "letrec basic" {
   let env = initial_env()
   let expr = parse_one("(letrec ((x 1) (y 2)) (+ x y))")
@@ -73,12 +73,12 @@ test "letrec basic" {
   }
 }
 
-// 注: 現在の letrec 実装は、不変環境モデルの制約により、
-// 完全な再帰的バインディングをサポートしていません。
-// 再帰関数は define を使用して定義してください。
-// 将来の改善として、可変環境または別の実装方法を検討します。
+// Note: Due to the constraints of the immutable environment model, the current letrec implementation
+// Does not support full recursive binding.
+// Define recursive functions using define.
+// For future improvements, consider a variable environment or another implementation method.
 
-/// letrec で非再帰的なクロージャを作成
+/// Create non-recursive closures with letrec
 test "letrec with non-recursive closure" {
   let env = initial_env()
   let expr = parse_one("(letrec ((f (lambda (x) (+ x 1)))) (f 5))")
@@ -88,7 +88,7 @@ test "letrec with non-recursive closure" {
   }
 }
 
-/// 空のバインディングを持つ let
+/// let with empty binding
 test "let empty bindings" {
   let env = initial_env()
   let expr = parse_one("(let () 42)")
@@ -98,7 +98,7 @@ test "let empty bindings" {
   }
 }
 
-/// ネストされた let
+/// nested let
 test "let nested" {
   let env = initial_env()
   let expr = parse_one("(let ((x 1)) (let ((y 2)) (+ x y)))")
@@ -108,7 +108,7 @@ test "let nested" {
   }
 }
 
-/// let でクロージャを作成
+/// Create a closure with let
 test "let with closure" {
   let env = initial_env()
   let expr = parse_one("(let ((x 10)) ((lambda (y) (+ x y)) 5))")
@@ -118,7 +118,7 @@ test "let with closure" {
   }
 }
 
-/// let* でクロージャの環境をテスト
+/// Test the closure environment with let*
 test "let* with closure" {
   let env = initial_env()
   let expr = parse_one("(let* ((x 5) (f (lambda (y) (+ x y)))) (f 3))")
@@ -128,7 +128,7 @@ test "let* with closure" {
   }
 }
 
-/// letrec で複数の非再帰的なバインディング
+/// Multiple non-recursive bindings with letrec
 test "letrec multiple bindings" {
   let env = initial_env()
   let expr = parse_one("(letrec ((x 1) (y 2) (z 3)) (+ x (+ y z)))")

@@ -1,6 +1,6 @@
-/// call/cc (call-with-current-continuation) のテスト。
+/// tests for call/cc (call-with-current-continuation).
 
-/// 継続を呼び出さない場合は通常の戻り値を返す。
+/// Returns the normal return value if no continuation is invoked.
 test "call/cc without invoking continuation" {
   let env = initial_env()
   let expr = parse_one("(call/cc (lambda (k) 42))")
@@ -11,7 +11,7 @@ test "call/cc without invoking continuation" {
   }
 }
 
-/// 継続を呼び出すと、その値が call/cc の戻り値になる。
+/// When you call continue, its value becomes the return value of call/cc.
 test "call/cc with continuation invocation" {
   let env = initial_env()
   let expr = parse_one("(call/cc (lambda (k) (begin (k 100) 42)))")
@@ -22,7 +22,7 @@ test "call/cc with continuation invocation" {
   }
 }
 
-/// 継続を呼び出すと、後続の式は評価されない（早期リターン）。
+/// When a continuation is invoked, subsequent expressions are not evaluated (early return).
 test "call/cc early return" {
   let env = initial_env()
   let expr = parse_one("(+ 1 (call/cc (lambda (k) (begin (k 10) (+ 100 200)))))")
@@ -33,7 +33,7 @@ test "call/cc early return" {
   }
 }
 
-/// call-with-current-continuation は call/cc の別名。
+/// call-with-current-continuation is an alias for call/cc.
 test "call-with-current-continuation alias" {
   let env = initial_env()
   let expr = parse_one("(call-with-current-continuation (lambda (k) (k 50)))")
@@ -44,7 +44,7 @@ test "call-with-current-continuation alias" {
   }
 }
 
-/// call/cc に手続き以外を渡すとエラー。
+/// error passing non-procedure to call/cc.
 test "call/cc with non-procedure" {
   let env = initial_env()
   let expr = parse_one("(call/cc 42)")
@@ -55,7 +55,7 @@ test "call/cc with non-procedure" {
   }
 }
 
-/// 継続は1引数のみ受け付ける。
+/// Continuation accepts only one argument.
 test "continuation requires exactly one argument" {
   let env = initial_env()
   let expr = parse_one("(call/cc (lambda (k) (k 1 2)))")
@@ -66,14 +66,14 @@ test "continuation requires exactly one argument" {
   }
 }
 
-/// 継続を変数に保存して後から呼び出す。
+/// Save the continuation to a variable and call it later.
 test "call/cc save and invoke later" {
   let env = initial_env()
   // (let ((saved #f))
   //   (+ 1 (call/cc (lambda (k) (set! saved k) 10)))
   //   (if saved (saved 20) 0))
-  // この場合、エスケープ継続なので saved を後から呼び出すと
-  // 新しい継続呼び出しエラーが伝播する
+  // In this case, since the escape is continued, if you call saved later,
+  // Propagation of new continuous call errors
   let expr = parse_one("(call/cc (lambda (k) (+ 1 (k 5))))")
   let result = eval(expr, env)
   match result {
@@ -82,7 +82,7 @@ test "call/cc save and invoke later" {
   }
 }
 
-/// ネストした call/cc。
+/// Nested call/cc.
 test "nested call/cc" {
   let env = initial_env()
   let expr = parse_one("(call/cc (lambda (k1) (call/cc (lambda (k2) (k1 100)))))")
@@ -93,7 +93,7 @@ test "nested call/cc" {
   }
 }
 
-/// 内側の継続を呼び出す。
+/// Calls for an inner continuation.
 test "nested call/cc inner continuation" {
   let env = initial_env()
   let expr = parse_one("(call/cc (lambda (k1) (+ 1 (call/cc (lambda (k2) (k2 10))))))")
@@ -104,7 +104,7 @@ test "nested call/cc inner continuation" {
   }
 }
 
-/// 継続を手続きとして扱う。
+/// Treat continuation as a procedure.
 test "continuation is a procedure" {
   let env = initial_env()
   let expr = parse_one("(call/cc (lambda (k) (procedure? k)))")

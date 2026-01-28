@@ -1,6 +1,6 @@
-/// 論理演算のテスト。
+/// Test of logical operations.
 
-/// not関数の基本テスト。
+/// Basic test for not function.
 test "builtin not" {
   let env = initial_env()
   let expr1 = parse_one("(not #t)")
@@ -29,7 +29,7 @@ test "builtin not" {
   }
 }
 
-/// and特殊形式の基本テスト。
+/// and special form basic tests.
 test "and basic" {
   let env = initial_env()
   let expr1 = parse_one("(and)")
@@ -70,7 +70,7 @@ test "and basic" {
   }
 }
 
-/// andの戻り値テスト（最後の値を返す）。
+/// Return value test for and (returns the last value).
 test "and returns last value" {
   let env = initial_env()
   let expr1 = parse_one("(and 1 2 3)")
@@ -87,16 +87,16 @@ test "and returns last value" {
   }
 }
 
-/// andの短絡評価テスト。
+/// Short circuit evaluation test of and.
 test "and short circuit" {
   let env = initial_env()
-  // #fの後の式は評価されないはず（エラーにならない）
+  // The expression after #f should not be evaluated (no error will occur)
   let expr = SExpr::Pair(
     SExpr::Symbol("and"),
     SExpr::Pair(
       SExpr::Bool(false),
       SExpr::Pair(
-        // この部分は評価されないので、未束縛変数でもエラーにならない
+        // This part is not evaluated, so unbound variables will not cause an error.
         SExpr::Symbol("undefined-var"),
         SExpr::Nil
       )
@@ -109,7 +109,7 @@ test "and short circuit" {
   }
 }
 
-/// or特殊形式の基本テスト。
+/// or special format basic tests.
 test "or basic" {
   let env = initial_env()
   let expr1 = parse_one("(or)")
@@ -150,7 +150,7 @@ test "or basic" {
   }
 }
 
-/// orの戻り値テスト（最初の真値を返す）。
+/// Return value test for or (returns the first true value).
 test "or returns first true value" {
   let env = initial_env()
   let expr1 = parse_one("(or #f 2 3)")
@@ -167,16 +167,16 @@ test "or returns first true value" {
   }
 }
 
-/// orの短絡評価テスト。
+/// Short circuit evaluation test of or.
 test "or short circuit" {
   let env = initial_env()
-  // 真値の後の式は評価されないはず（エラーにならない）
+  // The expression after the true value should not be evaluated (no error will occur)
   let expr = SExpr::Pair(
     SExpr::Symbol("or"),
     SExpr::Pair(
       SExpr::Number(1),
       SExpr::Pair(
-        // この部分は評価されないので、未束縛変数でもエラーにならない
+        // This part is not evaluated, so unbound variables will not cause an error.
         SExpr::Symbol("undefined-var"),
         SExpr::Nil
       )
@@ -189,7 +189,7 @@ test "or short circuit" {
   }
 }
 
-/// andとorの組み合わせテスト。
+/// Combination test for and and or.
 test "and or combination" {
   let env = initial_env()
   let expr1 = parse_one("(and (or #f #t) (or #t #f))")
@@ -218,7 +218,7 @@ test "and or combination" {
   }
 }
 
-/// 複雑な論理式のテスト。
+/// Testing complex logical expressions.
 test "complex logic expressions" {
   let env = initial_env()
   let expr1 = parse_one("(and (> 5 3) (< 2 4) (= 1 1))")

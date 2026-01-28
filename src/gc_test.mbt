@@ -1,6 +1,6 @@
-/// GC のテスト
+/// Testing the GC
 
-/// GC 統計の初期状態テスト
+/// Initial state test for GC statistics
 test "gc: initial stats" {
   reset_gc_stats()
   let stats = get_gc_stats()
@@ -13,7 +13,7 @@ test "gc: initial stats" {
   assert_eq!(stats.gc_runs, 0)
 }
 
-/// トラッキング関数のテスト
+/// Testing the tracking function
 test "gc: tracking functions" {
   reset_gc_stats()
 
@@ -35,7 +35,7 @@ test "gc: tracking functions" {
   assert_eq!(stats.boxes_allocated, 2)
 }
 
-/// GC 設定のテスト
+/// Testing your GC settings
 test "gc: config" {
   let config = get_gc_config()
   assert_true!(config.enabled)
@@ -46,11 +46,11 @@ test "gc: config" {
   let config2 = get_gc_config()
   assert_true!(not(config2.enabled))
 
-  // 元に戻す
+  // undo
   set_gc_config(enabled=true)
 }
 
-/// GC 統計文字列のテスト
+/// Testing GC statistics strings
 test "gc: stats to string" {
   reset_gc_stats()
   gc_track_closure()
@@ -62,7 +62,7 @@ test "gc: stats to string" {
   assert_true!(str.contains("Pairs allocated: 1"))
 }
 
-/// 簡単な式でのGCトラッキングテスト
+/// GC tracking test with simple formula
 test "gc: simple expression tracking" {
   reset_gc_stats()
   gc_clear_all_continuations()
@@ -73,9 +73,9 @@ test "gc: simple expression tracking" {
       let vm = new_vm_state(compiled)
       match vm_run(vm) {
         Ok(_) => {
-          // GC統計が更新されていることを確認
+          // Verify GC statistics are updated
           let stats = get_gc_stats()
-          // 基本的な式ではクロージャやペアは作成されない可能性がある
+          // Basic expressions may not create closures or pairs
           assert_true!(stats.gc_runs >= 0)
         }
         Err(e) => fail!("VM run failed: " + e.to_string())
@@ -85,27 +85,27 @@ test "gc: simple expression tracking" {
   }
 }
 
-/// クロージャ作成でのGCトラッキングテスト
+/// GC tracking test on closure creation
 test "gc: closure tracking" {
   reset_gc_stats()
   gc_clear_all_continuations()
 
-  // define で関数を定義して呼び出すことで、確実にクロージャを作成
-  // lambda をグローバルに保存する形式
+  // Define and call a function with define to ensure closure creation
+  // Format for storing lambda globally
   let expr = parse_one("(lambda (x) (+ x 1))")
   match compile_to_module(expr) {
     Ok(compiled) => {
       let vm = new_vm_state(compiled)
       match vm_run(vm) {
         Ok(result) => {
-          // lambda 式自体がクロージャを返す
+          // The lambda expression itself returns a closure
           match result {
             Value::Procedure(_) => ()  // OK
-            _ => ()  // クロージャが作成されなくても、トラッキング自体は動作
+            _ => ()  // Tracking works even if a closure is not created
           }
-          // GC統計を確認（クロージャが作成される保証はないがテスト自体は通る）
+          // Check the GC statistics (there is no guarantee that the closure will be created, but the test itself will pass)
           let stats = get_gc_stats()
-          // クロージャが作成されていれば良いが、最適化で作成されない場合もある
+          // It is fine if a closure is created, but it may not be created due to optimization.
           assert_true!(stats.closures_allocated >= 0)
         }
         Err(e) => fail!("VM run failed: " + e.to_string())
@@ -115,7 +115,7 @@ test "gc: closure tracking" {
   }
 }
 
-/// リスト作成でのGCトラッキングテスト
+/// GC tracking test in list creation
 test "gc: list tracking" {
   reset_gc_stats()
   gc_clear_all_continuations()
@@ -126,7 +126,7 @@ test "gc: list tracking" {
       let vm = new_vm_state(compiled)
       match vm_run(vm) {
         Ok(_) => {
-          // ペアが作成されたことを確認
+          // Verify that the pair has been created
           let stats = get_gc_stats()
           assert_true!(stats.pairs_allocated >= 3)
         }
@@ -137,7 +137,7 @@ test "gc: list tracking" {
   }
 }
 
-/// GC無効時のテスト
+/// Test when GC is disabled
 test "gc: disabled gc" {
   reset_gc_stats()
   gc_clear_all_continuations()
@@ -151,7 +151,7 @@ test "gc: disabled gc" {
       match vm_run(vm) {
         Ok(_) => {
           let stats = get_gc_stats()
-          // GCが無効なのでGC実行回数は0
+          // Since GC is disabled, the number of GC executions is 0.
           assert_eq!(stats.gc_runs, 0)
         }
         Err(e) => fail!("VM run failed: " + e.to_string())
@@ -160,11 +160,11 @@ test "gc: disabled gc" {
     Err(e) => fail!("Compile failed: " + e.to_string())
   }
 
-  // 元に戻す
+  // undo
   set_gc_config(enabled=true)
 }
 
-/// 継続クリアのテスト
+/// Continuous clear test
 test "gc: clear continuations" {
   reset_gc_stats()
 
@@ -177,13 +177,13 @@ test "gc: clear continuations" {
 
   gc_clear_all_continuations()
 
-  // continuation_marks がクリアされていることを確認
-  // 統計はリセットしていないので変わらない
+  // Make sure continuation_marks are cleared
+  // Statistics do not change because they are not reset.
   let stats2 = get_gc_stats()
   assert_eq!(stats2.continuations_allocated, 3)
 }
 
-/// Mark フェーズのテスト
+/// Mark phase testing
 test "gc: mark continuation" {
   gc_clear_all_continuations()
   reset_gc_stats()
@@ -192,20 +192,20 @@ test "gc: mark continuation" {
   gc_register_continuation(101)
   gc_register_continuation(102)
 
-  // 継続 100 と 102 をマーク
+  // Continue Marking 100 and 102
   gc_mark_continuation(100)
   gc_mark_continuation(102)
 
-  // スイープ
+  // sweep
   let freed = gc_sweep_continuations()
 
-  // 101 だけが解放されるはず
+  // Only 101 should be released
   assert_eq!(freed, 1)
 
   gc_clear_all_continuations()
 }
 
-/// VM クリアのテスト
+/// Testing VM clearing
 test "gc: clear vm" {
   reset_gc_stats()
   gc_clear_all_continuations()
@@ -230,12 +230,12 @@ test "gc: clear vm" {
   }
 }
 
-/// 大量のペア作成でのGCトリガーテスト
+/// GC trigger test with large number of pair creations
 test "gc: many pairs trigger" {
   reset_gc_stats()
   gc_clear_all_continuations()
 
-  // 低い閾値を設定してGCをトリガーしやすくする
+  // Set a lower threshold to make it easier to trigger GC
   set_gc_config(allocation_threshold=10, continuation_threshold=5)
 
   let expr = parse_one("(list 1 2 3 4 5 6 7 8 9 10)")
@@ -245,7 +245,7 @@ test "gc: many pairs trigger" {
       match vm_run(vm) {
         Ok(_) => {
           let stats = get_gc_stats()
-          // ペアが多く作成されているはず
+          // Many pairs should have been created.
           assert_true!(stats.pairs_allocated >= 10)
         }
         Err(e) => fail!("VM run failed: " + e.to_string())
@@ -254,6 +254,6 @@ test "gc: many pairs trigger" {
     Err(e) => fail!("Compile failed: " + e.to_string())
   }
 
-  // デフォルトに戻す
+  // Restore default
   set_gc_config(allocation_threshold=10000, continuation_threshold=100)
 }

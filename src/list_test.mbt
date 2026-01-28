@@ -1,6 +1,6 @@
-/// リスト操作関数のテスト。
+/// Testing list manipulation functions.
 
-/// list関数のテスト。
+/// Testing the list function.
 test "builtin list" {
   let env = initial_env()
   let expr1 = parse_one("(list)")
@@ -20,7 +20,7 @@ test "builtin list" {
   }
 }
 
-/// length関数のテスト。
+/// Testing the length function.
 test "builtin length" {
   let env = initial_env()
   let expr1 = parse_one("(length ())")
@@ -45,7 +45,7 @@ test "builtin length" {
   }
 }
 
-/// append関数のテスト。
+/// Testing the append function.
 test "builtin append" {
   let env = initial_env()
   let expr1 = parse_one("(append)")
@@ -70,7 +70,7 @@ test "builtin append" {
   }
 }
 
-/// reverse関数のテスト。
+/// Testing the reverse function.
 test "builtin reverse" {
   let env = initial_env()
   let expr1 = parse_one("(reverse ())")
@@ -90,7 +90,7 @@ test "builtin reverse" {
   }
 }
 
-/// list-ref関数のテスト。
+/// Testing the list-ref function.
 test "builtin list-ref" {
   let env = initial_env()
   let expr1 = parse_one("(list-ref (list 1 2 3) 0)")
@@ -110,7 +110,7 @@ test "builtin list-ref" {
   }
 }
 
-/// list-tail関数のテスト。
+/// Testing the list-tail function.
 test "builtin list-tail" {
   let env = initial_env()
   let expr1 = parse_one("(list-tail (list 1 2 3) 0)")
@@ -135,7 +135,7 @@ test "builtin list-tail" {
   }
 }
 
-/// appendとlengthの組み合わせテスト。
+/// Combination test of append and length.
 test "append and length" {
   let env = initial_env()
   let expr = parse_one("(length (append (list 1 2) (list 3 4) (list 5)))")
@@ -145,7 +145,7 @@ test "append and length" {
   }
 }
 
-/// reverseとlist-refの組み合わせテスト。
+/// Combination test of reverse and list-ref.
 test "reverse and list-ref" {
   let env = initial_env()
   let expr = parse_one("(list-ref (reverse (list 1 2 3 4 5)) 0)")
@@ -155,7 +155,7 @@ test "reverse and list-ref" {
   }
 }
 
-/// cons関数のテスト。
+/// Testing cons functions.
 test "builtin cons" {
   let env = initial_env()
   let expr1 = parse_one("(cons 1 2)")
@@ -175,7 +175,7 @@ test "builtin cons" {
   }
 }
 
-/// car関数のテスト。
+/// Testing the car function.
 test "builtin car" {
   let env = initial_env()
   let expr1 = parse_one("(car (cons 1 2))")
@@ -190,7 +190,7 @@ test "builtin car" {
   }
 }
 
-/// cdr関数のテスト。
+/// Testing the cdr function.
 test "builtin cdr" {
   let env = initial_env()
   let expr1 = parse_one("(cdr (cons 1 2))")
@@ -205,7 +205,7 @@ test "builtin cdr" {
   }
 }
 
-/// pair?関数のテスト。
+/// Testing the pair? function.
 test "builtin pair?" {
   let env = initial_env()
   let expr1 = parse_one("(pair? (cons 1 2))")
@@ -230,10 +230,10 @@ test "builtin pair?" {
   }
 }
 
-/// number?関数のテスト。
+/// Testing the number? function.
 test "builtin number?" {
   let env = initial_env()
-  // SExpr を直接作成してテスト
+  // Create and test SExpr directly
   let expr1 = SExpr::Pair(
     SExpr::Symbol("number?"),
     SExpr::Pair(SExpr::Number(42), SExpr::Nil)
@@ -252,10 +252,10 @@ test "builtin number?" {
   }
 }
 
-/// boolean?関数のテスト。
+/// boolean? function test.
 test "builtin boolean?" {
   let env = initial_env()
-  // SExpr を直接作成してテスト
+  // Create and test SExpr directly
   let expr1 = SExpr::Pair(
     SExpr::Symbol("boolean?"),
     SExpr::Pair(SExpr::Quote(SExpr::Symbol("true")), SExpr::Nil)
@@ -274,10 +274,10 @@ test "builtin boolean?" {
   }
 }
 
-/// symbol?関数のテスト。
+/// Testing the symbol? function.
 test "builtin symbol?" {
   let env = initial_env()
-  // SExpr を直接作成して eval を通してテスト
+  // Create SExpr directly and test through eval
   let expr1 = SExpr::Pair(
     SExpr::Symbol("symbol?"),
     SExpr::Pair(SExpr::Quote(SExpr::Symbol("test")), SExpr::Nil)
@@ -304,7 +304,7 @@ test "builtin symbol?" {
   }
 }
 
-/// null?関数のテスト。
+/// Testing the null? function.
 test "builtin null?" {
   let env = initial_env()
   let expr1 = parse_one("(null? ())")

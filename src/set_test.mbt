@@ -1,103 +1,103 @@
-/// set! 特殊形式のテスト。
+/// set! Special form of test.
 
-/// set_bang関数の基本テスト。
+/// Basic test of set_bang function.
 test "set_bang basic" {
   let env = empty_env()
   let env = define_var(env, "x", Value::Number(Number::Int(10)))
 
-  // xの値を20に更新
+  // Update the value of x to 20
   let (new_env, ok) = set_bang(env, "x", Value::Number(Number::Int(20)))
 
-  // 成功することを確認
+  // Confirm success
   if not(ok) {
     fail("set_bang should succeed")
   }
 
-  // 新しい値が設定されていることを確認
+  // Verify that the new value is set
   match lookup(new_env, "x") {
     Some(Value::Number(Number::Int(20))) => ()
     _ => fail("expected x to be 20")
   }
 }
 
-/// 未束縛変数に対するset_bangのテスト。
+/// Testing set_bang on unbound variables.
 test "set_bang unbound variable" {
   let env = empty_env()
 
-  // 未束縛変数に対するset_bang
+  // set_bang on unbound variables
   let (_new_env, ok) = set_bang(env, "y", Value::Number(Number::Int(30)))
 
-  // 失敗することを確認
+  // make sure it fails
   if ok {
     fail("set_bang should fail for unbound variable")
   }
 }
 
-/// ネストした環境でのset_bangのテスト。
+/// Testing set_bang in a nested environment.
 test "set_bang nested environment" {
   let env = empty_env()
   let env = define_var(env, "x", Value::Number(Number::Int(10)))
 
-  // 新しいフレームを追加
+  // add new frame
   let env2 = extend(env, [("y", Value::Number(Number::Int(20)))])
 
-  // 親環境の変数xを更新
+  // Update variable x in parent environment
   let (new_env, ok) = set_bang(env2, "x", Value::Number(Number::Int(100)))
 
-  // 成功することを確認
+  // Confirm success
   if not(ok) {
     fail("set_bang should succeed for parent frame variable")
   }
 
-  // xが更新されていることを確認
+  // Make sure x is updated
   match lookup(new_env, "x") {
     Some(Value::Number(Number::Int(100))) => ()
     _ => fail("expected x to be 100")
   }
 
-  // yは変わっていないことを確認
+  // Confirm that y has not changed
   match lookup(new_env, "y") {
     Some(Value::Number(Number::Int(20))) => ()
     _ => fail("expected y to be 20")
   }
 }
 
-/// set_bangで複数回更新するテスト。
+/// A test that updates multiple times with set_bang.
 test "set_bang multiple updates" {
   let env = empty_env()
   let env = define_var(env, "counter", Value::Number(Number::Int(0)))
 
-  // 1に更新
+  // updated to 1
   let (env, ok1) = set_bang(env, "counter", Value::Number(Number::Int(1)))
   if not(ok1) {
     fail("first update should succeed")
   }
 
-  // 2に更新
+  // updated to 2
   let (env, ok2) = set_bang(env, "counter", Value::Number(Number::Int(2)))
   if not(ok2) {
     fail("second update should succeed")
   }
 
-  // 3に更新
+  // updated to 3
   let (env, ok3) = set_bang(env, "counter", Value::Number(Number::Int(3)))
   if not(ok3) {
     fail("third update should succeed")
   }
 
-  // 最終的な値が3であることを確認
+  // Check that the final value is 3
   match lookup(env, "counter") {
     Some(Value::Number(Number::Int(3))) => ()
     _ => fail("expected counter to be 3")
   }
 }
 
-/// 異なる型の値への更新をテスト。
+/// Test updates to values ​​of different types.
 test "set_bang different types" {
   let env = empty_env()
   let env = define_var(env, "x", Value::Number(Number::Int(10)))
 
-  // 数値から真偽値に更新
+  // Update from numeric value to boolean value
   let (env, ok1) = set_bang(env, "x", Value::Bool(true))
   if not(ok1) {
     fail("update to boolean should succeed")
@@ -108,7 +108,7 @@ test "set_bang different types" {
     _ => fail("expected x to be #t")
   }
 
-  // 真偽値からシンボルに更新
+  // Update from boolean to symbol
   let (env, ok2) = set_bang(env, "x", Value::Symbol("test"))
   if not(ok2) {
     fail("update to symbol should succeed")
@@ -120,7 +120,7 @@ test "set_bang different types" {
   }
 }
 
-/// set!がREPLコンテキストでエラーを返すことを確認。
+/// Confirmed that set! returns an error in REPL context.
 test "set! in expression context" {
   let env = initial_env()
   let expr = SExpr::Pair(
