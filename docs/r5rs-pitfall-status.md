@@ -13,8 +13,6 @@ Guile の `r5rs_pitfall.test` を `src/tests/r5rs_pitfall_test.mbt` に移植し
   - rest parameter 構文が未実装
 - `enable_keyword_shadowing = false`
   - `quote` などの予約語シャドーイングが未対応
-- `enable_string_to_symbol = false`
-  - `string->symbol` が未実装
 - `enable_named_let = false`
   - named `let` が未実装
 

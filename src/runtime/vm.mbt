@@ -218,6 +218,8 @@ fn vm_exec_primop(
     PrimOpKind::SymbolP => vm_exec_symbol_p(args)
     PrimOpKind::StringP => vm_exec_string_p(args)
     PrimOpKind::ProcedureP => vm_exec_procedure_p(args)
+    PrimOpKind::SymbolToString => vm_exec_symbol_to_string(args)
+    PrimOpKind::StringToSymbol => vm_exec_string_to_symbol(args)
     _ => Err(VMError::RuntimeError("unimplemented primitive: " + kind.to_string()))
   }
 }
@@ -679,6 +681,28 @@ fn vm_exec_symbol_p(args : Array[Value]) -> Result[Value, VMError] {
   match args[0] {
     Value::Symbol(_) => Ok(Value::Bool(true))
     _ => Ok(Value::Bool(false))
+  }
+}
+
+/// symbol->string
+fn vm_exec_symbol_to_string(args : Array[Value]) -> Result[Value, VMError] {
+  if args.length() != 1 {
+    return Err(VMError::ArityError("symbol->string requires 1 argument"))
+  }
+  match args[0] {
+    Value::Symbol(name) => Ok(Value::String(name))
+    _ => Err(VMError::TypeError("symbol->string requires a symbol"))
+  }
+}
+
+/// string->symbol
+fn vm_exec_string_to_symbol(args : Array[Value]) -> Result[Value, VMError] {
+  if args.length() != 1 {
+    return Err(VMError::ArityError("string->symbol requires 1 argument"))
+  }
+  match args[0] {
+    Value::String(name) => Ok(Value::Symbol(name))
+    _ => Err(VMError::TypeError("string->symbol requires a string"))
   }
 }
 
