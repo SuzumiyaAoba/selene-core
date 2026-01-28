@@ -741,7 +741,7 @@ fn vm_call_function(
 }
 
 /// Execute 1 instruction
-fn vm_step(vm : VMState) -> Result[Bool, VMError] {
+pub fn vm_step(vm : VMState) -> Result[Bool, VMError] {
   let chunk = get_current_chunk(vm)
   if vm.ip >= chunk.code.length() {
     return Ok(false)
