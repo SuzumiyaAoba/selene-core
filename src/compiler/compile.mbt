@@ -24,6 +24,15 @@ fn extend_compile_env(parent : CompileEnv, locals : Array[String]) -> CompileEnv
   { parent: Some(parent), locals, globals: parent.globals }
 }
 
+/// Extend the current frame (let/letrec). Keeps the same call frame depth.
+fn extend_compile_env_same_frame(parent : CompileEnv, locals : Array[String]) -> CompileEnv {
+  let combined : Array[String] = parent.locals.copy()
+  for name in locals {
+    combined.push(name)
+  }
+  { parent: parent.parent, locals: combined, globals: parent.globals }
+}
+
 /// Check if variable is local and return VarRef
 fn lookup_local(env : CompileEnv, name : String) -> VarRef? {
   lookup_local_with_depth(env, name, 0)
@@ -32,13 +41,12 @@ fn lookup_local(env : CompileEnv, name : String) -> VarRef? {
 /// Check if variable is local and return VarRef with depth
 fn lookup_local_with_depth(env : CompileEnv, name : String, depth : Int) -> VarRef? {
   // Search in current frame
-  let mut i = 0
-  let len = env.locals.length()
-  while i < len {
+  let mut i = env.locals.length()
+  while i > 0 {
+    i = i - 1
     if env.locals[i] == name {
       return Some({ name, depth, index: i })
     }
-    i = i + 1
   }
   // Search in parent environment
   match env.parent {
@@ -706,6 +714,30 @@ fn compile_let(
   tail : Bool
 ) -> Result[IRExpr, CompileError] {
   match args {
+    SExpr::Pair(SExpr::Symbol(name), SExpr::Pair(bindings_expr, body)) => {
+      let (param_names, init_exprs) = match parse_named_let_bindings(bindings_expr) {
+        Ok(v) => v
+        Err(e) => return Err(e)
+      }
+      let params_expr = sexpr_list_from_names(param_names)
+      let lambda_expr = SExpr::Pair(
+        SExpr::Symbol("lambda"),
+        SExpr::Pair(params_expr, body),
+      )
+      let binding = SExpr::Pair(
+        SExpr::Symbol(name),
+        SExpr::Pair(lambda_expr, SExpr::Nil),
+      )
+      let letrec_bindings = SExpr::Pair(binding, SExpr::Nil)
+      let letrec_expr = SExpr::Pair(
+        SExpr::Symbol("letrec"),
+        SExpr::Pair(letrec_bindings, SExpr::Pair(SExpr::Symbol(name), SExpr::Nil)),
+      )
+      let app_expr = sexpr_list_from_exprs(
+        append_exprs([letrec_expr], init_exprs),
+      )
+      compile(app_expr, env, tail)
+    }
     SExpr::Pair(bindings_expr, body) => {
       let bindings = match parse_let_bindings(bindings_expr, env) {
         Ok(b) => b
@@ -716,7 +748,7 @@ fn compile_let(
       for b in bindings {
         names.push(b.name)
       }
-      let new_env = extend_compile_env(env, names)
+      let new_env = extend_compile_env_same_frame(env, names)
       // compile body
       let body_ir = match compile_body(body, new_env, tail) {
         Ok(ir) => ir
@@ -726,6 +758,66 @@ fn compile_let(
     }
     _ => Err(CompileError::SyntaxError("let: invalid syntax"))
   }
+}
+
+fn sexpr_list_from_exprs(items : Array[SExpr]) -> SExpr {
+  let mut result = SExpr::Nil
+  let mut i = items.length()
+  let _ = while i > 0 {
+    i = i - 1
+    result = SExpr::Pair(items[i], result)
+  } else {
+    ()
+  }
+  result
+}
+
+fn sexpr_list_from_names(names : Array[String]) -> SExpr {
+  sexpr_list_from_exprs(sexpr_names(names))
+}
+
+fn append_exprs(prefix : Array[SExpr], suffix : Array[SExpr]) -> Array[SExpr] {
+  let result : Array[SExpr] = []
+  for item in prefix {
+    result.push(item)
+  }
+  for item in suffix {
+    result.push(item)
+  }
+  result
+}
+
+fn sexpr_names(names : Array[String]) -> Array[SExpr] {
+  let items : Array[SExpr] = []
+  for name in names {
+    items.push(SExpr::Symbol(name))
+  }
+  items
+}
+
+fn parse_named_let_bindings(
+  bindings_expr : SExpr
+) -> Result[(Array[String], Array[SExpr]), CompileError] {
+  let names : Array[String] = []
+  let inits : Array[SExpr] = []
+  let mut current = bindings_expr
+  while true {
+    match current {
+      SExpr::Nil => return Ok((names, inits))
+      SExpr::Pair(binding, rest) => {
+        match binding {
+          SExpr::Pair(SExpr::Symbol(name), SExpr::Pair(init_expr, SExpr::Nil)) => {
+            names.push(name)
+            inits.push(init_expr)
+            current = rest
+          }
+          _ => return Err(CompileError::SyntaxError("let: invalid binding"))
+        }
+      }
+      _ => return Err(CompileError::SyntaxError("let: bindings must be a list"))
+    }
+  }
+  Ok((names, inits))
 }
 
 /// Parse the let binding
@@ -788,7 +880,7 @@ fn compile_let_star_bindings(
             Ok(ir) => ir
             Err(e) => return Err(e)
           }
-          let new_env = extend_compile_env(env, [name])
+          let new_env = extend_compile_env_same_frame(env, [name])
           let body_ir = match compile_let_star_bindings(rest, body, new_env, tail) {
             Ok(ir) => ir
             Err(e) => return Err(e)
@@ -824,7 +916,7 @@ fn compile_letrec(
         }
       }
       // Create a new environment (all variables visible)
-      let new_env = extend_compile_env(env, names.copy())
+      let new_env = extend_compile_env_same_frame(env, names.copy())
       // Parse binding (in new environment)
       let bindings = match parse_let_bindings(bindings_expr, new_env) {
         Ok(b) => b
@@ -932,9 +1024,13 @@ fn compile_application(
   // Optimization for primitive operations
   match op {
     SExpr::Symbol(name) =>
-      match name_to_primop(name) {
-        Some(primop) => return Ok(IRExpr::PrimOp(primop, arg_irs))
-        None => ()
+      match lookup_local(env, name) {
+        Some(_) => ()
+        None =>
+          match name_to_primop(name) {
+            Some(primop) => return Ok(IRExpr::PrimOp(primop, arg_irs))
+            None => ()
+          }
       }
     _ => ()
   }

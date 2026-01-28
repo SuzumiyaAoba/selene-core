@@ -23,7 +23,7 @@ test "r5rs pitfalls (guile r5rs_pitfall)" {
   let enable_rest_params = false
   let enable_keyword_shadowing = false
   let enable_string_to_symbol = true
-  let enable_named_let = false
+  let enable_named_let = true
   let enable_append = true
 
   if enable_callcc {
@@ -175,7 +175,7 @@ test "r5rs pitfalls (guile r5rs_pitfall)" {
   }
 
   if enable_named_let {
-    assert_should_be(ctx, "8.1", "-1", "(let - ((n (- 1))) n)")
+    assert_should_be(ctx, "8.1", "(- 1)", "(let - ((n (- 1))) n)")
   }
 
   if enable_append {
