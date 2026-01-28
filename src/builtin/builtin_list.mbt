@@ -3,7 +3,7 @@
 /// Implement Scheme list operations.
 
 /// Built-in function: cons
-fn builtin_cons(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_cons(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 2 {
     return Err(EvalError::ArityError("cons: requires exactly 2 arguments"))
   }
@@ -11,7 +11,7 @@ fn builtin_cons(args : Array[Value]) -> Result[Value, EvalError] {
 }
 
 /// Built-in function: car
-fn builtin_car(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_car(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("car: requires exactly 1 argument"))
   }
@@ -22,7 +22,7 @@ fn builtin_car(args : Array[Value]) -> Result[Value, EvalError] {
 }
 
 /// Built-in function: cdr
-fn builtin_cdr(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_cdr(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("cdr: requires exactly 1 argument"))
   }
@@ -35,7 +35,7 @@ fn builtin_cdr(args : Array[Value]) -> Result[Value, EvalError] {
 /// Built-in function: set-car!
 /// (set-car! pair obj) - Set the pair car to obj
 /// Note: Because of the immutable environment model, a new pair is returned
-fn builtin_set_car(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_set_car(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 2 {
     return Err(EvalError::ArityError("set-car!: requires exactly 2 arguments"))
   }
@@ -48,7 +48,7 @@ fn builtin_set_car(args : Array[Value]) -> Result[Value, EvalError] {
 /// Built-in function: set-cdr!
 /// (set-cdr! pair obj) - Set the cdr of the pair to obj
 /// Note: Because of the immutable environment model, a new pair is returned
-fn builtin_set_cdr(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_set_cdr(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 2 {
     return Err(EvalError::ArityError("set-cdr!: requires exactly 2 arguments"))
   }
@@ -59,7 +59,7 @@ fn builtin_set_cdr(args : Array[Value]) -> Result[Value, EvalError] {
 }
 
 /// Built-in function: caar
-fn builtin_caar(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_caar(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("caar: requires exactly 1 argument"))
   }
@@ -70,7 +70,7 @@ fn builtin_caar(args : Array[Value]) -> Result[Value, EvalError] {
 }
 
 /// Built-in function: cadr
-fn builtin_cadr(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_cadr(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("cadr: requires exactly 1 argument"))
   }
@@ -81,7 +81,7 @@ fn builtin_cadr(args : Array[Value]) -> Result[Value, EvalError] {
 }
 
 /// Built-in function: cdar
-fn builtin_cdar(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_cdar(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("cdar: requires exactly 1 argument"))
   }
@@ -92,7 +92,7 @@ fn builtin_cdar(args : Array[Value]) -> Result[Value, EvalError] {
 }
 
 /// Built-in function: cddr
-fn builtin_cddr(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_cddr(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("cddr: requires exactly 1 argument"))
   }
@@ -103,7 +103,7 @@ fn builtin_cddr(args : Array[Value]) -> Result[Value, EvalError] {
 }
 
 /// Built-in function: caaar
-fn builtin_caaar(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_caaar(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("caaar: requires exactly 1 argument"))
   }
@@ -114,7 +114,7 @@ fn builtin_caaar(args : Array[Value]) -> Result[Value, EvalError] {
 }
 
 /// Built-in function: caadr
-fn builtin_caadr(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_caadr(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("caadr: requires exactly 1 argument"))
   }
@@ -125,7 +125,7 @@ fn builtin_caadr(args : Array[Value]) -> Result[Value, EvalError] {
 }
 
 /// Built-in function: cadar
-fn builtin_cadar(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_cadar(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("cadar: requires exactly 1 argument"))
   }
@@ -136,7 +136,7 @@ fn builtin_cadar(args : Array[Value]) -> Result[Value, EvalError] {
 }
 
 /// Built-in function: caddr
-fn builtin_caddr(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_caddr(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("caddr: requires exactly 1 argument"))
   }
@@ -147,7 +147,7 @@ fn builtin_caddr(args : Array[Value]) -> Result[Value, EvalError] {
 }
 
 /// Built-in function: cdaar
-fn builtin_cdaar(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_cdaar(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("cdaar: requires exactly 1 argument"))
   }
@@ -158,7 +158,7 @@ fn builtin_cdaar(args : Array[Value]) -> Result[Value, EvalError] {
 }
 
 /// Built-in function: cdadr
-fn builtin_cdadr(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_cdadr(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("cdadr: requires exactly 1 argument"))
   }
@@ -169,7 +169,7 @@ fn builtin_cdadr(args : Array[Value]) -> Result[Value, EvalError] {
 }
 
 /// Built-in function: cddar
-fn builtin_cddar(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_cddar(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("cddar: requires exactly 1 argument"))
   }
@@ -180,7 +180,7 @@ fn builtin_cddar(args : Array[Value]) -> Result[Value, EvalError] {
 }
 
 /// Built-in function: cdddr
-fn builtin_cdddr(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_cdddr(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("cdddr: requires exactly 1 argument"))
   }
@@ -191,7 +191,7 @@ fn builtin_cdddr(args : Array[Value]) -> Result[Value, EvalError] {
 }
 
 /// Built-in function: symbol?
-fn builtin_symbol_p(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_symbol_p(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("symbol?: requires exactly 1 argument"))
   }
@@ -202,7 +202,7 @@ fn builtin_symbol_p(args : Array[Value]) -> Result[Value, EvalError] {
 }
 
 /// Built-in functions: list
-fn builtin_list(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_list(args : Array[Value]) -> Result[Value, EvalError] {
   let mut result = Value::Nil
   let mut i = args.length()
   let _ = while i > 0 {
@@ -215,7 +215,7 @@ fn builtin_list(args : Array[Value]) -> Result[Value, EvalError] {
 }
 
 /// Built-in function: length
-fn builtin_length(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_length(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("length: requires exactly 1 argument"))
   }
@@ -240,7 +240,7 @@ fn builtin_length(args : Array[Value]) -> Result[Value, EvalError] {
 }
 
 /// Built-in functions: append
-fn builtin_append(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_append(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() == 0 {
     return Ok(Value::Nil)
   }
@@ -293,7 +293,7 @@ fn append_two_lists(list1 : Value, list2 : Value) -> Result[Value, EvalError] {
 }
 
 /// Built-in functions: reverse
-fn builtin_reverse(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_reverse(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("reverse: requires exactly 1 argument"))
   }
@@ -318,7 +318,7 @@ fn builtin_reverse(args : Array[Value]) -> Result[Value, EvalError] {
 }
 
 /// Built-in function: list-ref
-fn builtin_list_ref(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_list_ref(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 2 {
     return Err(EvalError::ArityError("list-ref: requires exactly 2 arguments"))
   }
@@ -353,7 +353,7 @@ fn builtin_list_ref(args : Array[Value]) -> Result[Value, EvalError] {
 }
 
 /// Built-in function: list-tail
-fn builtin_list_tail(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_list_tail(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 2 {
     return Err(EvalError::ArityError("list-tail: requires exactly 2 arguments"))
   }
@@ -386,7 +386,7 @@ fn builtin_list_tail(args : Array[Value]) -> Result[Value, EvalError] {
 
 /// Built-in function: assq
 /// (assq obj alist) - Search for obj from alist by eq?
-fn builtin_assq(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_assq(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 2 {
     return Err(EvalError::ArityError("assq: requires exactly 2 arguments"))
   }
@@ -420,7 +420,7 @@ fn builtin_assq(args : Array[Value]) -> Result[Value, EvalError] {
 
 /// Built-in function: assv
 /// (assv obj alist) - Search for obj from alist by eqv?
-fn builtin_assv(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_assv(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 2 {
     return Err(EvalError::ArityError("assv: requires exactly 2 arguments"))
   }
@@ -454,7 +454,7 @@ fn builtin_assv(args : Array[Value]) -> Result[Value, EvalError] {
 
 /// Built-in function: assoc
 /// (assoc obj alist) - Search for obj from alist by equal?
-fn builtin_assoc(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_assoc(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 2 {
     return Err(EvalError::ArityError("assoc: requires exactly 2 arguments"))
   }
@@ -489,7 +489,7 @@ fn builtin_assoc(args : Array[Value]) -> Result[Value, EvalError] {
 
 /// Built-in function: memq
 /// (memq obj list) - eq obj from list? Search in and return a list starting at the location found
-fn builtin_memq(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_memq(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 2 {
     return Err(EvalError::ArityError("memq: requires exactly 2 arguments"))
   }
@@ -514,7 +514,7 @@ fn builtin_memq(args : Array[Value]) -> Result[Value, EvalError] {
 
 /// Built-in function: memv
 /// (memv obj list) - eqv obj from list? Search in and return a list starting at the location found
-fn builtin_memv(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_memv(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 2 {
     return Err(EvalError::ArityError("memv: requires exactly 2 arguments"))
   }
@@ -539,7 +539,7 @@ fn builtin_memv(args : Array[Value]) -> Result[Value, EvalError] {
 
 /// Built-in function: member
 /// (member obj list) - equal obj from list? Search in and return a list starting at the location found
-fn builtin_member(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_member(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 2 {
     return Err(EvalError::ArityError("member: requires exactly 2 arguments"))
   }
@@ -576,7 +576,7 @@ fn values_eq(a : Value, b : Value) -> Bool {
 
 /// Built-in function: symbol- > string
 /// (symbol- > string sym) - Convert symbol to string
-fn builtin_symbol_to_string(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_symbol_to_string(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(
       EvalError::ArityError("symbol->string: requires exactly 1 argument"),
@@ -590,7 +590,7 @@ fn builtin_symbol_to_string(args : Array[Value]) -> Result[Value, EvalError] {
 
 /// Built-in functions: string- > symbol
 /// (string- > symbol str) - Convert string to symbol
-fn builtin_string_to_symbol(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_string_to_symbol(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(
       EvalError::ArityError("string->symbol: requires exactly 1 argument"),
@@ -603,7 +603,7 @@ fn builtin_string_to_symbol(args : Array[Value]) -> Result[Value, EvalError] {
 }
 
 /// Converts a list of values to an array.
-fn list_to_array(list : Value) -> Result[Array[Value], EvalError] {
+pub fn list_to_array(list : Value) -> Result[Array[Value], EvalError] {
   let items : Array[Value] = []
   let mut current = list
   let _ = while true {
@@ -622,7 +622,7 @@ fn list_to_array(list : Value) -> Result[Array[Value], EvalError] {
 }
 
 /// Converts an array to a list of values.
-fn array_to_list(items : Array[Value]) -> Result[Value, EvalError] {
+pub fn array_to_list(items : Array[Value]) -> Result[Value, EvalError] {
   let mut result = Value::Nil
   let mut i = items.length()
   let _ = while i > 0 {

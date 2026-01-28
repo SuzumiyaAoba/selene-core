@@ -4,7 +4,7 @@
 
 /// Built-in function: string?
 /// (string? obj) - Determine if obj is a string
-fn builtin_string_p(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_string_p(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("string?: requires exactly 1 argument"))
   }
@@ -16,7 +16,7 @@ fn builtin_string_p(args : Array[Value]) -> Result[Value, EvalError] {
 
 /// Built-in functions: string-length
 /// (string-length str) - Returns the length of a string
-fn builtin_string_length(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_string_length(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(
       EvalError::ArityError("string-length: requires exactly 1 argument"),
@@ -30,7 +30,7 @@ fn builtin_string_length(args : Array[Value]) -> Result[Value, EvalError] {
 
 /// Built-in functions: string-ref
 /// (string-ref str k) - returns the kth character of the string
-fn builtin_string_ref(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_string_ref(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 2 {
     return Err(EvalError::ArityError("string-ref: requires exactly 2 arguments"))
   }
@@ -52,7 +52,7 @@ fn builtin_string_ref(args : Array[Value]) -> Result[Value, EvalError] {
 
 /// Built-in function: string-append
 /// (string-append str1 str2...) - concatenate strings
-fn builtin_string_append(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_string_append(args : Array[Value]) -> Result[Value, EvalError] {
   let builder = StringBuilder::new()
   for arg in args {
     match arg {
@@ -68,7 +68,7 @@ fn builtin_string_append(args : Array[Value]) -> Result[Value, EvalError] {
 
 /// Built-in function: string =?
 /// (string =? str1 str2) - Determine if the strings are equal
-fn builtin_string_eq(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_string_eq(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 2 {
     return Err(EvalError::ArityError("string=?: requires exactly 2 arguments"))
   }
@@ -80,7 +80,7 @@ fn builtin_string_eq(args : Array[Value]) -> Result[Value, EvalError] {
 
 /// Built-in function: string <?
 /// (string <? str1 str2) - Dictionary order comparison of strings (str1 < str2)
-fn builtin_string_lt(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_string_lt(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 2 {
     return Err(EvalError::ArityError("string<?: requires exactly 2 arguments"))
   }
@@ -92,7 +92,7 @@ fn builtin_string_lt(args : Array[Value]) -> Result[Value, EvalError] {
 
 /// Built-in function: string >?
 /// (string >? str1 str2) - Dictionary order comparison of strings (str1 > str2)
-fn builtin_string_gt(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_string_gt(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 2 {
     return Err(EvalError::ArityError("string>?: requires exactly 2 arguments"))
   }
@@ -104,7 +104,7 @@ fn builtin_string_gt(args : Array[Value]) -> Result[Value, EvalError] {
 
 /// Built-in functions: string < =?
 /// (string < =? str1 str2) - Dictionary order comparison of strings (str1 < = str2)
-fn builtin_string_le(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_string_le(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 2 {
     return Err(EvalError::ArityError("string<=?: requires exactly 2 arguments"))
   }
@@ -116,7 +116,7 @@ fn builtin_string_le(args : Array[Value]) -> Result[Value, EvalError] {
 
 /// Built-in function: string > =?
 /// (string > =? str1 str2) - Dictionary order comparison of strings (str1 > = str2)
-fn builtin_string_ge(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_string_ge(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 2 {
     return Err(EvalError::ArityError("string>=?: requires exactly 2 arguments"))
   }
@@ -143,7 +143,7 @@ fn string_downcase(s : String) -> String {
 
 /// Built-in function: string-ci =?
 /// (string-ci =? str1 str2) - Case-insensitive string comparison (equal)
-fn builtin_string_ci_eq(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_string_ci_eq(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 2 {
     return Err(
       EvalError::ArityError("string-ci=?: requires exactly 2 arguments"),
@@ -159,7 +159,7 @@ fn builtin_string_ci_eq(args : Array[Value]) -> Result[Value, EvalError] {
 
 /// Built-in function: string-ci <?
 /// (string-ci <? str1 str2) - case-insensitive string comparison (str1 < str2)
-fn builtin_string_ci_lt(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_string_ci_lt(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 2 {
     return Err(
       EvalError::ArityError("string-ci<?: requires exactly 2 arguments"),
@@ -175,7 +175,7 @@ fn builtin_string_ci_lt(args : Array[Value]) -> Result[Value, EvalError] {
 
 /// Built-in function: string-ci >?
 /// (string-ci >? str1 str2) - Case-insensitive string comparison (str1 > str2)
-fn builtin_string_ci_gt(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_string_ci_gt(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 2 {
     return Err(
       EvalError::ArityError("string-ci>?: requires exactly 2 arguments"),
@@ -191,7 +191,7 @@ fn builtin_string_ci_gt(args : Array[Value]) -> Result[Value, EvalError] {
 
 /// Built-in function: string-ci < =?
 /// (string-ci < =? str1 str2) - Case-insensitive string comparison (str1 < = str2)
-fn builtin_string_ci_le(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_string_ci_le(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 2 {
     return Err(
       EvalError::ArityError("string-ci<=?: requires exactly 2 arguments"),
@@ -207,7 +207,7 @@ fn builtin_string_ci_le(args : Array[Value]) -> Result[Value, EvalError] {
 
 /// Built-in function: string-ci > =?
 /// (string-ci > =? str1 str2) - Case-insensitive string comparison (str1 > = str2)
-fn builtin_string_ci_ge(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_string_ci_ge(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 2 {
     return Err(
       EvalError::ArityError("string-ci>=?: requires exactly 2 arguments"),
@@ -223,7 +223,7 @@ fn builtin_string_ci_ge(args : Array[Value]) -> Result[Value, EvalError] {
 
 /// Built-in function: make-string
 /// (make-string k [char]) - Creates a string of length k (optional character)
-fn builtin_make_string(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_make_string(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() < 1 || args.length() > 2 {
     return Err(EvalError::ArityError("make-string: requires 1 or 2 arguments"))
   }
@@ -266,7 +266,7 @@ fn builtin_make_string(args : Array[Value]) -> Result[Value, EvalError] {
 
 /// Built-in function: substring
 /// (substring str start end) - Returns the substring of a string
-fn builtin_substring(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_substring(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 3 {
     return Err(EvalError::ArityError("substring: requires exactly 3 arguments"))
   }
@@ -302,7 +302,7 @@ fn builtin_substring(args : Array[Value]) -> Result[Value, EvalError] {
 
 /// Built-in functions: string- > list
 /// (string- > list str) - Converts a string to a list of characters
-fn builtin_string_to_list(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_string_to_list(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(
       EvalError::ArityError("string->list: requires exactly 1 argument"),
@@ -327,7 +327,7 @@ fn builtin_string_to_list(args : Array[Value]) -> Result[Value, EvalError] {
 
 /// Built-in functions: list- > string
 /// (list- > string list) - Convert a list of characters to a string
-fn builtin_list_to_string(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_list_to_string(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(
       EvalError::ArityError("list->string: requires exactly 1 argument"),
@@ -364,7 +364,7 @@ fn builtin_list_to_string(args : Array[Value]) -> Result[Value, EvalError] {
 
 /// Built-in function: number- > string
 /// (number- > string num) - Converts a number to a string
-fn builtin_number_to_string(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_number_to_string(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(
       EvalError::ArityError("number->string: requires exactly 1 argument"),
@@ -379,7 +379,7 @@ fn builtin_number_to_string(args : Array[Value]) -> Result[Value, EvalError] {
 
 /// Built-in functions: string- > number
 /// (string- > number str) - Converts a string to a number
-fn builtin_string_to_number(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_string_to_number(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(
       EvalError::ArityError("string->number: requires exactly 1 argument"),

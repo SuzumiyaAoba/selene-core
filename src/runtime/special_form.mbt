@@ -448,19 +448,6 @@ fn check_case_datums(key : Value, datums : SExpr) -> Result[Bool, EvalError] {
   Ok(false)
 }
 
-/// Comparing values ​​with eqv?
-fn values_eqv(a : Value, b : Value) -> Bool {
-  match (a, b) {
-    (Value::Nil, Value::Nil) => true
-    (Value::Bool(x), Value::Bool(y)) => x == y
-    (Value::Number(Number::Int(x)), Value::Number(Number::Int(y))) => x == y
-    (Value::Number(Number::Real(x)), Value::Number(Number::Real(y))) => x == y
-    (Value::Char(x), Value::Char(y)) => x == y
-    (Value::Symbol(x), Value::Symbol(y)) => x == y
-    _ => false
-  }
-}
-
 /// Evaluate the delay special form.
 /// (delay expr) - delay evaluation of expr and return a promise
 fn eval_delay(args : SExpr, env : Env) -> Result[Value, EvalError] {

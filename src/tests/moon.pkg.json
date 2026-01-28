@@ -1,0 +1,11 @@
+{
+  "import": [
+    "SuzumiyaAoba/selene_core/core",
+    "SuzumiyaAoba/selene_core/frontend",
+    "SuzumiyaAoba/selene_core/runtime",
+    "SuzumiyaAoba/selene_core/compiler",
+    "SuzumiyaAoba/selene_core/repl",
+    "SuzumiyaAoba/selene_core/debug",
+    "SuzumiyaAoba/selene_core/builtin"
+  ]
+}

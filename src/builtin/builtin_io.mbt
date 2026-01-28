@@ -181,7 +181,7 @@ fn value_to_write_string(value : Value) -> String {
 /// Built-in functions: display
 /// (display obj) - outputs obj in a human-readable format (strings are unquoted)
 /// Note: Only println is available on MoonBit, so it will be output with line breaks
-fn builtin_display(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_display(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("display: requires exactly 1 argument"))
   }
@@ -192,7 +192,7 @@ fn builtin_display(args : Array[Value]) -> Result[Value, EvalError] {
 
 /// Built-in function: newline
 /// (newline) - Output line breaks
-fn builtin_newline(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_newline(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 0 {
     return Err(EvalError::ArityError("newline: requires exactly 0 arguments"))
   }
@@ -203,7 +203,7 @@ fn builtin_newline(args : Array[Value]) -> Result[Value, EvalError] {
 /// Built-in function: write
 /// (write obj) - outputs obj in a machine-readable format (strings are quoted)
 /// Note: Only println is available on MoonBit, so it will be output with line breaks
-fn builtin_write(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_write(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("write: requires exactly 1 argument"))
   }
@@ -215,7 +215,7 @@ fn builtin_write(args : Array[Value]) -> Result[Value, EvalError] {
 /// Built-in function: read
 /// (read) - reads back one S equation from standard input
 /// Note: This version is for JS backend only
-fn builtin_read(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_read(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 0 {
     return Err(EvalError::ArityError("read: requires exactly 0 arguments"))
   }

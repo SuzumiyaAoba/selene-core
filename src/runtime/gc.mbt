@@ -185,18 +185,7 @@ pub fn gc_sweep_continuations() -> Int {
 
 /// Delete from continuation store (access continuation_store in value.mbt)
 fn gc_remove_from_continuation_store(cont_id : Int) -> Unit {
-  // continuation_store is defined in value.mbt
-  // Create a new array and hold other IDs
-  let survivors : Array[(Int, ContinuationState)] = []
-  for entry in continuation_store {
-    if entry.0 != cont_id {
-      survivors.push(entry)
-    }
-  }
-  continuation_store.clear()
-  for s in survivors {
-    continuation_store.push(s)
-  }
+  remove_continuation(cont_id)
 }
 
 /// Run GC (mark and sweep)
@@ -282,8 +271,7 @@ pub fn gc_clear_vm(vm : VMState) -> Unit {
 /// Clear all continuations (used when resetting VM)
 pub fn gc_clear_all_continuations() -> Unit {
   continuation_marks.clear()
-  continuation_store.clear()
-  continuation_counter.val = 0
+  clear_continuations()
 }
 
 /// Get GC information as a string (for debugging)

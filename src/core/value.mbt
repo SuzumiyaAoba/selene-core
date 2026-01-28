@@ -127,6 +127,26 @@ pub fn get_continuation(id : Int) -> ContinuationState? {
   None
 }
 
+/// Remove a continuation by id.
+pub fn remove_continuation(id : Int) -> Unit {
+  let survivors : Array[(Int, ContinuationState)] = []
+  for entry in continuation_store {
+    if entry.0 != id {
+      survivors.push(entry)
+    }
+  }
+  continuation_store.clear()
+  for s in survivors {
+    continuation_store.push(s)
+  }
+}
+
+/// Clear all continuations and reset the counter.
+pub fn clear_continuations() -> Unit {
+  continuation_store.clear()
+  continuation_counter.val = 0
+}
+
 /// A type that represents a promise (lazy evaluation).
 pub(all) struct Promise {
   /// Has it been evaluated?

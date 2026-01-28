@@ -4,7 +4,7 @@
 
 /// Built-in function: floor
 /// (floor x) - Returns the largest integer less than or equal to x
-fn builtin_floor(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_floor(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("floor: requires exactly 1 argument"))
   }
@@ -18,7 +18,7 @@ fn builtin_floor(args : Array[Value]) -> Result[Value, EvalError] {
 
 /// Built-in function: ceiling
 /// (ceiling x) - Returns the smallest integer greater than or equal to x
-fn builtin_ceiling(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_ceiling(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("ceiling: requires exactly 1 argument"))
   }
@@ -32,7 +32,7 @@ fn builtin_ceiling(args : Array[Value]) -> Result[Value, EvalError] {
 
 /// Built-in function: truncate
 /// (truncate x) Round -x towards 0
-fn builtin_truncate(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_truncate(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("truncate: requires exactly 1 argument"))
   }
@@ -45,7 +45,7 @@ fn builtin_truncate(args : Array[Value]) -> Result[Value, EvalError] {
 
 /// Built-in functions: round
 /// (round x) - Round x to the nearest integer (even for 5)
-fn builtin_round(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_round(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("round: requires exactly 1 argument"))
   }
@@ -62,7 +62,7 @@ fn builtin_round(args : Array[Value]) -> Result[Value, EvalError] {
 
 /// Built-in function: sqrt
 /// (sqrt x) Returns the square root of -x
-fn builtin_sqrt(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_sqrt(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("sqrt: requires exactly 1 argument"))
   }
@@ -78,7 +78,7 @@ fn builtin_sqrt(args : Array[Value]) -> Result[Value, EvalError] {
 
 /// Built-in functions: expt
 /// (expt x y) Returns the y-squared of -x
-fn builtin_expt(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_expt(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 2 {
     return Err(EvalError::ArityError("expt: requires exactly 2 arguments"))
   }
@@ -115,7 +115,7 @@ fn builtin_expt(args : Array[Value]) -> Result[Value, EvalError] {
 
 /// Built-in functions: exact?
 /// (exact? z) - Determine if z is an exact number (integer or rational)
-fn builtin_exact_p(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_exact_p(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("exact?: requires exactly 1 argument"))
   }
@@ -130,7 +130,7 @@ fn builtin_exact_p(args : Array[Value]) -> Result[Value, EvalError] {
 
 /// Built-in function: inexact?
 /// (inexact? z) - Determine if z is an incorrect number (real or complex)
-fn builtin_inexact_p(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_inexact_p(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("inexact?: requires exactly 1 argument"))
   }
@@ -145,7 +145,7 @@ fn builtin_inexact_p(args : Array[Value]) -> Result[Value, EvalError] {
 
 /// Built-in function: sin
 /// (sin x) - Returns the sign (sine) of x (radian)
-fn builtin_sin(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_sin(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("sin: requires exactly 1 argument"))
   }
@@ -162,7 +162,7 @@ fn builtin_sin(args : Array[Value]) -> Result[Value, EvalError] {
 
 /// Built-in function: cos
 /// (cos x) - Returns the cosine of x (radian)
-fn builtin_cos(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_cos(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("cos: requires exactly 1 argument"))
   }
@@ -179,7 +179,7 @@ fn builtin_cos(args : Array[Value]) -> Result[Value, EvalError] {
 
 /// Built-in function: tan
 /// (tan x) Returns the tangent of -x (radian)
-fn builtin_tan(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_tan(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("tan: requires exactly 1 argument"))
   }
@@ -196,7 +196,7 @@ fn builtin_tan(args : Array[Value]) -> Result[Value, EvalError] {
 
 /// Built-in functions: asin
 /// (asin x) - Returns the arcsine (inverse sine) of x (radian)
-fn builtin_asin(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_asin(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("asin: requires exactly 1 argument"))
   }
@@ -213,7 +213,7 @@ fn builtin_asin(args : Array[Value]) -> Result[Value, EvalError] {
 
 /// Built-in function: acos
 /// (acos x) - Returns the arc cosine of x (inverse cosine) (radian)
-fn builtin_acos(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_acos(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("acos: requires exactly 1 argument"))
   }
@@ -232,7 +232,7 @@ fn builtin_acos(args : Array[Value]) -> Result[Value, EvalError] {
 /// (atan x) or (atan y x) - returns arc tangent (inverse tangent) (radian)
 /// For one argument: atan (x)
 /// For two arguments: atan2 (y, x)
-fn builtin_atan(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_atan(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() == 1 {
     match args[0] {
       Value::Number(Number::Int(n)) => {
@@ -262,7 +262,7 @@ fn builtin_atan(args : Array[Value]) -> Result[Value, EvalError] {
 
 /// Built-in functions: exp
 /// (exp x) Returns the x power of -e
-fn builtin_exp(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_exp(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("exp: requires exactly 1 argument"))
   }
@@ -279,7 +279,7 @@ fn builtin_exp(args : Array[Value]) -> Result[Value, EvalError] {
 
 /// Built-in functions: log
 /// (log x) - Returns the natural logarithm of x
-fn builtin_log(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_log(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("log: requires exactly 1 argument"))
   }
@@ -300,7 +300,7 @@ fn builtin_log(args : Array[Value]) -> Result[Value, EvalError] {
 
 /// Built-in function: make-rectangular
 /// (make-rectangular real imag) - create complex numbers from real and imaginary parts
-fn builtin_make_rectangular(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_make_rectangular(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 2 {
     return Err(EvalError::ArityError("make-rectangular: requires exactly 2 arguments"))
   }
@@ -317,7 +317,7 @@ fn builtin_make_rectangular(args : Array[Value]) -> Result[Value, EvalError] {
 
 /// Built-in function: make-polar
 /// (make-polar magnitude angle) - create complex numbers from polar form
-fn builtin_make_polar(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_make_polar(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 2 {
     return Err(EvalError::ArityError("make-polar: requires exactly 2 arguments"))
   }
@@ -336,7 +336,7 @@ fn builtin_make_polar(args : Array[Value]) -> Result[Value, EvalError] {
 
 /// Built-in functions: real-part
 /// (real-part z) - get the real part of a complex number
-fn builtin_real_part(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_real_part(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("real-part: requires exactly 1 argument"))
   }
@@ -349,7 +349,7 @@ fn builtin_real_part(args : Array[Value]) -> Result[Value, EvalError] {
 
 /// Built-in functions: imag-part
 /// (imag-part z) - get the imaginary part of a complex number
-fn builtin_imag_part(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_imag_part(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("imag-part: requires exactly 1 argument"))
   }
@@ -362,7 +362,7 @@ fn builtin_imag_part(args : Array[Value]) -> Result[Value, EvalError] {
 
 /// Built-in function: magnitude
 /// (magnitude z) - get the absolute value of a complex number
-fn builtin_magnitude(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_magnitude(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("magnitude: requires exactly 1 argument"))
   }
@@ -381,7 +381,7 @@ fn builtin_magnitude(args : Array[Value]) -> Result[Value, EvalError] {
 
 /// Built-in functions: angle
 /// (angle z) - get the deflection angle of a complex number
-fn builtin_angle(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_angle(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("angle: requires exactly 1 argument"))
   }
@@ -404,7 +404,7 @@ fn builtin_angle(args : Array[Value]) -> Result[Value, EvalError] {
 
 /// Built-in functions: complex?
 /// (complex? obj) - Determines whether obj is a complex number (all numbers are complex numbers)
-fn builtin_complex_p(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_complex_p(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("complex?: requires exactly 1 argument"))
   }
@@ -420,7 +420,7 @@ fn builtin_complex_p(args : Array[Value]) -> Result[Value, EvalError] {
 
 /// Built-in function: numerator
 /// (numerator q) - get the numerator of a rational number
-fn builtin_numerator(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_numerator(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("numerator: requires exactly 1 argument"))
   }
@@ -433,7 +433,7 @@ fn builtin_numerator(args : Array[Value]) -> Result[Value, EvalError] {
 
 /// built-in function: denominator
 /// (denominator q) - get denominator of rational numbers
-fn builtin_denominator(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_denominator(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("denominator: requires exactly 1 argument"))
   }
@@ -446,7 +446,7 @@ fn builtin_denominator(args : Array[Value]) -> Result[Value, EvalError] {
 
 /// Built-in functions: rational?
 /// (rational? obj) - Determine if obj is a rational number
-fn builtin_rational_p(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_rational_p(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("rational?: requires exactly 1 argument"))
   }

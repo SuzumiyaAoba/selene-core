@@ -4,7 +4,7 @@
 
 /// Built-in function: vector?
 /// (vector? obj) - Determine if obj is a vector
-fn builtin_vector_p(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_vector_p(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("vector?: requires exactly 1 argument"))
   }
@@ -16,7 +16,7 @@ fn builtin_vector_p(args : Array[Value]) -> Result[Value, EvalError] {
 
 /// Built-in function: make-vector
 /// (make-vector k [fill]) - creates a vector of length k (optional initial value)
-fn builtin_make_vector(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_make_vector(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() < 1 || args.length() > 2 {
     return Err(EvalError::ArityError("make-vector: requires 1 or 2 arguments"))
   }
@@ -51,7 +51,7 @@ fn builtin_make_vector(args : Array[Value]) -> Result[Value, EvalError] {
 
 /// Built-in function: vector
 /// (vector obj...) - create vector from arguments
-fn builtin_vector(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_vector(args : Array[Value]) -> Result[Value, EvalError] {
   let items : Array[Value] = []
   for arg in args {
     items.push(arg)
@@ -61,7 +61,7 @@ fn builtin_vector(args : Array[Value]) -> Result[Value, EvalError] {
 
 /// Built-in function: vector-length
 /// (vector-length vector) - Returns the length of a vector
-fn builtin_vector_length(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_vector_length(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(
       EvalError::ArityError("vector-length: requires exactly 1 argument"),
@@ -75,7 +75,7 @@ fn builtin_vector_length(args : Array[Value]) -> Result[Value, EvalError] {
 
 /// Built-in function: vector-ref
 /// (vector-ref vector k) - returns the kth element of the vector
-fn builtin_vector_ref(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_vector_ref(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 2 {
     return Err(
       EvalError::ArityError("vector-ref: requires exactly 2 arguments"),
@@ -99,7 +99,7 @@ fn builtin_vector_ref(args : Array[Value]) -> Result[Value, EvalError] {
 /// Built-in function: vector-set!
 /// (vector-set! vector k obj) - sets the kth element of the vector to obj
 /// Note: Because of the immutable environment model, a new vector is returned
-fn builtin_vector_set(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_vector_set(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 3 {
     return Err(
       EvalError::ArityError("vector-set!: requires exactly 3 arguments"),
@@ -137,7 +137,7 @@ fn builtin_vector_set(args : Array[Value]) -> Result[Value, EvalError] {
 
 /// Built-in function: vector- > list
 /// (vector- > list vector) - Convert vector to list
-fn builtin_vector_to_list(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_vector_to_list(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(
       EvalError::ArityError("vector->list: requires exactly 1 argument"),
@@ -161,7 +161,7 @@ fn builtin_vector_to_list(args : Array[Value]) -> Result[Value, EvalError] {
 
 /// Built-in function: list- > vector
 /// (list- > vector list) - Convert list to vector
-fn builtin_list_to_vector(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_list_to_vector(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(
       EvalError::ArityError("list->vector: requires exactly 1 argument"),

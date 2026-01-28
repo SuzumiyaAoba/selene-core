@@ -7,7 +7,7 @@
 // =============================================================================
 
 /// input-port? - Whether it is an input port
-fn builtin_input_port_p(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_input_port_p(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("input-port?: requires exactly 1 argument"))
   }
@@ -18,7 +18,7 @@ fn builtin_input_port_p(args : Array[Value]) -> Result[Value, EvalError] {
 }
 
 /// output-port? - Whether it is an output port
-fn builtin_output_port_p(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_output_port_p(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("output-port?: requires exactly 1 argument"))
   }
@@ -29,7 +29,7 @@ fn builtin_output_port_p(args : Array[Value]) -> Result[Value, EvalError] {
 }
 
 /// port? - Whether or not it is a port
-fn builtin_port_p(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_port_p(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("port?: requires exactly 1 argument"))
   }
@@ -44,7 +44,7 @@ fn builtin_port_p(args : Array[Value]) -> Result[Value, EvalError] {
 // =============================================================================
 
 /// open-input-file - Open the input file
-fn builtin_open_input_file(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_open_input_file(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("open-input-file: requires exactly 1 argument"))
   }
@@ -72,7 +72,7 @@ fn builtin_open_input_file(args : Array[Value]) -> Result[Value, EvalError] {
 }
 
 /// open-output-file - Open the output file
-fn builtin_open_output_file(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_open_output_file(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("open-output-file: requires exactly 1 argument"))
   }
@@ -100,7 +100,7 @@ fn builtin_open_output_file(args : Array[Value]) -> Result[Value, EvalError] {
 }
 
 /// close-input-port - Close the input port
-fn builtin_close_input_port(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_close_input_port(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(
       EvalError::ArityError("close-input-port: requires exactly 1 argument"),
@@ -123,7 +123,7 @@ fn builtin_close_input_port(args : Array[Value]) -> Result[Value, EvalError] {
 }
 
 /// close-output-port - Close the output port
-fn builtin_close_output_port(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_close_output_port(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(
       EvalError::ArityError("close-output-port: requires exactly 1 argument"),
@@ -150,7 +150,7 @@ fn builtin_close_output_port(args : Array[Value]) -> Result[Value, EvalError] {
 // =============================================================================
 
 /// read-char - read a character from the port
-fn builtin_read_char(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_read_char(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() > 1 {
     return Err(EvalError::ArityError("read-char: requires 0 or 1 argument"))
   }
@@ -179,7 +179,7 @@ fn builtin_read_char(args : Array[Value]) -> Result[Value, EvalError] {
 }
 
 /// peek-char - read one character ahead of the port (do not consume)
-fn builtin_peek_char(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_peek_char(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() > 1 {
     return Err(EvalError::ArityError("peek-char: requires 0 or 1 argument"))
   }
@@ -208,7 +208,7 @@ fn builtin_peek_char(args : Array[Value]) -> Result[Value, EvalError] {
 }
 
 /// eof-object? -Is it an EoF object?
-fn builtin_eof_object_p(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_eof_object_p(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("eof-object?: requires exactly 1 argument"))
   }
@@ -223,7 +223,7 @@ fn builtin_eof_object_p(args : Array[Value]) -> Result[Value, EvalError] {
 // =============================================================================
 
 /// write-char - write one character to the port
-fn builtin_write_char_port(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_write_char_port(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() < 1 || args.length() > 2 {
     return Err(EvalError::ArityError("write-char: requires 1 or 2 arguments"))
   }

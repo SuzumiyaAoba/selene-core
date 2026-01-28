@@ -3,7 +3,7 @@
 /// Implement Scheme type checking and equivalence testing.
 
 /// Built-in function: null?
-fn builtin_null_p(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_null_p(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("null?: requires exactly 1 argument"))
   }
@@ -14,7 +14,7 @@ fn builtin_null_p(args : Array[Value]) -> Result[Value, EvalError] {
 }
 
 /// Built-in function: procedure?
-fn builtin_procedure_p(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_procedure_p(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("procedure?: requires exactly 1 argument"))
   }
@@ -25,7 +25,7 @@ fn builtin_procedure_p(args : Array[Value]) -> Result[Value, EvalError] {
 }
 
 /// Built-in function: list?
-fn builtin_list_p(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_list_p(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("list?: requires exactly 1 argument"))
   }
@@ -40,7 +40,7 @@ fn builtin_list_p(args : Array[Value]) -> Result[Value, EvalError] {
 }
 
 /// Built-in function: integer?
-fn builtin_integer_p(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_integer_p(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("integer?: requires exactly 1 argument"))
   }
@@ -55,7 +55,7 @@ fn builtin_integer_p(args : Array[Value]) -> Result[Value, EvalError] {
 }
 
 /// Built-in functions: real?
-fn builtin_real_p(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_real_p(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("real?: requires exactly 1 argument"))
   }
@@ -66,7 +66,7 @@ fn builtin_real_p(args : Array[Value]) -> Result[Value, EvalError] {
 }
 
 /// Built-in function: zero?
-fn builtin_zero_p(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_zero_p(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("zero?: requires exactly 1 argument"))
   }
@@ -78,7 +78,7 @@ fn builtin_zero_p(args : Array[Value]) -> Result[Value, EvalError] {
 }
 
 /// Built-in functions: positive?
-fn builtin_positive_p(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_positive_p(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("positive?: requires exactly 1 argument"))
   }
@@ -90,7 +90,7 @@ fn builtin_positive_p(args : Array[Value]) -> Result[Value, EvalError] {
 }
 
 /// Built-in functions: negative?
-fn builtin_negative_p(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_negative_p(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("negative?: requires exactly 1 argument"))
   }
@@ -102,7 +102,7 @@ fn builtin_negative_p(args : Array[Value]) -> Result[Value, EvalError] {
 }
 
 /// Built-in function: odd?
-fn builtin_odd_p(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_odd_p(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("odd?: requires exactly 1 argument"))
   }
@@ -120,7 +120,7 @@ fn builtin_odd_p(args : Array[Value]) -> Result[Value, EvalError] {
 }
 
 /// Built-in functions: even?
-fn builtin_even_p(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_even_p(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("even?: requires exactly 1 argument"))
   }
@@ -138,7 +138,7 @@ fn builtin_even_p(args : Array[Value]) -> Result[Value, EvalError] {
 }
 
 /// Built-in function: pair?
-fn builtin_pair_p(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_pair_p(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("pair?: requires exactly 1 argument"))
   }
@@ -149,7 +149,7 @@ fn builtin_pair_p(args : Array[Value]) -> Result[Value, EvalError] {
 }
 
 /// Built-in function: number?
-fn builtin_number_p(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_number_p(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("number?: requires exactly 1 argument"))
   }
@@ -160,7 +160,7 @@ fn builtin_number_p(args : Array[Value]) -> Result[Value, EvalError] {
 }
 
 /// Built-in function: boolean?
-fn builtin_boolean_p(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_boolean_p(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("boolean?: requires exactly 1 argument"))
   }
@@ -171,7 +171,7 @@ fn builtin_boolean_p(args : Array[Value]) -> Result[Value, EvalError] {
 }
 
 /// Built-in function: eq?
-fn builtin_eq_p(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_eq_p(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 2 {
     return Err(EvalError::ArityError("eq?: requires exactly 2 arguments"))
   }
@@ -188,7 +188,7 @@ fn builtin_eq_p(args : Array[Value]) -> Result[Value, EvalError] {
 
 /// Built-in function: eqv?
 /// equivalence checks laxer than eq? (including numeric values)
-fn builtin_eqv_p(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_eqv_p(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 2 {
     return Err(EvalError::ArityError("eqv?: requires exactly 2 arguments"))
   }
@@ -223,7 +223,7 @@ fn physical_identity[T](_a : T, _b : T) -> Bool {
 
 /// Built-in functions: equal?
 /// Check Structural Equivalence (Deep Comparison)
-fn builtin_equal_p(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_equal_p(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 2 {
     return Err(EvalError::ArityError("equal?: requires exactly 2 arguments"))
   }
@@ -274,7 +274,7 @@ fn values_equal(a : Value, b : Value) -> Bool {
 }
 
 /// Built-in functions: not
-fn builtin_not(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_not(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("not: requires exactly 1 argument"))
   }

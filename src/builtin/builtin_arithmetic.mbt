@@ -177,7 +177,7 @@ fn min_numbers(a : Number, b : Number) -> Number {
 }
 
 /// Built-in functions: +
-fn builtin_add(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_add(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() == 0 {
     return Ok(Value::Number(Number::Int(0)))
   }
@@ -201,7 +201,7 @@ fn builtin_add(args : Array[Value]) -> Result[Value, EvalError] {
 }
 
 /// Built-in functions: -
-fn builtin_sub(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_sub(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() == 0 {
     return Err(EvalError::ArityError("-: requires at least 1 argument"))
   }
@@ -241,7 +241,7 @@ fn builtin_sub(args : Array[Value]) -> Result[Value, EvalError] {
 }
 
 /// Built-in functions: *
-fn builtin_mul(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_mul(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() == 0 {
     return Ok(Value::Number(Number::Int(1)))
   }
@@ -265,7 +265,7 @@ fn builtin_mul(args : Array[Value]) -> Result[Value, EvalError] {
 }
 
 /// Built-in functions:/
-fn builtin_div(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_div(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() == 0 {
     return Err(EvalError::ArityError("/: requires at least 1 argument"))
   }
@@ -308,7 +308,7 @@ fn builtin_div(args : Array[Value]) -> Result[Value, EvalError] {
 }
 
 /// Built-in function: quotient
-fn builtin_quotient(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_quotient(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 2 {
     return Err(EvalError::ArityError("quotient: requires exactly 2 arguments"))
   }
@@ -332,7 +332,7 @@ fn builtin_quotient(args : Array[Value]) -> Result[Value, EvalError] {
 }
 
 /// Built-in function: remainder
-fn builtin_remainder(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_remainder(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 2 {
     return Err(EvalError::ArityError("remainder: requires exactly 2 arguments"))
   }
@@ -356,7 +356,7 @@ fn builtin_remainder(args : Array[Value]) -> Result[Value, EvalError] {
 }
 
 /// Built-in function: modulo
-fn builtin_modulo(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_modulo(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 2 {
     return Err(EvalError::ArityError("modulo: requires exactly 2 arguments"))
   }
@@ -383,7 +383,7 @@ fn builtin_modulo(args : Array[Value]) -> Result[Value, EvalError] {
 }
 
 /// Built-in function: abs
-fn builtin_abs(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_abs(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("abs: requires exactly 1 argument"))
   }
@@ -408,7 +408,7 @@ fn builtin_abs(args : Array[Value]) -> Result[Value, EvalError] {
 }
 
 /// Built-in functions: max
-fn builtin_max(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_max(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() == 0 {
     return Err(EvalError::ArityError("max: requires at least 1 argument"))
   }
@@ -432,7 +432,7 @@ fn builtin_max(args : Array[Value]) -> Result[Value, EvalError] {
 }
 
 /// Built-in function: min
-fn builtin_min(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_min(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() == 0 {
     return Err(EvalError::ArityError("min: requires at least 1 argument"))
   }
@@ -457,7 +457,7 @@ fn builtin_min(args : Array[Value]) -> Result[Value, EvalError] {
 
 /// Built-in function: gcd
 /// (gcd n1n2...) - calculate maximum common factor
-fn builtin_gcd(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_gcd(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() == 0 {
     return Ok(Value::Number(Number::Int(0)))
   }
@@ -494,7 +494,7 @@ fn builtin_gcd(args : Array[Value]) -> Result[Value, EvalError] {
 
 /// Built-in functions: lcm
 /// (lcm n1n2...) - calculate least common multiple
-fn builtin_lcm(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_lcm(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() == 0 {
     return Ok(Value::Number(Number::Int(1)))
   }
@@ -572,7 +572,7 @@ fn compare_numbers(op : String, a : Number, b : Number) -> Bool {
 }
 
 /// Built-in functions: =
-fn builtin_num_eq(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_num_eq(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() < 2 {
     return Err(EvalError::ArityError("=: requires at least 2 arguments"))
   }
@@ -598,7 +598,7 @@ fn builtin_num_eq(args : Array[Value]) -> Result[Value, EvalError] {
 }
 
 /// Built-in functions: <
-fn builtin_lt(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_lt(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() < 2 {
     return Err(EvalError::ArityError("<: requires at least 2 arguments"))
   }
@@ -625,7 +625,7 @@ fn builtin_lt(args : Array[Value]) -> Result[Value, EvalError] {
 }
 
 /// Built-in functions: >
-fn builtin_gt(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_gt(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() < 2 {
     return Err(EvalError::ArityError(">: requires at least 2 arguments"))
   }
@@ -652,7 +652,7 @@ fn builtin_gt(args : Array[Value]) -> Result[Value, EvalError] {
 }
 
 /// Built-in functions: < =
-fn builtin_le(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_le(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() < 2 {
     return Err(EvalError::ArityError("<=: requires at least 2 arguments"))
   }
@@ -679,7 +679,7 @@ fn builtin_le(args : Array[Value]) -> Result[Value, EvalError] {
 }
 
 /// Built-in functions: > =
-fn builtin_ge(args : Array[Value]) -> Result[Value, EvalError] {
+pub fn builtin_ge(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() < 2 {
     return Err(EvalError::ArityError(">=: requires at least 2 arguments"))
   }
