@@ -1,0 +1,7 @@
+{
+  "targets": {
+    "ffi.js.mbt": ["js"],
+    "ffi.wasm.mbt": ["wasm"],
+    "ffi.wasm-gc.mbt": ["wasm-gc"]
+  }
+}

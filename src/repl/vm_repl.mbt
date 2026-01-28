@@ -1,0 +1,103 @@
+/// VM REPL context
+///
+/// Run multiple expressions sequentially and share chunks with the global environment
+
+/// REPL context
+pub(all) struct VMReplContext {
+  /// global variable (value)
+  globals : @hashmap.T[String, Value]
+  /// Global variables for compiler (name only)
+  compiler_globals : @hashmap.T[String, Unit]
+  /// accumulated chunks
+  chunks : Array[CodeChunk]
+}
+
+/// Create a new REPL context
+pub fn new_repl_context() -> VMReplContext {
+  {
+    globals: create_initial_globals(),
+    compiler_globals: initial_globals(),
+    chunks: [],
+  }
+}
+
+/// Evaluate expressions in REPL context
+pub fn repl_eval(ctx : VMReplContext, input : String) -> Result[Value, String] {
+  let expr = parse_one(input)
+  repl_eval_expr(ctx, expr)
+}
+
+/// Evaluate SExpr in REPL context
+pub fn repl_eval_expr(ctx : VMReplContext, expr : SExpr) -> Result[Value, String] {
+  // compile
+  match compile_toplevel_with_globals(expr, ctx.compiler_globals) {
+    Ok(ir) => {
+      // optimization
+      let optimized = optimize(ir)
+      // code generation
+      let compiled_module = generate(optimized)
+
+      // Calculate chunk offset (number of existing chunks)
+      let chunk_offset = ctx.chunks.length()
+
+      // Add new chunk to cumulative list (with offset adjustment)
+      for chunk in compiled_module.chunks {
+        let adjusted = adjust_chunk_refs(chunk, chunk_offset)
+        ctx.chunks.push(adjusted)
+      }
+
+      // Offset adjustment of chunk reference of main chunk
+      let adjusted_main = adjust_chunk_refs(compiled_module.main, chunk_offset)
+
+      // Build module for VM (using cumulative chunks)
+      let vm_module : CompiledModule = {
+        main: adjusted_main,
+        chunks: ctx.chunks,
+      }
+
+      // Run in VM
+      let vm = new_vm_state_with_globals(vm_module, ctx.globals)
+      match vm_run(vm) {
+        Ok(value) => {
+          // For GlobalSet, register global variables
+          match optimized {
+            IRExpr::GlobalSet(name, _) => {
+              ctx.compiler_globals.set(name, ())
+            }
+            _ => ()
+          }
+          Ok(value)
+        }
+        Err(e) => Err("VM Error: " + e.to_string())
+      }
+    }
+    Err(e) => Err("Compile Error: " + e.to_string())
+  }
+}
+
+/// Offset adjustment of chunk references within chunks
+fn adjust_chunk_refs(chunk : CodeChunk, offset : Int) -> CodeChunk {
+  if offset == 0 {
+    return chunk
+  }
+
+  let new_code : Array[Opcode] = []
+  for op in chunk.code {
+    let adjusted = match op {
+      Opcode::MakeClosure(chunk_idx, num_captures) => Opcode::MakeClosure(chunk_idx + offset, num_captures)
+      Opcode::MakePromise(idx) => Opcode::MakePromise(idx + offset)
+      other => other
+    }
+    new_code.push(adjusted)
+  }
+
+  {
+    code: new_code,
+    constants: chunk.constants,
+    names: chunk.names,
+    arity: chunk.arity,
+    num_free_vars: chunk.num_free_vars,
+    num_locals: chunk.num_locals,
+    debug_name: chunk.debug_name,
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "import": [
+    "SuzumiyaAoba/selene_core/core",
+    "SuzumiyaAoba/selene_core/frontend"
+  ]
+}

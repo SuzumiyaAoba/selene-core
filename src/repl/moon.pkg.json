@@ -1,0 +1,9 @@
+{
+  "import": [
+    "SuzumiyaAoba/selene_core/core",
+    "SuzumiyaAoba/selene_core/frontend",
+    "SuzumiyaAoba/selene_core/runtime",
+    "SuzumiyaAoba/selene_core/compiler",
+    "SuzumiyaAoba/selene_core/ffi"
+  ]
+}

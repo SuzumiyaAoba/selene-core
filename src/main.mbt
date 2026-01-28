@@ -5,6 +5,7 @@
 ///
 /// The WASM backend runs a sample expression:
 ///   moon run src
+using @repl { run_vm_interactive }
 fn main {
   run_vm_interactive()
 }
