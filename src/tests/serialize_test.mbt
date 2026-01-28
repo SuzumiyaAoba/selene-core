@@ -8,12 +8,12 @@ test "serialize: simple module" {
     Ok(compiled) => {
       let serialized = serialize_module_to_string(compiled)
       // Check the header
-      assert_true!(serialized.contains("SELENE_BYTECODE_V1"))
-      assert_true!(serialized.contains("main_chunk:"))
-      assert_true!(serialized.contains("arity:"))
-      assert_true!(serialized.contains("code:"))
+      assert_true(serialized.contains("SELENE_BYTECODE_V1"))
+      assert_true(serialized.contains("main_chunk:"))
+      assert_true(serialized.contains("arity:"))
+      assert_true(serialized.contains("code:"))
     }
-    Err(_) => fail!("Compilation failed")
+    Err(_) => fail("Compilation failed")
   }
 }
 
@@ -23,11 +23,11 @@ test "serialize: module with lambda" {
   match compile_to_module(expr) {
     Ok(compiled) => {
       let serialized = serialize_module_to_string(compiled)
-      assert_true!(serialized.contains("SELENE_BYTECODE_V1"))
+      assert_true(serialized.contains("SELENE_BYTECODE_V1"))
       // There should be a child chunk
-      assert_true!(serialized.contains("chunks:"))
+      assert_true(serialized.contains("chunks:"))
     }
-    Err(_) => fail!("Compilation failed")
+    Err(_) => fail("Compilation failed")
   }
 }
 
@@ -37,10 +37,10 @@ test "serialize: module with constants" {
   match compile_to_module(expr) {
     Ok(compiled) => {
       let serialized = serialize_module_to_string(compiled)
-      assert_true!(serialized.contains("constants:"))
-      assert_true!(serialized.contains("42") || serialized.contains("Int(42)"))
+      assert_true(serialized.contains("constants:"))
+      assert_true(serialized.contains("42") || serialized.contains("Int(42)"))
     }
-    Err(_) => fail!("Compilation failed")
+    Err(_) => fail("Compilation failed")
   }
 }
 
@@ -57,18 +57,18 @@ test "deserialize: simple roundtrip" {
       match deserialize_module_from_string(serialized) {
         Ok(restored) => {
           // main chunk comparison
-          assert_eq!(restored.main.arity, original.main.arity)
-          assert_eq!(restored.main.num_free_vars, original.main.num_free_vars)
-          assert_eq!(restored.main.num_locals, original.main.num_locals)
-          assert_eq!(restored.main.code.length(), original.main.code.length())
-          assert_eq!(restored.main.constants.length(), original.main.constants.length())
-          assert_eq!(restored.main.names.length(), original.main.names.length())
-          assert_eq!(restored.chunks.length(), original.chunks.length())
+          assert_eq(restored.main.arity, original.main.arity)
+          assert_eq(restored.main.num_free_vars, original.main.num_free_vars)
+          assert_eq(restored.main.num_locals, original.main.num_locals)
+          assert_eq(restored.main.code.length(), original.main.code.length())
+          assert_eq(restored.main.constants.length(), original.main.constants.length())
+          assert_eq(restored.main.names.length(), original.main.names.length())
+          assert_eq(restored.chunks.length(), original.chunks.length())
         }
-        Err(e) => fail!("Deserialization failed: " + e.to_string())
+        Err(e) => fail("Deserialization failed: " + e.to_string())
       }
     }
-    Err(_) => fail!("Compilation failed")
+    Err(_) => fail("Compilation failed")
   }
 }
 
@@ -81,16 +81,16 @@ test "deserialize: lambda roundtrip" {
       match deserialize_module_from_string(serialized) {
         Ok(restored) => {
           // Match number of chunks
-          assert_eq!(restored.chunks.length(), original.chunks.length())
+          assert_eq(restored.chunks.length(), original.chunks.length())
           // Lambda chunk arity matches
           if restored.chunks.length() > 0 {
-            assert_eq!(restored.chunks[0].arity, original.chunks[0].arity)
+            assert_eq(restored.chunks[0].arity, original.chunks[0].arity)
           }
         }
-        Err(e) => fail!("Deserialization failed: " + e.to_string())
+        Err(e) => fail("Deserialization failed: " + e.to_string())
       }
     }
-    Err(_) => fail!("Compilation failed")
+    Err(_) => fail("Compilation failed")
   }
 }
 
@@ -102,12 +102,12 @@ test "deserialize: constants roundtrip" {
       let serialized = serialize_module_to_string(original)
       match deserialize_module_from_string(serialized) {
         Ok(restored) => {
-          assert_eq!(restored.main.constants.length(), original.main.constants.length())
+          assert_eq(restored.main.constants.length(), original.main.constants.length())
         }
-        Err(e) => fail!("Deserialization failed: " + e.to_string())
+        Err(e) => fail("Deserialization failed: " + e.to_string())
       }
     }
-    Err(_) => fail!("Compilation failed")
+    Err(_) => fail("Compilation failed")
   }
 }
 
@@ -119,12 +119,12 @@ test "deserialize: control flow roundtrip" {
       let serialized = serialize_module_to_string(original)
       match deserialize_module_from_string(serialized) {
         Ok(restored) => {
-          assert_eq!(restored.main.code.length(), original.main.code.length())
+          assert_eq(restored.main.code.length(), original.main.code.length())
         }
-        Err(e) => fail!("Deserialization failed: " + e.to_string())
+        Err(e) => fail("Deserialization failed: " + e.to_string())
       }
     }
-    Err(_) => fail!("Compilation failed")
+    Err(_) => fail("Compilation failed")
   }
 }
 
@@ -132,12 +132,12 @@ test "deserialize: control flow roundtrip" {
 test "deserialize: invalid format" {
   match deserialize_module_from_string("INVALID_HEADER") {
     Err(SerializeError::InvalidFormat(_)) => ()
-    _ => fail!("Expected InvalidFormat error")
+    _ => fail("Expected InvalidFormat error")
   }
 
   match deserialize_module_from_string("") {
     Err(SerializeError::UnexpectedEnd) => ()
-    _ => fail!("Expected UnexpectedEnd error")
+    _ => fail("Expected UnexpectedEnd error")
   }
 }
 
@@ -149,13 +149,13 @@ test "deserialize: complex program roundtrip" {
       let serialized = serialize_module_to_string(original)
       match deserialize_module_from_string(serialized) {
         Ok(restored) => {
-          assert_eq!(restored.main.code.length(), original.main.code.length())
-          assert_eq!(restored.chunks.length(), original.chunks.length())
+          assert_eq(restored.main.code.length(), original.main.code.length())
+          assert_eq(restored.chunks.length(), original.chunks.length())
         }
-        Err(e) => fail!("Deserialization failed: " + e.to_string())
+        Err(e) => fail("Deserialization failed: " + e.to_string())
       }
     }
-    Err(_) => fail!("Compilation failed")
+    Err(_) => fail("Compilation failed")
   }
 }
 
@@ -167,12 +167,12 @@ test "deserialize: bool constants roundtrip" {
       let serialized = serialize_module_to_string(original)
       match deserialize_module_from_string(serialized) {
         Ok(restored) => {
-          assert_eq!(restored.main.constants.length(), original.main.constants.length())
+          assert_eq(restored.main.constants.length(), original.main.constants.length())
         }
-        Err(e) => fail!("Deserialization failed: " + e.to_string())
+        Err(e) => fail("Deserialization failed: " + e.to_string())
       }
     }
-    Err(_) => fail!("Compilation failed")
+    Err(_) => fail("Compilation failed")
   }
 }
 
@@ -184,12 +184,12 @@ test "deserialize: symbol roundtrip" {
       let serialized = serialize_module_to_string(original)
       match deserialize_module_from_string(serialized) {
         Ok(restored) => {
-          assert_eq!(restored.main.constants.length(), original.main.constants.length())
+          assert_eq(restored.main.constants.length(), original.main.constants.length())
         }
-        Err(e) => fail!("Deserialization failed: " + e.to_string())
+        Err(e) => fail("Deserialization failed: " + e.to_string())
       }
     }
-    Err(_) => fail!("Compilation failed")
+    Err(_) => fail("Compilation failed")
   }
 }
 
@@ -205,16 +205,16 @@ test "binary: simple roundtrip" {
       let binary = serialize_module_to_binary(original)
       match deserialize_module_from_binary(binary) {
         Ok(restored) => {
-          assert_eq!(restored.main.arity, original.main.arity)
-          assert_eq!(restored.main.num_free_vars, original.main.num_free_vars)
-          assert_eq!(restored.main.num_locals, original.main.num_locals)
-          assert_eq!(restored.main.code.length(), original.main.code.length())
-          assert_eq!(restored.main.constants.length(), original.main.constants.length())
+          assert_eq(restored.main.arity, original.main.arity)
+          assert_eq(restored.main.num_free_vars, original.main.num_free_vars)
+          assert_eq(restored.main.num_locals, original.main.num_locals)
+          assert_eq(restored.main.code.length(), original.main.code.length())
+          assert_eq(restored.main.constants.length(), original.main.constants.length())
         }
-        Err(e) => fail!("Binary deserialization failed: " + e.to_string())
+        Err(e) => fail("Binary deserialization failed: " + e.to_string())
       }
     }
-    Err(_) => fail!("Compilation failed")
+    Err(_) => fail("Compilation failed")
   }
 }
 
@@ -226,15 +226,15 @@ test "binary: lambda roundtrip" {
       let binary = serialize_module_to_binary(original)
       match deserialize_module_from_binary(binary) {
         Ok(restored) => {
-          assert_eq!(restored.chunks.length(), original.chunks.length())
+          assert_eq(restored.chunks.length(), original.chunks.length())
           if restored.chunks.length() > 0 {
-            assert_eq!(restored.chunks[0].arity, original.chunks[0].arity)
+            assert_eq(restored.chunks[0].arity, original.chunks[0].arity)
           }
         }
-        Err(e) => fail!("Binary deserialization failed: " + e.to_string())
+        Err(e) => fail("Binary deserialization failed: " + e.to_string())
       }
     }
-    Err(_) => fail!("Compilation failed")
+    Err(_) => fail("Compilation failed")
   }
 }
 
@@ -246,12 +246,12 @@ test "binary: constants roundtrip" {
       let binary = serialize_module_to_binary(original)
       match deserialize_module_from_binary(binary) {
         Ok(restored) => {
-          assert_eq!(restored.main.constants.length(), original.main.constants.length())
+          assert_eq(restored.main.constants.length(), original.main.constants.length())
         }
-        Err(e) => fail!("Binary deserialization failed: " + e.to_string())
+        Err(e) => fail("Binary deserialization failed: " + e.to_string())
       }
     }
-    Err(_) => fail!("Compilation failed")
+    Err(_) => fail("Compilation failed")
   }
 }
 
@@ -263,12 +263,12 @@ test "binary: control flow roundtrip" {
       let binary = serialize_module_to_binary(original)
       match deserialize_module_from_binary(binary) {
         Ok(restored) => {
-          assert_eq!(restored.main.code.length(), original.main.code.length())
+          assert_eq(restored.main.code.length(), original.main.code.length())
         }
-        Err(e) => fail!("Binary deserialization failed: " + e.to_string())
+        Err(e) => fail("Binary deserialization failed: " + e.to_string())
       }
     }
-    Err(_) => fail!("Compilation failed")
+    Err(_) => fail("Compilation failed")
   }
 }
 
@@ -280,13 +280,13 @@ test "binary: complex program roundtrip" {
       let binary = serialize_module_to_binary(original)
       match deserialize_module_from_binary(binary) {
         Ok(restored) => {
-          assert_eq!(restored.main.code.length(), original.main.code.length())
-          assert_eq!(restored.chunks.length(), original.chunks.length())
+          assert_eq(restored.main.code.length(), original.main.code.length())
+          assert_eq(restored.chunks.length(), original.chunks.length())
         }
-        Err(e) => fail!("Binary deserialization failed: " + e.to_string())
+        Err(e) => fail("Binary deserialization failed: " + e.to_string())
       }
     }
-    Err(_) => fail!("Compilation failed")
+    Err(_) => fail("Compilation failed")
   }
 }
 
@@ -295,13 +295,13 @@ test "binary: invalid format" {
   // empty data
   match deserialize_module_from_binary([]) {
     Err(SerializeError::UnexpectedEnd) => ()
-    _ => fail!("Expected UnexpectedEnd error")
+    _ => fail("Expected UnexpectedEnd error")
   }
 
   // fraudulent magic number
   match deserialize_module_from_binary([0x00, 0x00, 0x00, 0x00]) {
     Err(SerializeError::InvalidFormat(_)) => ()
-    _ => fail!("Expected InvalidFormat error")
+    _ => fail("Expected InvalidFormat error")
   }
 }
 
@@ -313,8 +313,8 @@ test "binary: smaller than text" {
       let text = serialize_module_to_string(compiled)
       let binary = serialize_module_to_binary(compiled)
       // binary should be smaller than text
-      assert_true!(binary.length() < text.length())
+      assert_true(binary.length() < text.length())
     }
-    Err(_) => fail!("Compilation failed")
+    Err(_) => fail("Compilation failed")
   }
 }

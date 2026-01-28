@@ -7,7 +7,7 @@ test "do loop basic counting" {
   let result = eval(expr, env)
   match result {
     Ok(Value::Number(Number::Int(5))) => ()
-    _ => fail!("expected 5")
+    _ => fail("expected 5")
   }
 }
 
@@ -18,7 +18,7 @@ test "do loop building list" {
   let result = eval(expr, env)
   match result {
     Ok(Value::Pair(_, _)) => ()
-    _ => fail!("expected a list")
+    _ => fail("expected a list")
   }
 }
 
@@ -29,7 +29,7 @@ test "do loop no result expression" {
   let result = eval(expr, env)
   match result {
     Ok(Value::Nil) => ()
-    _ => fail!("expected Nil")
+    _ => fail("expected Nil")
   }
 }
 
@@ -41,7 +41,7 @@ test "do loop with commands" {
   let result = eval(expr, env)
   match result {
     Ok(Value::Number(Number::Int(6))) => () // 0+1+2+3=6
-    _ => fail!("expected 6")
+    _ => fail("expected 6")
   }
 }
 
@@ -52,7 +52,7 @@ test "do loop without step" {
   let result = eval(expr, env)
   match result {
     Ok(Value::Number(Number::Int(10))) => ()
-    _ => fail!("expected 10")
+    _ => fail("expected 10")
   }
 }
 
@@ -63,7 +63,7 @@ test "do loop multiple variables" {
   let result = eval(expr, env)
   match result {
     Ok(Value::Number(Number::Int(10))) => () // 0+1+2+3+4=10
-    _ => fail!("expected 10")
+    _ => fail("expected 10")
   }
 }
 
@@ -74,6 +74,6 @@ test "do loop early exit" {
   let result = eval(expr, env)
   match result {
     Ok(Value::Number(Number::Int(4))) => ()
-    _ => fail!("expected 4")
+    _ => fail("expected 4")
   }
 }

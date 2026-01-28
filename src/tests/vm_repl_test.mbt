@@ -7,8 +7,8 @@ test "vm repl: basic arithmetic" {
   // (+ 1 2) => 3
   let result = repl_eval(ctx, "(+ 1 2)")
   match result {
-    Ok(Value::Number(Number::Int(n))) => assert_eq!(n, 3)
-    _ => fail!("Expected 3")
+    Ok(Value::Number(Number::Int(n))) => assert_eq(n, 3)
+    _ => fail("Expected 3")
   }
 }
 
@@ -19,8 +19,8 @@ test "vm repl: multiplication" {
   // (* 3 4) => 12
   let result = repl_eval(ctx, "(* 3 4)")
   match result {
-    Ok(Value::Number(Number::Int(n))) => assert_eq!(n, 12)
-    _ => fail!("Expected 12")
+    Ok(Value::Number(Number::Int(n))) => assert_eq(n, 12)
+    _ => fail("Expected 12")
   }
 }
 
@@ -34,8 +34,8 @@ test "vm repl: define and reference" {
   // x => 10
   let result = repl_eval(ctx, "x")
   match result {
-    Ok(Value::Number(Number::Int(n))) => assert_eq!(n, 10)
-    _ => fail!("Expected 10")
+    Ok(Value::Number(Number::Int(n))) => assert_eq(n, 10)
+    _ => fail("Expected 10")
   }
 }
 
@@ -51,8 +51,8 @@ test "vm repl: multiple defines" {
   // (+ x y) => 30
   let result = repl_eval(ctx, "(+ x y)")
   match result {
-    Ok(Value::Number(Number::Int(n))) => assert_eq!(n, 30)
-    _ => fail!("Expected 30")
+    Ok(Value::Number(Number::Int(n))) => assert_eq(n, 30)
+    _ => fail("Expected 30")
   }
 }
 
@@ -66,8 +66,8 @@ test "vm repl: function definition and call" {
   // (square 5) => 25
   let result = repl_eval(ctx, "(square 5)")
   match result {
-    Ok(Value::Number(Number::Int(n))) => assert_eq!(n, 25)
-    _ => fail!("Expected 25")
+    Ok(Value::Number(Number::Int(n))) => assert_eq(n, 25)
+    _ => fail("Expected 25")
   }
 }
 
@@ -78,15 +78,15 @@ test "vm repl: if expression" {
   // (if #t 1 2) => 1
   let result1 = repl_eval(ctx, "(if #t 1 2)")
   match result1 {
-    Ok(Value::Number(Number::Int(n))) => assert_eq!(n, 1)
-    _ => fail!("Expected 1")
+    Ok(Value::Number(Number::Int(n))) => assert_eq(n, 1)
+    _ => fail("Expected 1")
   }
 
   // (if #f 1 2) => 2
   let result2 = repl_eval(ctx, "(if #f 1 2)")
   match result2 {
-    Ok(Value::Number(Number::Int(n))) => assert_eq!(n, 2)
-    _ => fail!("Expected 2")
+    Ok(Value::Number(Number::Int(n))) => assert_eq(n, 2)
+    _ => fail("Expected 2")
   }
 }
 
@@ -97,8 +97,8 @@ test "vm repl: let expression" {
   // (let ((a 5) (b 10)) (+ a b)) => 15
   let result = repl_eval(ctx, "(let ((a 5) (b 10)) (+ a b))")
   match result {
-    Ok(Value::Number(Number::Int(n))) => assert_eq!(n, 15)
-    _ => fail!("Expected 15")
+    Ok(Value::Number(Number::Int(n))) => assert_eq(n, 15)
+    _ => fail("Expected 15")
   }
 }
 
@@ -109,15 +109,15 @@ test "vm repl: list operations" {
   // (car (cons 1 2)) => 1
   let result1 = repl_eval(ctx, "(car (cons 1 2))")
   match result1 {
-    Ok(Value::Number(Number::Int(n))) => assert_eq!(n, 1)
-    _ => fail!("Expected 1")
+    Ok(Value::Number(Number::Int(n))) => assert_eq(n, 1)
+    _ => fail("Expected 1")
   }
 
   // (cdr (cons 1 2)) => 2
   let result2 = repl_eval(ctx, "(cdr (cons 1 2))")
   match result2 {
-    Ok(Value::Number(Number::Int(n))) => assert_eq!(n, 2)
-    _ => fail!("Expected 2")
+    Ok(Value::Number(Number::Int(n))) => assert_eq(n, 2)
+    _ => fail("Expected 2")
   }
 }
 
@@ -131,8 +131,8 @@ test "vm repl: recursive function - factorial" {
   // (fact 5) => 120
   let result = repl_eval(ctx, "(fact 5)")
   match result {
-    Ok(Value::Number(Number::Int(n))) => assert_eq!(n, 120)
-    _ => fail!("Expected 120")
+    Ok(Value::Number(Number::Int(n))) => assert_eq(n, 120)
+    _ => fail("Expected 120")
   }
 }
 
@@ -146,8 +146,8 @@ test "vm repl: recursive function - fibonacci" {
   // (fib 10) => 55
   let result = repl_eval(ctx, "(fib 10)")
   match result {
-    Ok(Value::Number(Number::Int(n))) => assert_eq!(n, 55)
-    _ => fail!("Expected 55")
+    Ok(Value::Number(Number::Int(n))) => assert_eq(n, 55)
+    _ => fail("Expected 55")
   }
 }
 
@@ -163,8 +163,8 @@ test "vm repl: higher order function" {
   // (apply-twice add1 5) => 7
   let result = repl_eval(ctx, "(apply-twice add1 5)")
   match result {
-    Ok(Value::Number(Number::Int(n))) => assert_eq!(n, 7)
-    _ => fail!("Expected 7")
+    Ok(Value::Number(Number::Int(n))) => assert_eq(n, 7)
+    _ => fail("Expected 7")
   }
 }
 
@@ -177,10 +177,10 @@ test "vm repl: simple closure" {
   match result1 {
     Ok(Value::Number(Number::Int(n))) => {
       println("identity result = " + n.to_string())
-      assert_eq!(n, 5)
+      assert_eq(n, 5)
     }
-    Ok(v) => fail!("Expected 5, got: " + v.to_string())
-    Err(e) => fail!("Error: " + e)
+    Ok(v) => fail("Expected 5, got: " + v.to_string())
+    Err(e) => fail("Error: " + e)
   }
 
   // ((lambda (x) (+ x 1)) 5) => 6
@@ -188,10 +188,10 @@ test "vm repl: simple closure" {
   match result2 {
     Ok(Value::Number(Number::Int(n))) => {
       println("add1 result = " + n.to_string())
-      assert_eq!(n, 6)
+      assert_eq(n, 6)
     }
-    Ok(v) => fail!("Expected 6, got: " + v.to_string())
-    Err(e) => fail!("Error: " + e)
+    Ok(v) => fail("Expected 6, got: " + v.to_string())
+    Err(e) => fail("Error: " + e)
   }
 }
 
@@ -204,8 +204,8 @@ test "vm repl: nested closure" {
   let result1 = repl_eval(ctx, "((lambda (n) (lambda (x) x)) 5)")
   match result1 {
     Ok(Value::Procedure(_)) => println("inner lambda returned")
-    Ok(v) => fail!("Expected procedure, got: " + v.to_string())
-    Err(e) => fail!("Error in step 1: " + e)
+    Ok(v) => fail("Expected procedure, got: " + v.to_string())
+    Err(e) => fail("Error in step 1: " + e)
   }
 
   // Then just return the outer parameters
@@ -213,8 +213,8 @@ test "vm repl: nested closure" {
   let result2a = repl_eval(ctx, "((lambda (n) (lambda (x) n)) 5)")
   match result2a {
     Ok(Value::Procedure(_)) => println("outer param lambda created")
-    Ok(v) => fail!("Expected procedure in 2a, got: " + v.to_string())
-    Err(e) => fail!("Error in step 2a: " + e)
+    Ok(v) => fail("Expected procedure in 2a, got: " + v.to_string())
+    Err(e) => fail("Error in step 2a: " + e)
   }
 
   // Reference outer parameters - test step by step
@@ -223,10 +223,10 @@ test "vm repl: nested closure" {
   match result2b {
     Ok(Value::Number(Number::Int(n))) => {
       println("constant result = " + n.to_string())
-      assert_eq!(n, 42)
+      assert_eq(n, 42)
     }
-    Ok(v) => fail!("Expected 42, got: " + v.to_string())
-    Err(e) => fail!("Error in step 2b: " + e)
+    Ok(v) => fail("Expected 42, got: " + v.to_string())
+    Err(e) => fail("Error in step 2b: " + e)
   }
 
   // step 2c: use arguments in inner closure
@@ -234,10 +234,10 @@ test "vm repl: nested closure" {
   match result2c {
     Ok(Value::Number(Number::Int(n))) => {
       println("inner param result = " + n.to_string())
-      assert_eq!(n, 10)
+      assert_eq(n, 10)
     }
-    Ok(v) => fail!("Expected 10, got: " + v.to_string())
-    Err(e) => fail!("Error in step 2c: " + e)
+    Ok(v) => fail("Expected 10, got: " + v.to_string())
+    Err(e) => fail("Error in step 2c: " + e)
   }
 
   // step 2: refer to outer parameters
@@ -246,10 +246,10 @@ test "vm repl: nested closure" {
   match result2 {
     Ok(Value::Number(Number::Int(n))) => {
       println("outer param reference = " + n.to_string())
-      assert_eq!(n, 5)
+      assert_eq(n, 5)
     }
-    Ok(v) => fail!("Expected 5, got: " + v.to_string())
-    Err(e) => fail!("Error in step 2: " + e)
+    Ok(v) => fail("Expected 5, got: " + v.to_string())
+    Err(e) => fail("Error in step 2: " + e)
   }
 
   // Finally, use both
@@ -258,10 +258,10 @@ test "vm repl: nested closure" {
   match result3 {
     Ok(Value::Number(Number::Int(n))) => {
       println("nested closure result = " + n.to_string())
-      assert_eq!(n, 15)
+      assert_eq(n, 15)
     }
-    Ok(v) => fail!("Expected 15, got: " + v.to_string())
-    Err(e) => fail!("Error in step 3: " + e)
+    Ok(v) => fail("Expected 15, got: " + v.to_string())
+    Err(e) => fail("Error in step 3: " + e)
   }
 }
 
@@ -273,10 +273,10 @@ test "vm: simple two arg function" {
   match result {
     Ok(Value::Number(Number::Int(n))) => {
       println("simple (+ a b) = " + n.to_string())
-      assert_eq!(n, 15)
+      assert_eq(n, 15)
     }
-    Ok(v) => fail!("Expected 15, got: " + v.to_string())
-    Err(e) => fail!("Error: " + e)
+    Ok(v) => fail("Expected 15, got: " + v.to_string())
+    Err(e) => fail("Error: " + e)
   }
 }
 
@@ -292,17 +292,17 @@ test "vm: list capture vs param" {
           match x_val {
             Value::Number(Number::Int(x)) => {
               println("list: n = " + n.to_string() + ", x = " + x.to_string())
-              assert_eq!(n, 5)
-              assert_eq!(x, 10)
+              assert_eq(n, 5)
+              assert_eq(x, 10)
             }
-            _ => fail!("x is not a number")
+            _ => fail("x is not a number")
           }
         }
-        _ => fail!("Unexpected list structure")
+        _ => fail("Unexpected list structure")
       }
     }
-    Ok(v) => fail!("Expected list, got: " + v.to_string())
-    Err(e) => fail!("Error: " + e)
+    Ok(v) => fail("Expected list, got: " + v.to_string())
+    Err(e) => fail("Error: " + e)
   }
 }
 
@@ -314,10 +314,10 @@ test "vm: primop capture vs param" {
   match result1 {
     Ok(Value::Number(Number::Int(n))) => {
       println("(+ n 0) = " + n.to_string())
-      assert_eq!(n, 5)
+      assert_eq(n, 5)
     }
-    Ok(v) => fail!("Expected 5, got: " + v.to_string())
-    Err(e) => fail!("Error in (+ n 0): " + e)
+    Ok(v) => fail("Expected 5, got: " + v.to_string())
+    Err(e) => fail("Error in (+ n 0): " + e)
   }
 
   // constant + parameter
@@ -326,10 +326,10 @@ test "vm: primop capture vs param" {
   match result2 {
     Ok(Value::Number(Number::Int(n))) => {
       println("(+ 0 x) = " + n.to_string())
-      assert_eq!(n, 10)
+      assert_eq(n, 10)
     }
-    Ok(v) => fail!("Expected 10, got: " + v.to_string())
-    Err(e) => fail!("Error in (+ 0 x): " + e)
+    Ok(v) => fail("Expected 10, got: " + v.to_string())
+    Err(e) => fail("Error in (+ 0 x): " + e)
   }
 
   // capture + parameters
@@ -338,10 +338,10 @@ test "vm: primop capture vs param" {
   match result3 {
     Ok(Value::Number(Number::Int(n))) => {
       println("(+ n x) = " + n.to_string())
-      assert_eq!(n, 15)
+      assert_eq(n, 15)
     }
-    Ok(v) => fail!("Expected 15, got: " + v.to_string())
-    Err(e) => fail!("Error in (+ n x): " + e)
+    Ok(v) => fail("Expected 15, got: " + v.to_string())
+    Err(e) => fail("Error in (+ n x): " + e)
   }
 }
 
@@ -353,10 +353,10 @@ test "vm: capture debug" {
   match result1 {
     Ok(Value::Number(Number::Int(n))) => {
       println("captured n = " + n.to_string())
-      assert_eq!(n, 5)
+      assert_eq(n, 5)
     }
-    Ok(v) => fail!("Expected 5, got: " + v.to_string())
-    Err(e) => fail!("Error getting n: " + e)
+    Ok(v) => fail("Expected 5, got: " + v.to_string())
+    Err(e) => fail("Error getting n: " + e)
   }
 
   // return only parameter x
@@ -365,10 +365,10 @@ test "vm: capture debug" {
   match result2 {
     Ok(Value::Number(Number::Int(n))) => {
       println("param x = " + n.to_string())
-      assert_eq!(n, 10)
+      assert_eq(n, 10)
     }
-    Ok(v) => fail!("Expected 10, got: " + v.to_string())
-    Err(e) => fail!("Error getting x: " + e)
+    Ok(v) => fail("Expected 10, got: " + v.to_string())
+    Err(e) => fail("Error getting x: " + e)
   }
 
   // Add n and x
@@ -377,10 +377,10 @@ test "vm: capture debug" {
   match result3 {
     Ok(Value::Number(Number::Int(n))) => {
       println("n + x = " + n.to_string())
-      assert_eq!(n, 15)
+      assert_eq(n, 15)
     }
-    Ok(v) => fail!("Expected 15, got: " + v.to_string())
-    Err(e) => fail!("Error in n+x: " + e)
+    Ok(v) => fail("Expected 15, got: " + v.to_string())
+    Err(e) => fail("Error in n+x: " + e)
   }
 }
 
@@ -391,9 +391,9 @@ test "vm repl: isolated capture test" {
   // When using only capture
   let result = repl_eval(ctx, "(((lambda (n) (lambda (x) n)) 5) 10)")
   match result {
-    Ok(Value::Number(Number::Int(n))) => assert_eq!(n, 5)
-    Ok(v) => fail!("Expected 5, got: " + v.to_string())
-    Err(e) => fail!("Error: " + e)
+    Ok(Value::Number(Number::Int(n))) => assert_eq(n, 5)
+    Ok(v) => fail("Expected 5, got: " + v.to_string())
+    Err(e) => fail("Error: " + e)
   }
 }
 
@@ -404,22 +404,22 @@ test "vm repl: comparison" {
   // (< 1 2) => #t
   let result1 = repl_eval(ctx, "(< 1 2)")
   match result1 {
-    Ok(Value::Bool(b)) => assert_eq!(b, true)
-    _ => fail!("Expected #t")
+    Ok(Value::Bool(b)) => assert_eq(b, true)
+    _ => fail("Expected #t")
   }
 
   // (> 1 2) => #f
   let result2 = repl_eval(ctx, "(> 1 2)")
   match result2 {
-    Ok(Value::Bool(b)) => assert_eq!(b, false)
-    _ => fail!("Expected #f")
+    Ok(Value::Bool(b)) => assert_eq(b, false)
+    _ => fail("Expected #f")
   }
 
   // (= 5 5) => #t
   let result3 = repl_eval(ctx, "(= 5 5)")
   match result3 {
-    Ok(Value::Bool(b)) => assert_eq!(b, true)
-    _ => fail!("Expected #t")
+    Ok(Value::Bool(b)) => assert_eq(b, true)
+    _ => fail("Expected #t")
   }
 }
 
@@ -436,9 +436,9 @@ test "vm repl: make-adder pattern" {
   // (add5 10) => 15
   let result = repl_eval(ctx, "(add5 10)")
   match result {
-    Ok(Value::Number(Number::Int(n))) => assert_eq!(n, 15)
-    Ok(v) => fail!("Expected 15, got: " + v.to_string())
-    Err(e) => fail!("Error: " + e)
+    Ok(Value::Number(Number::Int(n))) => assert_eq(n, 15)
+    Ok(v) => fail("Expected 15, got: " + v.to_string())
+    Err(e) => fail("Error: " + e)
   }
 
   // (define add10 (make-adder 10))
@@ -447,18 +447,18 @@ test "vm repl: make-adder pattern" {
   // (add10 10) => 20
   let result2 = repl_eval(ctx, "(add10 10)")
   match result2 {
-    Ok(Value::Number(Number::Int(n))) => assert_eq!(n, 20)
-    Ok(v) => fail!("Expected 20, got: " + v.to_string())
-    Err(e) => fail!("Error: " + e)
+    Ok(Value::Number(Number::Int(n))) => assert_eq(n, 20)
+    Ok(v) => fail("Expected 20, got: " + v.to_string())
+    Err(e) => fail("Error: " + e)
   }
 
   // add5 and add10 are different closures
   // (+ (add5 0) (add10 0)) => 15
   let result3 = repl_eval(ctx, "(+ (add5 0) (add10 0))")
   match result3 {
-    Ok(Value::Number(Number::Int(n))) => assert_eq!(n, 15)
-    Ok(v) => fail!("Expected 15, got: " + v.to_string())
-    Err(e) => fail!("Error: " + e)
+    Ok(Value::Number(Number::Int(n))) => assert_eq(n, 15)
+    Ok(v) => fail("Expected 15, got: " + v.to_string())
+    Err(e) => fail("Error: " + e)
   }
 }
 
@@ -471,9 +471,9 @@ test "vm repl: closure with set!" {
   let _ = repl_eval(ctx, "(set! x 10)")
   let result1 = repl_eval(ctx, "x")
   match result1 {
-    Ok(Value::Number(Number::Int(n))) => assert_eq!(n, 10)
-    Ok(v) => fail!("Expected 10, got: " + v.to_string())
-    Err(e) => fail!("Error in simple set!: " + e)
+    Ok(Value::Number(Number::Int(n))) => assert_eq(n, 10)
+    Ok(v) => fail("Expected 10, got: " + v.to_string())
+    Err(e) => fail("Error in simple set!: " + e)
   }
 }
 
@@ -495,10 +495,10 @@ test "vm repl: counter pattern" {
   match result1 {
     Ok(Value::Number(Number::Int(n))) => {
       println("counter first call: " + n.to_string())
-      assert_eq!(n, 1)
+      assert_eq(n, 1)
     }
-    Ok(v) => fail!("Expected 1, got: " + v.to_string())
-    Err(e) => fail!("Error in counter (1): " + e)
+    Ok(v) => fail("Expected 1, got: " + v.to_string())
+    Err(e) => fail("Error in counter (1): " + e)
   }
 
   // Second call: 2
@@ -506,10 +506,10 @@ test "vm repl: counter pattern" {
   match result2 {
     Ok(Value::Number(Number::Int(n))) => {
       println("counter second call: " + n.to_string())
-      assert_eq!(n, 2)
+      assert_eq(n, 2)
     }
-    Ok(v) => fail!("Expected 2, got: " + v.to_string())
-    Err(e) => fail!("Error in counter (2): " + e)
+    Ok(v) => fail("Expected 2, got: " + v.to_string())
+    Err(e) => fail("Error in counter (2): " + e)
   }
 
   // 3rd call: 3
@@ -517,9 +517,9 @@ test "vm repl: counter pattern" {
   match result3 {
     Ok(Value::Number(Number::Int(n))) => {
       println("counter third call: " + n.to_string())
-      assert_eq!(n, 3)
+      assert_eq(n, 3)
     }
-    Ok(v) => fail!("Expected 3, got: " + v.to_string())
-    Err(e) => fail!("Error in counter (3): " + e)
+    Ok(v) => fail("Expected 3, got: " + v.to_string())
+    Err(e) => fail("Error in counter (3): " + e)
   }
 }

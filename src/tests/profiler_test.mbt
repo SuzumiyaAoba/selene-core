@@ -3,9 +3,9 @@
 /// Profiler creation test
 test "profiler: create" {
   let profiler = new_profiler()
-  assert_true!(profiler.enabled)
-  assert_eq!(profiler.total_instructions, 0L)
-  assert_eq!(profiler.total_calls, 0L)
+  assert_true(profiler.enabled)
+  assert_eq(profiler.total_instructions, 0L)
+  assert_eq(profiler.total_calls, 0L)
 }
 
 /// Profiler reset test
@@ -17,32 +17,32 @@ test "profiler: reset" {
   profiler_record_instruction(profiler, Opcode::Pop)
   profiler_record_call(profiler, 0, Some("test"))
 
-  assert_true!(profiler.total_instructions > 0L)
-  assert_true!(profiler.total_calls > 0L)
+  assert_true(profiler.total_instructions > 0L)
+  assert_true(profiler.total_calls > 0L)
 
   // reset
   profiler_reset(profiler)
 
-  assert_eq!(profiler.total_instructions, 0L)
-  assert_eq!(profiler.total_calls, 0L)
+  assert_eq(profiler.total_instructions, 0L)
+  assert_eq(profiler.total_calls, 0L)
 }
 
 /// Enabling/disabling test
 test "profiler: enable/disable" {
   let profiler = new_profiler()
 
-  assert_true!(profiler.enabled)
+  assert_true(profiler.enabled)
 
   profiler_disable(profiler)
-  assert_true!(not(profiler.enabled))
+  assert_true(not(profiler.enabled))
 
   // Not recorded when disabled
   profiler_record_instruction(profiler, Opcode::Push(0))
-  assert_eq!(profiler.total_instructions, 0L)
+  assert_eq(profiler.total_instructions, 0L)
 
   profiler_enable(profiler)
   profiler_record_instruction(profiler, Opcode::Push(0))
-  assert_eq!(profiler.total_instructions, 1L)
+  assert_eq(profiler.total_instructions, 1L)
 }
 
 /// Instruction record test
@@ -54,18 +54,18 @@ test "profiler: record instructions" {
   profiler_record_instruction(profiler, Opcode::Pop)
   profiler_record_instruction(profiler, Opcode::Push(2))
 
-  assert_eq!(profiler.total_instructions, 4L)
+  assert_eq(profiler.total_instructions, 4L)
 
   // Push should have been recorded 3 times.
   match profiler.instruction_stats.get("Push") {
-    Some(stats) => assert_eq!(stats.count, 3L)
-    None => fail!("Push stats not found")
+    Some(stats) => assert_eq(stats.count, 3L)
+    None => fail("Push stats not found")
   }
 
   // Pop should have been recorded once.
   match profiler.instruction_stats.get("Pop") {
-    Some(stats) => assert_eq!(stats.count, 1L)
-    None => fail!("Pop stats not found")
+    Some(stats) => assert_eq(stats.count, 1L)
+    None => fail("Pop stats not found")
   }
 }
 
@@ -78,21 +78,21 @@ test "profiler: record function calls" {
   profiler_record_call(profiler, 0, Some("factorial"))
   profiler_record_call(profiler, 1, None)
 
-  assert_eq!(profiler.total_calls, 4L)
+  assert_eq(profiler.total_calls, 4L)
 
   // factorial should have been called twice
   match profiler.function_stats.get(0) {
     Some(stats) => {
-      assert_eq!(stats.call_count, 2L)
-      assert_eq!(stats.name, "factorial")
+      assert_eq(stats.call_count, 2L)
+      assert_eq(stats.name, "factorial")
     }
-    None => fail!("factorial stats not found")
+    None => fail("factorial stats not found")
   }
 
   // Unnamed lambda is an automatically generated name
   match profiler.function_stats.get(1) {
-    Some(stats) => assert_true!(stats.name.contains("lambda"))
-    None => fail!("lambda stats not found")
+    Some(stats) => assert_true(stats.name.contains("lambda"))
+    None => fail("lambda stats not found")
   }
 }
 
@@ -103,13 +103,13 @@ test "profiler: record returns" {
   profiler_record_call(profiler, -1, Some("main"))
   profiler_record_call(profiler, 0, Some("foo"))
 
-  assert_eq!(profiler.call_stack.length(), 2)
+  assert_eq(profiler.call_stack.length(), 2)
 
   profiler_record_return(profiler)
-  assert_eq!(profiler.call_stack.length(), 1)
+  assert_eq(profiler.call_stack.length(), 1)
 
   profiler_record_return(profiler)
-  assert_eq!(profiler.call_stack.length(), 0)
+  assert_eq(profiler.call_stack.length(), 0)
 }
 
 /// instruction report test
@@ -121,10 +121,10 @@ test "profiler: instruction report" {
   profiler_record_instruction(profiler, Opcode::Pop)
 
   let report = profiler_instruction_report(profiler)
-  assert_true!(report.contains("Instruction Statistics"))
-  assert_true!(report.contains("Push"))
-  assert_true!(report.contains("Pop"))
-  assert_true!(report.contains("Total instructions: 3"))
+  assert_true(report.contains("Instruction Statistics"))
+  assert_true(report.contains("Push"))
+  assert_true(report.contains("Pop"))
+  assert_true(report.contains("Total instructions: 3"))
 }
 
 /// function report test
@@ -135,10 +135,10 @@ test "profiler: function report" {
   profiler_record_call(profiler, 0, Some("test-func"))
 
   let report = profiler_function_report(profiler)
-  assert_true!(report.contains("Function Statistics"))
-  assert_true!(report.contains("main"))
-  assert_true!(report.contains("test-func"))
-  assert_true!(report.contains("Total calls: 2"))
+  assert_true(report.contains("Function Statistics"))
+  assert_true(report.contains("main"))
+  assert_true(report.contains("test-func"))
+  assert_true(report.contains("Total calls: 2"))
 }
 
 /// hotspot report test
@@ -168,9 +168,9 @@ test "profiler: hotspot report" {
   profiler_record_call(profiler, 1, Some("cold-function"))
 
   let report = profiler_hotspot_report(profiler, 3)
-  assert_true!(report.contains("Hotspot Analysis"))
-  assert_true!(report.contains("Push"))  // most
-  assert_true!(report.contains("hot-function"))  // most called
+  assert_true(report.contains("Hotspot Analysis"))
+  assert_true(report.contains("Push"))  // most
+  assert_true(report.contains("hot-function"))  // most called
 }
 
 /// Summary report test
@@ -181,9 +181,9 @@ test "profiler: summary report" {
   profiler_record_call(profiler, -1, Some("main"))
 
   let report = profiler_summary(profiler)
-  assert_true!(report.contains("Profiler Summary"))
-  assert_true!(report.contains("Total instructions executed"))
-  assert_true!(report.contains("Total function calls"))
+  assert_true(report.contains("Profiler Summary"))
+  assert_true(report.contains("Total instructions executed"))
+  assert_true(report.contains("Total function calls"))
 }
 
 /// full report test
@@ -195,10 +195,10 @@ test "profiler: full report" {
   profiler_record_call(profiler, -1, Some("main"))
 
   let report = profiler_full_report(profiler)
-  assert_true!(report.contains("Profiler Summary"))
-  assert_true!(report.contains("Instruction Statistics"))
-  assert_true!(report.contains("Function Statistics"))
-  assert_true!(report.contains("Hotspot Analysis"))
+  assert_true(report.contains("Profiler Summary"))
+  assert_true(report.contains("Instruction Statistics"))
+  assert_true(report.contains("Function Statistics"))
+  assert_true(report.contains("Hotspot Analysis"))
 }
 
 /// Empty profiler report test
@@ -206,10 +206,10 @@ test "profiler: empty reports" {
   let profiler = new_profiler()
 
   let instr_report = profiler_instruction_report(profiler)
-  assert_true!(instr_report.contains("No instructions executed"))
+  assert_true(instr_report.contains("No instructions executed"))
 
   let func_report = profiler_function_report(profiler)
-  assert_true!(func_report.contains("No function calls recorded"))
+  assert_true(func_report.contains("No function calls recorded"))
 }
 
 /// Profiling tests with real expressions
@@ -221,13 +221,13 @@ test "profiler: with simple expression" {
   match vm_eval_with_profiler(expr, profiler) {
     Ok(result) => {
       match result {
-        Value::Number(Number::Int(n)) => assert_eq!(n, 3)
-        _ => fail!("Expected number")
+        Value::Number(Number::Int(n)) => assert_eq(n, 3)
+        _ => fail("Expected number")
       }
       // Verify that the instruction was executed
-      assert_true!(profiler.total_instructions > 0L)
+      assert_true(profiler.total_instructions > 0L)
     }
-    Err(e) => fail!("Eval failed: " + e)
+    Err(e) => fail("Eval failed: " + e)
   }
 }
 
@@ -240,13 +240,13 @@ test "profiler: with lambda" {
   match vm_eval_with_profiler(expr, profiler) {
     Ok(result) => {
       match result {
-        Value::Number(Number::Int(n)) => assert_eq!(n, 6)
-        _ => fail!("Expected number")
+        Value::Number(Number::Int(n)) => assert_eq(n, 6)
+        _ => fail("Expected number")
       }
       // Verify function call was recorded
-      assert_true!(profiler.total_calls >= 1L)
+      assert_true(profiler.total_calls >= 1L)
     }
-    Err(e) => fail!("Eval failed: " + e)
+    Err(e) => fail("Eval failed: " + e)
   }
 }
 
@@ -260,13 +260,13 @@ test "profiler: with recursion" {
   match vm_eval_with_profiler(expr, profiler) {
     Ok(result) => {
       match result {
-        Value::Number(Number::Int(n)) => assert_eq!(n, 10)
-        _ => fail!("Expected number")
+        Value::Number(Number::Int(n)) => assert_eq(n, 10)
+        _ => fail("Expected number")
       }
       // Verify that instructions have been executed (at least one)
-      assert_true!(profiler.total_instructions >= 1L)
+      assert_true(profiler.total_instructions >= 1L)
     }
-    Err(e) => fail!("Eval failed: " + e)
+    Err(e) => fail("Eval failed: " + e)
   }
 }
 
@@ -279,9 +279,9 @@ test "profiler: gc stats integration" {
   match vm_eval_with_profiler(expr, profiler) {
     Ok(_) => {
       let summary = profiler_summary(profiler)
-      assert_true!(summary.contains("Memory allocations"))
-      assert_true!(summary.contains("Pairs"))
+      assert_true(summary.contains("Memory allocations"))
+      assert_true(summary.contains("Pairs"))
     }
-    Err(e) => fail!("Eval failed: " + e)
+    Err(e) => fail("Eval failed: " + e)
   }
 }

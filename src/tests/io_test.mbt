@@ -6,7 +6,7 @@ test "display - displays string without quotes" {
   let result = eval(expr, env)
   match result {
     Ok(Value::Nil) => ()
-    _ => @test.fail!("display should return Nil")
+    _ => @test.fail("display should return Nil")
   }
 }
 
@@ -16,7 +16,7 @@ test "display - displays number" {
   let result = eval(expr, env)
   match result {
     Ok(Value::Nil) => ()
-    _ => @test.fail!("display should return Nil")
+    _ => @test.fail("display should return Nil")
   }
 }
 
@@ -26,7 +26,7 @@ test "display - displays boolean" {
   let result = eval(expr, env)
   match result {
     Ok(Value::Nil) => ()
-    _ => @test.fail!("display should return Nil")
+    _ => @test.fail("display should return Nil")
   }
 }
 
@@ -36,7 +36,7 @@ test "display - displays list" {
   let result = eval(expr, env)
   match result {
     Ok(Value::Nil) => ()
-    _ => @test.fail!("display should return Nil")
+    _ => @test.fail("display should return Nil")
   }
 }
 
@@ -46,7 +46,7 @@ test "display - requires exactly 1 argument" {
   let result = eval(expr, env)
   match result {
     Err(EvalError::ArityError(_)) => ()
-    _ => @test.fail!("display should fail with arity error when given no arguments")
+    _ => @test.fail("display should fail with arity error when given no arguments")
   }
 }
 
@@ -56,7 +56,7 @@ test "display - fails with too many arguments" {
   let result = eval(expr, env)
   match result {
     Err(EvalError::ArityError(_)) => ()
-    _ => @test.fail!("display should fail with arity error when given too many arguments")
+    _ => @test.fail("display should fail with arity error when given too many arguments")
   }
 }
 
@@ -66,7 +66,7 @@ test "newline - outputs newline" {
   let result = eval(expr, env)
   match result {
     Ok(Value::Nil) => ()
-    _ => @test.fail!("newline should return Nil")
+    _ => @test.fail("newline should return Nil")
   }
 }
 
@@ -76,7 +76,7 @@ test "newline - requires exactly 0 arguments" {
   let result = eval(expr, env)
   match result {
     Err(EvalError::ArityError(_)) => ()
-    _ => @test.fail!("newline should fail with arity error when given arguments")
+    _ => @test.fail("newline should fail with arity error when given arguments")
   }
 }
 
@@ -86,7 +86,7 @@ test "write - writes string with quotes" {
   let result = eval(expr, env)
   match result {
     Ok(Value::Nil) => ()
-    _ => @test.fail!("write should return Nil")
+    _ => @test.fail("write should return Nil")
   }
 }
 
@@ -96,7 +96,7 @@ test "write - writes number" {
   let result = eval(expr, env)
   match result {
     Ok(Value::Nil) => ()
-    _ => @test.fail!("write should return Nil")
+    _ => @test.fail("write should return Nil")
   }
 }
 
@@ -106,7 +106,7 @@ test "write - writes boolean" {
   let result = eval(expr, env)
   match result {
     Ok(Value::Nil) => ()
-    _ => @test.fail!("write should return Nil")
+    _ => @test.fail("write should return Nil")
   }
 }
 
@@ -116,7 +116,7 @@ test "write - writes list" {
   let result = eval(expr, env)
   match result {
     Ok(Value::Nil) => ()
-    _ => @test.fail!("write should return Nil")
+    _ => @test.fail("write should return Nil")
   }
 }
 
@@ -126,7 +126,7 @@ test "write - requires exactly 1 argument" {
   let result = eval(expr, env)
   match result {
     Err(EvalError::ArityError(_)) => ()
-    _ => @test.fail!("write should fail with arity error when given no arguments")
+    _ => @test.fail("write should fail with arity error when given no arguments")
   }
 }
 
@@ -136,7 +136,7 @@ test "write - fails with too many arguments" {
   let result = eval(expr, env)
   match result {
     Err(EvalError::ArityError(_)) => ()
-    _ => @test.fail!("write should fail with arity error when given too many arguments")
+    _ => @test.fail("write should fail with arity error when given too many arguments")
   }
 }
 
@@ -148,12 +148,12 @@ test "display and write - difference in string output" {
 
   match eval(display_expr, env) {
     Ok(Value::Nil) => ()
-    _ => @test.fail!("display should succeed")
+    _ => @test.fail("display should succeed")
   }
 
   match eval(write_expr, env) {
     Ok(Value::Nil) => ()
-    _ => @test.fail!("write should succeed")
+    _ => @test.fail("write should succeed")
   }
 }
 
@@ -163,7 +163,7 @@ test "display - with character" {
   let result = eval(expr, env)
   match result {
     Ok(Value::Nil) => ()
-    _ => @test.fail!("display should return Nil for character")
+    _ => @test.fail("display should return Nil for character")
   }
 }
 
@@ -173,7 +173,7 @@ test "write - with character" {
   let result = eval(expr, env)
   match result {
     Ok(Value::Nil) => ()
-    _ => @test.fail!("write should return Nil for character")
+    _ => @test.fail("write should return Nil for character")
   }
 }
 
@@ -183,7 +183,7 @@ test "display - with vector" {
   let result = eval(expr, env)
   match result {
     Ok(Value::Nil) => ()
-    _ => @test.fail!("display should return Nil for vector")
+    _ => @test.fail("display should return Nil for vector")
   }
 }
 
@@ -193,7 +193,7 @@ test "write - with vector" {
   let result = eval(expr, env)
   match result {
     Ok(Value::Nil) => ()
-    _ => @test.fail!("write should return Nil for vector")
+    _ => @test.fail("write should return Nil for vector")
   }
 }
 
@@ -203,7 +203,7 @@ test "display - with procedure" {
   let result = eval(expr, env)
   match result {
     Ok(Value::Nil) => ()
-    _ => @test.fail!("display should return Nil for procedure")
+    _ => @test.fail("display should return Nil for procedure")
   }
 }
 
@@ -213,7 +213,7 @@ test "write - with procedure" {
   let result = eval(expr, env)
   match result {
     Ok(Value::Nil) => ()
-    _ => @test.fail!("write should return Nil for procedure")
+    _ => @test.fail("write should return Nil for procedure")
   }
 }
 
@@ -223,7 +223,7 @@ test "display - with nil" {
   let result = eval(expr, env)
   match result {
     Ok(Value::Nil) => ()
-    _ => @test.fail!("display should return Nil for nil")
+    _ => @test.fail("display should return Nil for nil")
   }
 }
 
@@ -233,7 +233,7 @@ test "write - with nil" {
   let result = eval(expr, env)
   match result {
     Ok(Value::Nil) => ()
-    _ => @test.fail!("write should return Nil for nil")
+    _ => @test.fail("write should return Nil for nil")
   }
 }
 
@@ -244,12 +244,12 @@ test "newline - multiple calls" {
 
   match eval(expr1, env) {
     Ok(Value::Nil) => ()
-    _ => @test.fail!("first newline should succeed")
+    _ => @test.fail("first newline should succeed")
   }
 
   match eval(expr2, env) {
     Ok(Value::Nil) => ()
-    _ => @test.fail!("second newline should succeed")
+    _ => @test.fail("second newline should succeed")
   }
 }
 
@@ -259,6 +259,6 @@ test "display and newline - sequence" {
   let result = eval(expr, env)
   match result {
     Ok(Value::Nil) => ()
-    _ => @test.fail!("sequence should succeed")
+    _ => @test.fail("sequence should succeed")
   }
 }

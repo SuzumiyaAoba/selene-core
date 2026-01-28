@@ -3,31 +3,31 @@
 /// Test default options
 test "bytecode_dump: default options" {
   let options = default_dump_options()
-  assert_true!(options.verbose)
-  assert_true!(not(options.hex_addresses))
-  assert_true!(options.inline_constants)
-  assert_eq!(options.indent_width, 2)
+  assert_true(options.verbose)
+  assert_true(not(options.hex_addresses))
+  assert_true(options.inline_constants)
+  assert_eq(options.indent_width, 2)
 }
 
 /// Testing Brief Options
 test "bytecode_dump: compact options" {
   let options = compact_dump_options()
-  assert_true!(not(options.verbose))
-  assert_true!(options.inline_constants)
+  assert_true(not(options.verbose))
+  assert_true(options.inline_constants)
 }
 
 /// Simple expression dump test
 test "bytecode_dump: simple expression" {
   let expr = parse_one("(+ 1 2)")
   match compile_to_module(expr) {
-    Ok(module) => {
-      let dump = dump_module(module, default_dump_options())
-      assert_true!(dump.contains("BYTECODE MODULE DUMP"))
-      assert_true!(dump.contains("MAIN CHUNK"))
-      assert_true!(dump.contains("Code:"))
-      assert_true!(dump.contains("END OF DUMP"))
+    Ok(compiled_module) => {
+      let dump = dump_module(compiled_module, default_dump_options())
+      assert_true(dump.contains("BYTECODE MODULE DUMP"))
+      assert_true(dump.contains("MAIN CHUNK"))
+      assert_true(dump.contains("Code:"))
+      assert_true(dump.contains("END OF DUMP"))
     }
-    Err(e) => fail!("Compile failed: " + e.to_string())
+    Err(e) => fail("Compile failed: " + e.to_string())
   }
 }
 
@@ -35,13 +35,13 @@ test "bytecode_dump: simple expression" {
 test "bytecode_dump: lambda" {
   let expr = parse_one("(lambda (x) (+ x 1))")
   match compile_to_module(expr) {
-    Ok(module) => {
-      let dump = dump_module(module, default_dump_options())
-      assert_true!(dump.contains("MAIN CHUNK"))
+    Ok(compiled_module) => {
+      let dump = dump_module(compiled_module, default_dump_options())
+      assert_true(dump.contains("MAIN CHUNK"))
       // There should be child chunks because there is a lambda
-      assert_true!(dump.contains("CHILD CHUNKS") || dump.contains("MAKE_CLOSURE"))
+      assert_true(dump.contains("CHILD CHUNKS") || dump.contains("MAKE_CLOSURE"))
     }
-    Err(e) => fail!("Compile failed: " + e.to_string())
+    Err(e) => fail("Compile failed: " + e.to_string())
   }
 }
 
@@ -49,11 +49,11 @@ test "bytecode_dump: lambda" {
 test "bytecode_dump: constants" {
   let expr = parse_one("42")
   match compile_to_module(expr) {
-    Ok(module) => {
-      let dump = dump_module(module, default_dump_options())
-      assert_true!(dump.contains("Constants:") || dump.contains("42"))
+    Ok(compiled_module) => {
+      let dump = dump_module(compiled_module, default_dump_options())
+      assert_true(dump.contains("Constants:") || dump.contains("42"))
     }
-    Err(e) => fail!("Compile failed: " + e.to_string())
+    Err(e) => fail("Compile failed: " + e.to_string())
   }
 }
 
@@ -61,12 +61,12 @@ test "bytecode_dump: constants" {
 test "bytecode_dump: names" {
   let expr = parse_one("(+ x y)")
   match compile_to_module(expr) {
-    Ok(module) => {
-      let dump = dump_module(module, default_dump_options())
+    Ok(compiled_module) => {
+      let dump = dump_module(compiled_module, default_dump_options())
       // There should be a name table because there is a global variable reference
-      assert_true!(dump.contains("LOAD_GLOBAL") || dump.contains("Names:"))
+      assert_true(dump.contains("LOAD_GLOBAL") || dump.contains("Names:"))
     }
-    Err(e) => fail!("Compile failed: " + e.to_string())
+    Err(e) => fail("Compile failed: " + e.to_string())
   }
 }
 
@@ -74,13 +74,13 @@ test "bytecode_dump: names" {
 test "bytecode_dump: compact mode" {
   let expr = parse_one("(+ 1 2)")
   match compile_to_module(expr) {
-    Ok(module) => {
-      let verbose_dump = dump_module(module, default_dump_options())
-      let compact_dump = dump_module(module, compact_dump_options())
+    Ok(compiled_module) => {
+      let verbose_dump = dump_module(compiled_module, default_dump_options())
+      let compact_dump = dump_module(compiled_module, compact_dump_options())
       // Brief mode should be shorter than Advanced mode
-      assert_true!(compact_dump.length() <= verbose_dump.length())
+      assert_true(compact_dump.length() <= verbose_dump.length())
     }
-    Err(e) => fail!("Compile failed: " + e.to_string())
+    Err(e) => fail("Compile failed: " + e.to_string())
   }
 }
 
@@ -88,17 +88,17 @@ test "bytecode_dump: compact mode" {
 test "bytecode_dump: hex addresses" {
   let expr = parse_one("(+ 1 2)")
   match compile_to_module(expr) {
-    Ok(module) => {
+    Ok(compiled_module) => {
       let options : DumpOptions = {
         verbose: true,
         hex_addresses: true,
         inline_constants: true,
         indent_width: 2,
       }
-      let dump = dump_module(module, options)
-      assert_true!(dump.contains("0x"))
+      let dump = dump_module(compiled_module, options)
+      assert_true(dump.contains("0x"))
     }
-    Err(e) => fail!("Compile failed: " + e.to_string())
+    Err(e) => fail("Compile failed: " + e.to_string())
   }
 }
 
@@ -107,31 +107,31 @@ test "bytecode_dump: constant display" {
   // Compile and dump expressions containing various constants
   let expr = parse_one("42")
   match compile_to_module(expr) {
-    Ok(module) => {
-      let dump = dump_module(module, default_dump_options())
-      assert_true!(dump.contains("42") || dump.contains("int"))
+    Ok(compiled_module) => {
+      let dump = dump_module(compiled_module, default_dump_options())
+      assert_true(dump.contains("42") || dump.contains("int"))
     }
-    Err(e) => fail!("Compile failed: " + e.to_string())
+    Err(e) => fail("Compile failed: " + e.to_string())
   }
 
   // string_literal
   let expr2 = parse_one("\"hello\"")
   match compile_to_module(expr2) {
-    Ok(module) => {
-      let dump = dump_module(module, default_dump_options())
-      assert_true!(dump.contains("hello") || dump.contains("string"))
+    Ok(compiled_module) => {
+      let dump = dump_module(compiled_module, default_dump_options())
+      assert_true(dump.contains("hello") || dump.contains("string"))
     }
-    Err(e) => fail!("Compile failed: " + e.to_string())
+    Err(e) => fail("Compile failed: " + e.to_string())
   }
 
   // Symbol constant
   let expr3 = parse_one("'foo")
   match compile_to_module(expr3) {
-    Ok(module) => {
-      let dump = dump_module(module, default_dump_options())
-      assert_true!(dump.contains("foo") || dump.contains("symbol"))
+    Ok(compiled_module) => {
+      let dump = dump_module(compiled_module, default_dump_options())
+      assert_true(dump.contains("foo") || dump.contains("symbol"))
     }
-    Err(e) => fail!("Compile failed: " + e.to_string())
+    Err(e) => fail("Compile failed: " + e.to_string())
   }
 }
 
@@ -141,43 +141,43 @@ test "bytecode_dump: opcode display" {
   // Push
   let expr1 = parse_one("42")
   match compile_to_module(expr1) {
-    Ok(module) => {
-      let dump = dump_module(module, default_dump_options())
-      assert_true!(dump.contains("PUSH"))
+    Ok(compiled_module) => {
+      let dump = dump_module(compiled_module, default_dump_options())
+      assert_true(dump.contains("PUSH"))
     }
-    Err(e) => fail!("Compile failed: " + e.to_string())
+    Err(e) => fail("Compile failed: " + e.to_string())
   }
 
   // Call - Primitive function call
   let expr2 = parse_one("(+ 1 2)")
   match compile_to_module(expr2) {
-    Ok(module) => {
-      let dump = dump_module(module, default_dump_options())
+    Ok(compiled_module) => {
+      let dump = dump_module(compiled_module, default_dump_options())
       // Verify that dumps are generated successfully (may be optimized with constant convolution)
-      assert_true!(dump.contains("Code:") || dump.contains("PRIM_CALL") || dump.contains("PUSH"))
+      assert_true(dump.contains("Code:") || dump.contains("PRIM_CALL") || dump.contains("PUSH"))
     }
-    Err(e) => fail!("Compile failed: " + e.to_string())
+    Err(e) => fail("Compile failed: " + e.to_string())
   }
 
   // Jump (if statement generates jump_IF_false or jump)
   let expr3 = parse_one("(if #t 1 2)")
   match compile_to_module(expr3) {
-    Ok(module) => {
-      let dump = dump_module(module, default_dump_options())
+    Ok(compiled_module) => {
+      let dump = dump_module(compiled_module, default_dump_options())
       // Has jump or jump_IF_false or conditional branch instructions
-      assert_true!(dump.contains("JUMP") || dump.contains("Code:"))
+      assert_true(dump.contains("JUMP") || dump.contains("Code:"))
     }
-    Err(e) => fail!("Compile failed: " + e.to_string())
+    Err(e) => fail("Compile failed: " + e.to_string())
   }
 
   // Return
   let expr4 = parse_one("(lambda (x) x)")
   match compile_to_module(expr4) {
-    Ok(module) => {
-      let dump = dump_module(module, default_dump_options())
-      assert_true!(dump.contains("RETURN"))
+    Ok(compiled_module) => {
+      let dump = dump_module(compiled_module, default_dump_options())
+      assert_true(dump.contains("RETURN"))
     }
-    Err(e) => fail!("Compile failed: " + e.to_string())
+    Err(e) => fail("Compile failed: " + e.to_string())
   }
 }
 
@@ -185,25 +185,25 @@ test "bytecode_dump: opcode display" {
 test "bytecode_dump: compile_and_dump" {
   match compile_and_dump_default("(+ 1 2)") {
     Ok(dump) => {
-      assert_true!(dump.contains("BYTECODE MODULE DUMP"))
-      assert_true!(dump.contains("Code:"))
+      assert_true(dump.contains("BYTECODE MODULE DUMP"))
+      assert_true(dump.contains("Code:"))
     }
-    Err(e) => fail!("Compile and dump failed: " + e)
+    Err(e) => fail("Compile and dump failed: " + e)
   }
 }
 
 /// Test Module Statistics
-test "bytecode_dump: module stats" {
+test "bytecode_dump: compiled_module stats" {
   let expr = parse_one("(+ 1 2)")
   match compile_to_module(expr) {
-    Ok(module) => {
-      let stats = dump_module_stats(module)
-      assert_true!(stats.contains("Module Statistics"))
-      assert_true!(stats.contains("Code size"))
-      assert_true!(stats.contains("Constants"))
-      assert_true!(stats.contains("Totals"))
+    Ok(compiled_module) => {
+      let stats = dump_module_stats(compiled_module)
+      assert_true(stats.contains("Module Statistics"))
+      assert_true(stats.contains("Code size"))
+      assert_true(stats.contains("Constants"))
+      assert_true(stats.contains("Totals"))
     }
-    Err(e) => fail!("Compile failed: " + e.to_string())
+    Err(e) => fail("Compile failed: " + e.to_string())
   }
 }
 
@@ -211,13 +211,13 @@ test "bytecode_dump: module stats" {
 test "bytecode_dump: complex expression" {
   let expr = parse_one("(define (fact n) (if (<= n 1) 1 (* n (fact (- n 1)))))")
   match compile_to_module(expr) {
-    Ok(module) => {
-      let dump = dump_module(module, default_dump_options())
-      assert_true!(dump.contains("BYTECODE MODULE DUMP"))
+    Ok(compiled_module) => {
+      let dump = dump_module(compiled_module, default_dump_options())
+      assert_true(dump.contains("BYTECODE MODULE DUMP"))
       // Since it is a recursive function, there should be multiple instruction types
-      assert_true!(dump.contains("Code:"))
+      assert_true(dump.contains("Code:"))
     }
-    Err(e) => fail!("Compile failed: " + e.to_string())
+    Err(e) => fail("Compile failed: " + e.to_string())
   }
 }
 
@@ -225,13 +225,13 @@ test "bytecode_dump: complex expression" {
 test "bytecode_dump: if expression" {
   let expr = parse_one("(if #t 1 2)")
   match compile_to_module(expr) {
-    Ok(module) => {
-      let dump = dump_module(module, default_dump_options())
+    Ok(compiled_module) => {
+      let dump = dump_module(compiled_module, default_dump_options())
       // the if statement should generate a jump instruction (jump or jump_IF_false)
       // or may be optimized with constant convolution
-      assert_true!(dump.contains("JUMP") || dump.contains("PUSH") || dump.contains("Code:"))
+      assert_true(dump.contains("JUMP") || dump.contains("PUSH") || dump.contains("Code:"))
     }
-    Err(e) => fail!("Compile failed: " + e.to_string())
+    Err(e) => fail("Compile failed: " + e.to_string())
   }
 }
 
@@ -239,12 +239,12 @@ test "bytecode_dump: if expression" {
 test "bytecode_dump: list" {
   let expr = parse_one("(list 1 2 3)")
   match compile_to_module(expr) {
-    Ok(module) => {
-      let dump = dump_module(module, default_dump_options())
+    Ok(compiled_module) => {
+      let dump = dump_module(compiled_module, default_dump_options())
       // list should generate a primitive call or make_list
-      assert_true!(dump.contains("PRIM_CALL") || dump.contains("MAKE_LIST"))
+      assert_true(dump.contains("PRIM_CALL") || dump.contains("MAKE_LIST"))
     }
-    Err(e) => fail!("Compile failed: " + e.to_string())
+    Err(e) => fail("Compile failed: " + e.to_string())
   }
 }
 
@@ -252,12 +252,12 @@ test "bytecode_dump: list" {
 test "bytecode_dump: string escape" {
   let expr = parse_one("\"hello\\nworld\"")
   match compile_to_module(expr) {
-    Ok(module) => {
-      let dump = dump_module(module, default_dump_options())
+    Ok(compiled_module) => {
+      let dump = dump_module(compiled_module, default_dump_options())
       // Line breaks should be escaped
-      assert_true!(dump.contains("string"))
+      assert_true(dump.contains("string"))
     }
-    Err(e) => fail!("Compile failed: " + e.to_string())
+    Err(e) => fail("Compile failed: " + e.to_string())
   }
 }
 
@@ -265,13 +265,13 @@ test "bytecode_dump: string escape" {
 test "bytecode_dump: chunk dump" {
   let expr = parse_one("(lambda (x y) (+ x y))")
   match compile_to_module(expr) {
-    Ok(module) => {
-      let chunk_dump = dump_chunk(module.main, -1, module, default_dump_options())
-      assert_true!(chunk_dump.contains("Arity:"))
-      assert_true!(chunk_dump.contains("Locals:"))
-      assert_true!(chunk_dump.contains("Code:"))
+    Ok(compiled_module) => {
+      let chunk_dump = dump_chunk(compiled_module.main, -1, compiled_module, default_dump_options())
+      assert_true(chunk_dump.contains("Arity:"))
+      assert_true(chunk_dump.contains("Locals:"))
+      assert_true(chunk_dump.contains("Code:"))
     }
-    Err(e) => fail!("Compile failed: " + e.to_string())
+    Err(e) => fail("Compile failed: " + e.to_string())
   }
 }
 
@@ -279,17 +279,17 @@ test "bytecode_dump: chunk dump" {
 test "bytecode_dump: no inline constants" {
   let expr = parse_one("42")
   match compile_to_module(expr) {
-    Ok(module) => {
+    Ok(compiled_module) => {
       let options : DumpOptions = {
         verbose: true,
         hex_addresses: false,
         inline_constants: false,
         indent_width: 2,
       }
-      let dump = dump_module(module, options)
+      let dump = dump_module(compiled_module, options)
       // Push instructions should have no inline constants
-      assert_true!(dump.contains("PUSH"))
+      assert_true(dump.contains("PUSH"))
     }
-    Err(e) => fail!("Compile failed: " + e.to_string())
+    Err(e) => fail("Compile failed: " + e.to_string())
   }
 }

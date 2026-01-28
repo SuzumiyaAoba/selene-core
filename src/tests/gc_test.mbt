@@ -4,13 +4,13 @@
 test "gc: initial stats" {
   reset_gc_stats()
   let stats = get_gc_stats()
-  assert_eq!(stats.values_allocated, 0)
-  assert_eq!(stats.closures_allocated, 0)
-  assert_eq!(stats.continuations_allocated, 0)
-  assert_eq!(stats.pairs_allocated, 0)
-  assert_eq!(stats.vectors_allocated, 0)
-  assert_eq!(stats.boxes_allocated, 0)
-  assert_eq!(stats.gc_runs, 0)
+  assert_eq(stats.values_allocated, 0)
+  assert_eq(stats.closures_allocated, 0)
+  assert_eq(stats.continuations_allocated, 0)
+  assert_eq(stats.pairs_allocated, 0)
+  assert_eq(stats.vectors_allocated, 0)
+  assert_eq(stats.boxes_allocated, 0)
+  assert_eq(stats.gc_runs, 0)
 }
 
 /// Testing the tracking function
@@ -28,23 +28,23 @@ test "gc: tracking functions" {
   gc_track_box()
 
   let stats = get_gc_stats()
-  assert_eq!(stats.values_allocated, 2)
-  assert_eq!(stats.closures_allocated, 1)
-  assert_eq!(stats.pairs_allocated, 3)
-  assert_eq!(stats.vectors_allocated, 1)
-  assert_eq!(stats.boxes_allocated, 2)
+  assert_eq(stats.values_allocated, 2)
+  assert_eq(stats.closures_allocated, 1)
+  assert_eq(stats.pairs_allocated, 3)
+  assert_eq(stats.vectors_allocated, 1)
+  assert_eq(stats.boxes_allocated, 2)
 }
 
 /// Testing your GC settings
 test "gc: config" {
   let config = get_gc_config()
-  assert_true!(config.enabled)
-  assert_true!(config.allocation_threshold > 0)
-  assert_true!(config.continuation_threshold > 0)
+  assert_true(config.enabled)
+  assert_true(config.allocation_threshold > 0)
+  assert_true(config.continuation_threshold > 0)
 
   set_gc_config(enabled=false)
   let config2 = get_gc_config()
-  assert_true!(not(config2.enabled))
+  assert_true(not(config2.enabled))
 
   // undo
   set_gc_config(enabled=true)
@@ -57,9 +57,9 @@ test "gc: stats to string" {
   gc_track_pair()
 
   let str = gc_stats_to_string()
-  assert_true!(str.contains("GC Stats:"))
-  assert_true!(str.contains("Closures allocated: 1"))
-  assert_true!(str.contains("Pairs allocated: 1"))
+  assert_true(str.contains("GC Stats:"))
+  assert_true(str.contains("Closures allocated: 1"))
+  assert_true(str.contains("Pairs allocated: 1"))
 }
 
 /// GC tracking test with simple formula
@@ -76,12 +76,12 @@ test "gc: simple expression tracking" {
           // Verify GC statistics are updated
           let stats = get_gc_stats()
           // Basic expressions may not create closures or pairs
-          assert_true!(stats.gc_runs >= 0)
+          assert_true(stats.gc_runs >= 0)
         }
-        Err(e) => fail!("VM run failed: " + e.to_string())
+        Err(e) => fail("VM run failed: " + e.to_string())
       }
     }
-    Err(e) => fail!("Compile failed: " + e.to_string())
+    Err(e) => fail("Compile failed: " + e.to_string())
   }
 }
 
@@ -106,12 +106,12 @@ test "gc: closure tracking" {
           // Check the GC statistics (there is no guarantee that the closure will be created, but the test itself will pass)
           let stats = get_gc_stats()
           // It is fine if a closure is created, but it may not be created due to optimization.
-          assert_true!(stats.closures_allocated >= 0)
+          assert_true(stats.closures_allocated >= 0)
         }
-        Err(e) => fail!("VM run failed: " + e.to_string())
+        Err(e) => fail("VM run failed: " + e.to_string())
       }
     }
-    Err(e) => fail!("Compile failed: " + e.to_string())
+    Err(e) => fail("Compile failed: " + e.to_string())
   }
 }
 
@@ -128,12 +128,12 @@ test "gc: list tracking" {
         Ok(_) => {
           // Verify that the pair has been created
           let stats = get_gc_stats()
-          assert_true!(stats.pairs_allocated >= 3)
+          assert_true(stats.pairs_allocated >= 3)
         }
-        Err(e) => fail!("VM run failed: " + e.to_string())
+        Err(e) => fail("VM run failed: " + e.to_string())
       }
     }
-    Err(e) => fail!("Compile failed: " + e.to_string())
+    Err(e) => fail("Compile failed: " + e.to_string())
   }
 }
 
@@ -152,12 +152,12 @@ test "gc: disabled gc" {
         Ok(_) => {
           let stats = get_gc_stats()
           // Since GC is disabled, the number of GC executions is 0.
-          assert_eq!(stats.gc_runs, 0)
+          assert_eq(stats.gc_runs, 0)
         }
-        Err(e) => fail!("VM run failed: " + e.to_string())
+        Err(e) => fail("VM run failed: " + e.to_string())
       }
     }
-    Err(e) => fail!("Compile failed: " + e.to_string())
+    Err(e) => fail("Compile failed: " + e.to_string())
   }
 
   // undo
@@ -173,14 +173,14 @@ test "gc: clear continuations" {
   gc_register_continuation(3)
 
   let stats = get_gc_stats()
-  assert_eq!(stats.continuations_allocated, 3)
+  assert_eq(stats.continuations_allocated, 3)
 
   gc_clear_all_continuations()
 
   // Make sure continuation_marks are cleared
   // Statistics do not change because they are not reset.
   let stats2 = get_gc_stats()
-  assert_eq!(stats2.continuations_allocated, 3)
+  assert_eq(stats2.continuations_allocated, 3)
 }
 
 /// Mark phase testing
@@ -200,7 +200,7 @@ test "gc: mark continuation" {
   let freed = gc_sweep_continuations()
 
   // Only 101 should be released
-  assert_eq!(freed, 1)
+  assert_eq(freed, 1)
 
   gc_clear_all_continuations()
 }
@@ -217,16 +217,16 @@ test "gc: clear vm" {
       vm.stack.push(Value::Number(Number::Int(1)))
       vm.stack.push(Value::Number(Number::Int(2)))
 
-      assert_true!(vm.stack.length() > 0)
+      assert_true(vm.stack.length() > 0)
 
       gc_clear_vm(vm)
 
-      assert_eq!(vm.stack.length(), 0)
-      assert_eq!(vm.call_stack.length(), 0)
-      assert_eq!(vm.ip, 0)
-      assert_eq!(vm.current_chunk, -1)
+      assert_eq(vm.stack.length(), 0)
+      assert_eq(vm.call_stack.length(), 0)
+      assert_eq(vm.ip, 0)
+      assert_eq(vm.current_chunk, -1)
     }
-    Err(e) => fail!("Compile failed: " + e.to_string())
+    Err(e) => fail("Compile failed: " + e.to_string())
   }
 }
 
@@ -246,12 +246,12 @@ test "gc: many pairs trigger" {
         Ok(_) => {
           let stats = get_gc_stats()
           // Many pairs should have been created.
-          assert_true!(stats.pairs_allocated >= 10)
+          assert_true(stats.pairs_allocated >= 10)
         }
-        Err(e) => fail!("VM run failed: " + e.to_string())
+        Err(e) => fail("VM run failed: " + e.to_string())
       }
     }
-    Err(e) => fail!("Compile failed: " + e.to_string())
+    Err(e) => fail("Compile failed: " + e.to_string())
   }
 
   // Restore default

@@ -7,7 +7,7 @@ test "dynamic-wind basic" {
   let result = eval(expr, env)
   match result {
     Ok(Value::Number(Number::Int(42))) => ()
-    _ => fail!("expected 42")
+    _ => fail("expected 42")
   }
 }
 
@@ -19,7 +19,7 @@ test "dynamic-wind before and after execution" {
   let result = eval(expr, env)
   match result {
     Ok(Value::Number(Number::Int(10))) => () // thunk result
-    _ => fail!("expected 10")
+    _ => fail("expected 10")
   }
 }
 
@@ -30,7 +30,7 @@ test "dynamic-wind returns thunk result" {
   let result = eval(expr, env)
   match result {
     Ok(Value::Number(Number::Int(6))) => ()
-    _ => fail!("expected 6")
+    _ => fail("expected 6")
   }
 }
 
@@ -41,7 +41,7 @@ test "dynamic-wind with computation result" {
   let result = eval(expr, env)
   match result {
     Ok(Value::Number(Number::Int(56))) => ()
-    _ => fail!("expected 56")
+    _ => fail("expected 56")
   }
 }
 
@@ -52,7 +52,7 @@ test "nested dynamic-wind" {
   let result = eval(expr, env)
   match result {
     Ok(Value::Number(Number::Int(3))) => () // Inner thunk result
-    _ => fail!("expected 3")
+    _ => fail("expected 3")
   }
 }
 
@@ -63,6 +63,6 @@ test "dynamic-wind computation" {
   let result = eval(expr, env)
   match result {
     Ok(Value::Number(Number::Int(42))) => ()
-    _ => fail!("expected 42")
+    _ => fail("expected 42")
   }
 }

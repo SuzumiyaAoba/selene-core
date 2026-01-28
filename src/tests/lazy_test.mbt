@@ -7,7 +7,7 @@ test "delay and force basic" {
   let result = eval(expr, env)
   match result {
     Ok(Value::Number(Number::Int(3))) => ()
-    _ => fail!("expected 3")
+    _ => fail("expected 3")
   }
 }
 
@@ -18,7 +18,7 @@ test "promise? predicate" {
   let result = eval(expr, env)
   match result {
     Ok(Value::Bool(true)) => ()
-    _ => fail!("expected #t")
+    _ => fail("expected #t")
   }
 }
 
@@ -29,7 +29,7 @@ test "promise? with non-promise" {
   let result = eval(expr, env)
   match result {
     Ok(Value::Bool(false)) => ()
-    _ => fail!("expected #f")
+    _ => fail("expected #f")
   }
 }
 
@@ -41,7 +41,7 @@ test "delay is lazy" {
   let result = eval(expr, env)
   match result {
     Ok(Value::Bool(true)) => ()
-    _ => fail!("expected #t (no error because delay is lazy)")
+    _ => fail("expected #t (no error because delay is lazy)")
   }
 }
 
@@ -52,7 +52,7 @@ test "force memoization" {
   let result = eval(expr, env)
   match result {
     Ok(Value::Number(Number::Int(60))) => () // 30 + 30
-    _ => fail!("expected 60")
+    _ => fail("expected 60")
   }
 }
 
@@ -63,7 +63,7 @@ test "force non-promise" {
   let result = eval(expr, env)
   match result {
     Ok(Value::Number(Number::Int(42))) => ()
-    _ => fail!("expected 42")
+    _ => fail("expected 42")
   }
 }
 
@@ -74,7 +74,7 @@ test "nested delay" {
   let result = eval(expr, env)
   match result {
     Ok(Value::Number(Number::Int(100))) => ()
-    _ => fail!("expected 100")
+    _ => fail("expected 100")
   }
 }
 
@@ -85,6 +85,6 @@ test "delay with variable reference" {
   let result = eval(expr, env)
   match result {
     Ok(Value::Number(Number::Int(10))) => ()
-    _ => fail!("expected 10")
+    _ => fail("expected 10")
   }
 }

@@ -1,7 +1,7 @@
 /// Testing of extended mathematical functions (trigonometric functions, logarithmic/exponential functions)
 
 /// Constant: π (pi)
-let pi : Double = 3.14159265358979323846
+let _pi : Double = 3.14159265358979323846
 
 /// Basic operation of sin
 test "sin basic" {

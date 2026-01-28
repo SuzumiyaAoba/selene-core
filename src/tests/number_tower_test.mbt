@@ -11,7 +11,7 @@ test "rational from division" {
   let result = eval(expr, env)
   match result {
     Ok(Value::Number(Number::Rational(1, 2))) => ()
-    _ => fail!("expected 1/2")
+    _ => fail("expected 1/2")
   }
 }
 
@@ -22,7 +22,7 @@ test "rational normalization" {
   let result = eval(expr, env)
   match result {
     Ok(Value::Number(Number::Rational(1, 2))) => ()
-    _ => fail!("expected 1/2")
+    _ => fail("expected 1/2")
   }
 }
 
@@ -33,7 +33,7 @@ test "rational addition" {
   let result = eval(expr, env)
   match result {
     Ok(Value::Number(Number::Rational(5, 6))) => ()
-    _ => fail!("expected 5/6")
+    _ => fail("expected 5/6")
   }
 }
 
@@ -44,7 +44,7 @@ test "rational subtraction" {
   let result = eval(expr, env)
   match result {
     Ok(Value::Number(Number::Rational(1, 6))) => ()
-    _ => fail!("expected 1/6")
+    _ => fail("expected 1/6")
   }
 }
 
@@ -55,7 +55,7 @@ test "rational multiplication" {
   let result = eval(expr, env)
   match result {
     Ok(Value::Number(Number::Rational(1, 3))) => ()
-    _ => fail!("expected 1/3")
+    _ => fail("expected 1/3")
   }
 }
 
@@ -66,7 +66,7 @@ test "rational division" {
   let result = eval(expr, env)
   match result {
     Ok(Value::Number(Number::Rational(3, 2))) => ()
-    _ => fail!("expected 3/2")
+    _ => fail("expected 3/2")
   }
 }
 
@@ -77,7 +77,7 @@ test "numerator function" {
   let result = eval(expr, env)
   match result {
     Ok(Value::Number(Number::Int(3))) => ()
-    _ => fail!("expected 3")
+    _ => fail("expected 3")
   }
 }
 
@@ -88,7 +88,7 @@ test "denominator function" {
   let result = eval(expr, env)
   match result {
     Ok(Value::Number(Number::Int(4))) => ()
-    _ => fail!("expected 4")
+    _ => fail("expected 4")
   }
 }
 
@@ -99,7 +99,7 @@ test "numerator with integer" {
   let result = eval(expr, env)
   match result {
     Ok(Value::Number(Number::Int(5))) => ()
-    _ => fail!("expected 5")
+    _ => fail("expected 5")
   }
 }
 
@@ -110,7 +110,7 @@ test "denominator with integer" {
   let result = eval(expr, env)
   match result {
     Ok(Value::Number(Number::Int(1))) => ()
-    _ => fail!("expected 1")
+    _ => fail("expected 1")
   }
 }
 
@@ -121,7 +121,7 @@ test "rational? predicate" {
   let result = eval(expr, env)
   match result {
     Ok(Value::Bool(true)) => ()
-    _ => fail!("expected #t")
+    _ => fail("expected #t")
   }
 }
 
@@ -132,7 +132,7 @@ test "rational? with integer" {
   let result = eval(expr, env)
   match result {
     Ok(Value::Bool(true)) => ()
-    _ => fail!("expected #t")
+    _ => fail("expected #t")
   }
 }
 
@@ -143,7 +143,7 @@ test "exact? with rational" {
   let result = eval(expr, env)
   match result {
     Ok(Value::Bool(true)) => ()
-    _ => fail!("expected #t")
+    _ => fail("expected #t")
   }
 }
 
@@ -158,7 +158,7 @@ test "make-rectangular" {
   let result = eval(expr, env)
   match result {
     Ok(Value::Number(Number::Complex(3.0, 4.0))) => ()
-    _ => fail!("expected 3+4i")
+    _ => fail("expected 3+4i")
   }
 }
 
@@ -169,7 +169,7 @@ test "make-rectangular with zero imag" {
   let result = eval(expr, env)
   match result {
     Ok(Value::Number(Number::Real(5.0))) => ()
-    _ => fail!("expected 5.0")
+    _ => fail("expected 5.0")
   }
 }
 
@@ -183,10 +183,10 @@ test "real-part function" {
       if r == 3.0 {
         ()
       } else {
-        fail!("expected 3.0")
+        fail("expected 3.0")
       }
     }
-    _ => fail!("expected 3.0")
+    _ => fail("expected 3.0")
   }
 }
 
@@ -200,10 +200,10 @@ test "imag-part function" {
       if i == 4.0 {
         ()
       } else {
-        fail!("expected 4.0")
+        fail("expected 4.0")
       }
     }
-    _ => fail!("expected 4.0")
+    _ => fail("expected 4.0")
   }
 }
 
@@ -214,7 +214,7 @@ test "imag-part of real" {
   let result = eval(expr, env)
   match result {
     Ok(Value::Number(Number::Real(0.0))) => ()
-    _ => fail!("expected 0.0")
+    _ => fail("expected 0.0")
   }
 }
 
@@ -228,10 +228,10 @@ test "magnitude function" {
       if m == 5.0 {
         ()
       } else {
-        fail!("expected 5.0")
+        fail("expected 5.0")
       }
     }
-    _ => fail!("expected 5.0")
+    _ => fail("expected 5.0")
   }
 }
 
@@ -242,7 +242,7 @@ test "complex? predicate" {
   let result = eval(expr, env)
   match result {
     Ok(Value::Bool(true)) => ()
-    _ => fail!("expected #t")
+    _ => fail("expected #t")
   }
 }
 
@@ -253,7 +253,7 @@ test "complex? with complex" {
   let result = eval(expr, env)
   match result {
     Ok(Value::Bool(true)) => ()
-    _ => fail!("expected #t")
+    _ => fail("expected #t")
   }
 }
 
@@ -267,10 +267,10 @@ test "complex addition" {
       if r == 4.0 && i == 6.0 {
         ()
       } else {
-        fail!("expected 4+6i")
+        fail("expected 4+6i")
       }
     }
-    _ => fail!("expected 4+6i")
+    _ => fail("expected 4+6i")
   }
 }
 
@@ -284,10 +284,10 @@ test "complex subtraction" {
       if r == 3.0 && i == 2.0 {
         ()
       } else {
-        fail!("expected 3+2i")
+        fail("expected 3+2i")
       }
     }
-    _ => fail!("expected 3+2i")
+    _ => fail("expected 3+2i")
   }
 }
 
@@ -302,10 +302,10 @@ test "complex multiplication" {
       if r == -5.0 && i == 10.0 {
         ()
       } else {
-        fail!("expected -5+10i")
+        fail("expected -5+10i")
       }
     }
-    _ => fail!("expected -5+10i")
+    _ => fail("expected -5+10i")
   }
 }
 
@@ -319,10 +319,10 @@ test "abs with complex" {
       if m == 5.0 {
         ()
       } else {
-        fail!("expected 5.0")
+        fail("expected 5.0")
       }
     }
-    _ => fail!("expected 5.0")
+    _ => fail("expected 5.0")
   }
 }
 
@@ -333,6 +333,6 @@ test "inexact? with complex" {
   let result = eval(expr, env)
   match result {
     Ok(Value::Bool(true)) => ()
-    _ => fail!("expected #t")
+    _ => fail("expected #t")
   }
 }

@@ -7,7 +7,7 @@ test "values single value" {
   let result = eval(expr, env)
   match result {
     Ok(Value::Number(Number::Int(42))) => ()
-    _ => fail!("expected 42")
+    _ => fail("expected 42")
   }
 }
 
@@ -18,7 +18,7 @@ test "values multiple values" {
   let result = eval(expr, env)
   match result {
     Ok(Value::Number(Number::Int(6))) => () // 1 + 2 + 3
-    _ => fail!("expected 6")
+    _ => fail("expected 6")
   }
 }
 
@@ -29,7 +29,7 @@ test "values no values" {
   let result = eval(expr, env)
   match result {
     Ok(Value::Number(Number::Int(99))) => ()
-    _ => fail!("expected 99")
+    _ => fail("expected 99")
   }
 }
 
@@ -40,7 +40,7 @@ test "call-with-values with normal value producer" {
   let result = eval(expr, env)
   match result {
     Ok(Value::Number(Number::Int(84))) => ()
-    _ => fail!("expected 84")
+    _ => fail("expected 84")
   }
 }
 
@@ -51,7 +51,7 @@ test "multiple values computation" {
   let result = eval(expr, env)
   match result {
     Ok(Value::Number(Number::Int(-10))) => ()
-    _ => fail!("expected -10")
+    _ => fail("expected -10")
   }
 }
 
@@ -65,13 +65,13 @@ test "swap two values" {
       if vals.length() == 2 {
         match (vals[0], vals[1]) {
           (Value::Number(Number::Int(2)), Value::Number(Number::Int(1))) => ()
-          _ => fail!("expected (2 1)")
+          _ => fail("expected (2 1)")
         }
       } else {
-        fail!("expected 2 values")
+        fail("expected 2 values")
       }
     }
-    _ => fail!("expected multiple values")
+    _ => fail("expected multiple values")
   }
 }
 
@@ -82,6 +82,6 @@ test "values with list construction" {
   let result = eval(expr, env)
   match result {
     Ok(Value::Pair(_, _)) => ()
-    _ => fail!("expected a list")
+    _ => fail("expected a list")
   }
 }

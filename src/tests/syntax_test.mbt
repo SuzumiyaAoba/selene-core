@@ -11,11 +11,11 @@ test "let-syntax basic" {
       let expected_expr = parse_one("(list 2 1)")
       let expected = match eval(expected_expr, env) {
         Ok(v) => v
-        _ => fail!("Failed to create expected list")
+        _ => fail("Failed to create expected list")
       }
       assert_eq(syntax_value_to_string(result), syntax_value_to_string(expected))
     }
-    Err(e) => fail!("Expected list (2 1), got error: " + e.to_string())
+    Err(e) => fail("Expected list (2 1), got error: " + e.to_string())
   }
 }
 
@@ -27,7 +27,7 @@ test "let-syntax constant" {
   )
   match eval(expr, env) {
     Ok(Value::Number(Number::Int(42))) => ()
-    _ => fail!("Expected 42")
+    _ => fail("Expected 42")
   }
 }
 
@@ -39,8 +39,8 @@ test "let-syntax multiple args" {
   )
   match eval(expr, env) {
     Ok(Value::Number(Number::Int(6))) => ()
-    Err(e) => fail!("Expected 6, got error: " + e.to_string())
-    _ => fail!("Expected 6")
+    Err(e) => fail("Expected 6, got error: " + e.to_string())
+    _ => fail("Expected 6")
   }
 }
 
@@ -52,8 +52,8 @@ test "let-syntax with literals" {
   )
   match eval(expr, env) {
     Ok(Value::Number(Number::Int(1))) => ()
-    Err(e) => fail!("Expected 1, got error: " + e.to_string())
-    _ => fail!("Expected 1")
+    Err(e) => fail("Expected 1, got error: " + e.to_string())
+    _ => fail("Expected 1")
   }
 }
 
@@ -66,8 +66,8 @@ test "let-syntax multiple rules" {
   )
   match eval(expr, env) {
     Ok(Value::Number(Number::Int(30))) => ()
-    Err(e) => fail!("Expected 30, got error: " + e.to_string())
-    _ => fail!("Expected 30")
+    Err(e) => fail("Expected 30, got error: " + e.to_string())
+    _ => fail("Expected 30")
   }
 }
 
@@ -79,8 +79,8 @@ test "let-syntax nested" {
   )
   match eval(expr, env) {
     Ok(Value::Number(Number::Int(20))) => ()
-    Err(e) => fail!("Expected 20, got error: " + e.to_string())
-    _ => fail!("Expected 20")
+    Err(e) => fail("Expected 20, got error: " + e.to_string())
+    _ => fail("Expected 20")
   }
 }
 
@@ -95,11 +95,11 @@ test "let-syntax with ellipsis" {
       let expected_expr = parse_one("(list 1 2 3)")
       let expected = match eval(expected_expr, env) {
         Ok(v) => v
-        _ => fail!("Failed to create expected list")
+        _ => fail("Failed to create expected list")
       }
       assert_eq(syntax_value_to_string(result), syntax_value_to_string(expected))
     }
-    Err(e) => fail!("Expected (1 2 3), got error: " + e.to_string())
+    Err(e) => fail("Expected (1 2 3), got error: " + e.to_string())
   }
 }
 
@@ -111,8 +111,8 @@ test "let-syntax with ellipsis empty" {
   )
   match eval(expr, env) {
     Ok(Value::Nil) => ()
-    Err(e) => fail!("Expected empty list, got error: " + e.to_string())
-    _ => fail!("Expected empty list")
+    Err(e) => fail("Expected empty list, got error: " + e.to_string())
+    _ => fail("Expected empty list")
   }
 }
 
@@ -124,8 +124,8 @@ test "let-syntax with wildcard" {
   )
   match eval(expr, env) {
     Ok(Value::Number(Number::Int(10))) => ()
-    Err(e) => fail!("Expected 10, got error: " + e.to_string())
-    _ => fail!("Expected 10")
+    Err(e) => fail("Expected 10, got error: " + e.to_string())
+    _ => fail("Expected 10")
   }
 }
 
@@ -138,8 +138,8 @@ test "letrec-syntax recursive" {
   )
   match eval(expr, env) {
     Ok(Value::Number(Number::Int(3))) => ()
-    Err(e) => fail!("Expected 3, got error: " + e.to_string())
-    _ => fail!("Expected 3")
+    Err(e) => fail("Expected 3, got error: " + e.to_string())
+    _ => fail("Expected 3")
   }
 }
 

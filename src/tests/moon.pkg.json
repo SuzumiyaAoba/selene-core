@@ -5,7 +5,6 @@
     "SuzumiyaAoba/selene_core/runtime",
     "SuzumiyaAoba/selene_core/compiler",
     "SuzumiyaAoba/selene_core/repl",
-    "SuzumiyaAoba/selene_core/debug",
-    "SuzumiyaAoba/selene_core/builtin"
+    "SuzumiyaAoba/selene_core/debug"
   ]
 }

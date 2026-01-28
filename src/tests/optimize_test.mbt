@@ -9,8 +9,8 @@ test "optimize: constant folding - add" {
   ])
   let result = optimize(expr)
   match result {
-    IRExpr::Const(IRConst::Int(n)) => assert_eq!(n, 3)
-    _ => fail!("Expected Const(Int(3))")
+    IRExpr::Const(IRConst::Int(n)) => assert_eq(n, 3)
+    _ => fail("Expected Const(Int(3))")
   }
 }
 
@@ -23,8 +23,8 @@ test "optimize: constant folding - mul" {
   ])
   let result = optimize(expr)
   match result {
-    IRExpr::Const(IRConst::Int(n)) => assert_eq!(n, 12)
-    _ => fail!("Expected Const(Int(12))")
+    IRExpr::Const(IRConst::Int(n)) => assert_eq(n, 12)
+    _ => fail("Expected Const(Int(12))")
   }
 }
 
@@ -37,8 +37,8 @@ test "optimize: constant folding - sub" {
   ])
   let result = optimize(expr)
   match result {
-    IRExpr::Const(IRConst::Int(n)) => assert_eq!(n, 7)
-    _ => fail!("Expected Const(Int(7))")
+    IRExpr::Const(IRConst::Int(n)) => assert_eq(n, 7)
+    _ => fail("Expected Const(Int(7))")
   }
 }
 
@@ -51,8 +51,8 @@ test "optimize: constant folding - comparison" {
   ])
   let result = optimize(expr)
   match result {
-    IRExpr::Const(IRConst::Bool(b)) => assert_eq!(b, true)
-    _ => fail!("Expected Const(Bool(true))")
+    IRExpr::Const(IRConst::Bool(b)) => assert_eq(b, true)
+    _ => fail("Expected Const(Bool(true))")
   }
 }
 
@@ -65,8 +65,8 @@ test "optimize: constant folding - comparison false" {
   ])
   let result = optimize(expr)
   match result {
-    IRExpr::Const(IRConst::Bool(b)) => assert_eq!(b, false)
-    _ => fail!("Expected Const(Bool(false))")
+    IRExpr::Const(IRConst::Bool(b)) => assert_eq(b, false)
+    _ => fail("Expected Const(Bool(false))")
   }
 }
 
@@ -80,8 +80,8 @@ test "optimize: constant if - true" {
   )
   let result = optimize(expr)
   match result {
-    IRExpr::Const(IRConst::Int(n)) => assert_eq!(n, 1)
-    _ => fail!("Expected Const(Int(1))")
+    IRExpr::Const(IRConst::Int(n)) => assert_eq(n, 1)
+    _ => fail("Expected Const(Int(1))")
   }
 }
 
@@ -95,8 +95,8 @@ test "optimize: constant if - false" {
   )
   let result = optimize(expr)
   match result {
-    IRExpr::Const(IRConst::Int(n)) => assert_eq!(n, 2)
-    _ => fail!("Expected Const(Int(2))")
+    IRExpr::Const(IRConst::Int(n)) => assert_eq(n, 2)
+    _ => fail("Expected Const(Int(2))")
   }
 }
 
@@ -109,8 +109,8 @@ test "optimize: and with false" {
   ])
   let result = optimize(expr)
   match result {
-    IRExpr::Const(IRConst::Bool(b)) => assert_eq!(b, false)
-    _ => fail!("Expected Const(Bool(false))")
+    IRExpr::Const(IRConst::Bool(b)) => assert_eq(b, false)
+    _ => fail("Expected Const(Bool(false))")
   }
 }
 
@@ -123,8 +123,8 @@ test "optimize: or with true" {
   ])
   let result = optimize(expr)
   match result {
-    IRExpr::Const(IRConst::Bool(b)) => assert_eq!(b, true)
-    _ => fail!("Expected Const(Bool(true))")
+    IRExpr::Const(IRConst::Bool(b)) => assert_eq(b, true)
+    _ => fail("Expected Const(Bool(true))")
   }
 }
 
@@ -137,8 +137,8 @@ test "optimize: add zero" {
   ])
   let result = optimize(expr)
   match result {
-    IRExpr::GlobalVar(name) => assert_eq!(name, "x")
-    _ => fail!("Expected GlobalVar(x)")
+    IRExpr::GlobalVar(name) => assert_eq(name, "x")
+    _ => fail("Expected GlobalVar(x)")
   }
 }
 
@@ -151,8 +151,8 @@ test "optimize: mul one" {
   ])
   let result = optimize(expr)
   match result {
-    IRExpr::GlobalVar(name) => assert_eq!(name, "x")
-    _ => fail!("Expected GlobalVar(x)")
+    IRExpr::GlobalVar(name) => assert_eq(name, "x")
+    _ => fail("Expected GlobalVar(x)")
   }
 }
 
@@ -165,8 +165,8 @@ test "optimize: mul zero" {
   ])
   let result = optimize(expr)
   match result {
-    IRExpr::Const(IRConst::Int(n)) => assert_eq!(n, 0)
-    _ => fail!("Expected Const(Int(0))")
+    IRExpr::Const(IRConst::Int(n)) => assert_eq(n, 0)
+    _ => fail("Expected Const(Int(0))")
   }
 }
 
@@ -176,8 +176,8 @@ test "optimize: begin single" {
   let expr = IRExpr::Begin([IRExpr::Const(IRConst::Int(1))])
   let result = optimize(expr)
   match result {
-    IRExpr::Const(IRConst::Int(n)) => assert_eq!(n, 1)
-    _ => fail!("Expected Const(Int(1))")
+    IRExpr::Const(IRConst::Int(n)) => assert_eq(n, 1)
+    _ => fail("Expected Const(Int(1))")
   }
 }
 
@@ -196,8 +196,8 @@ test "optimize: nested constant folding" {
   ])
   let result = optimize(expr)
   match result {
-    IRExpr::Const(IRConst::Int(n)) => assert_eq!(n, 15)
-    _ => fail!("Expected Const(Int(15))")
+    IRExpr::Const(IRConst::Int(n)) => assert_eq(n, 15)
+    _ => fail("Expected Const(Int(15))")
   }
 }
 
@@ -207,8 +207,8 @@ test "optimize: zero?" {
   let expr = IRExpr::PrimOp(PrimOpKind::ZeroP, [IRExpr::Const(IRConst::Int(0))])
   let result = optimize(expr)
   match result {
-    IRExpr::Const(IRConst::Bool(b)) => assert_eq!(b, true)
-    _ => fail!("Expected Const(Bool(true))")
+    IRExpr::Const(IRConst::Bool(b)) => assert_eq(b, true)
+    _ => fail("Expected Const(Bool(true))")
   }
 }
 
@@ -218,8 +218,8 @@ test "optimize: null?" {
   let expr = IRExpr::PrimOp(PrimOpKind::NullP, [IRExpr::Const(IRConst::Nil)])
   let result = optimize(expr)
   match result {
-    IRExpr::Const(IRConst::Bool(b)) => assert_eq!(b, true)
-    _ => fail!("Expected Const(Bool(true))")
+    IRExpr::Const(IRConst::Bool(b)) => assert_eq(b, true)
+    _ => fail("Expected Const(Bool(true))")
   }
 }
 
@@ -229,8 +229,8 @@ test "optimize: number?" {
   let expr = IRExpr::PrimOp(PrimOpKind::NumberP, [IRExpr::Const(IRConst::Int(42))])
   let result = optimize(expr)
   match result {
-    IRExpr::Const(IRConst::Bool(b)) => assert_eq!(b, true)
-    _ => fail!("Expected Const(Bool(true))")
+    IRExpr::Const(IRConst::Bool(b)) => assert_eq(b, true)
+    _ => fail("Expected Const(Bool(true))")
   }
 }
 
@@ -242,8 +242,8 @@ test "optimize: car" {
   ])
   let result = optimize(expr)
   match result {
-    IRExpr::Const(IRConst::Int(n)) => assert_eq!(n, 1)
-    _ => fail!("Expected Const(Int(1))")
+    IRExpr::Const(IRConst::Int(n)) => assert_eq(n, 1)
+    _ => fail("Expected Const(Int(1))")
   }
 }
 
@@ -255,8 +255,8 @@ test "optimize: cdr" {
   ])
   let result = optimize(expr)
   match result {
-    IRExpr::Const(IRConst::Int(n)) => assert_eq!(n, 2)
-    _ => fail!("Expected Const(Int(2))")
+    IRExpr::Const(IRConst::Int(n)) => assert_eq(n, 2)
+    _ => fail("Expected Const(Int(2))")
   }
 }
 
@@ -268,8 +268,8 @@ test "optimize: string-length" {
   ])
   let result = optimize(expr)
   match result {
-    IRExpr::Const(IRConst::Int(n)) => assert_eq!(n, 5)
-    _ => fail!("Expected Const(Int(5))")
+    IRExpr::Const(IRConst::Int(n)) => assert_eq(n, 5)
+    _ => fail("Expected Const(Int(5))")
   }
 }
 
@@ -286,8 +286,8 @@ test "optimize: if with constant condition from computation" {
   )
   let result = optimize(expr)
   match result {
-    IRExpr::Const(IRConst::Int(n)) => assert_eq!(n, 10)
-    _ => fail!("Expected Const(Int(10))")
+    IRExpr::Const(IRConst::Int(n)) => assert_eq(n, 10)
+    _ => fail("Expected Const(Int(10))")
   }
 }
 
@@ -306,10 +306,10 @@ test "optimize: dead code elimination - unused let binding" {
   match result {
     IRExpr::Let(bindings, _body) => {
       // x should have been removed
-      assert_eq!(bindings.length(), 1)
-      assert_eq!(bindings[0].name, "y")
+      assert_eq(bindings.length(), 1)
+      assert_eq(bindings[0].name, "y")
     }
-    _ => fail!("Expected Let with one binding")
+    _ => fail("Expected Let with one binding")
   }
 }
 
@@ -326,8 +326,8 @@ test "optimize: dead code elimination - all bindings unused" {
   let result = optimize(expr)
   // all bindings are removed
   match result {
-    IRExpr::Const(IRConst::Int(n)) => assert_eq!(n, 3)
-    _ => fail!("Expected Const(Int(3))")
+    IRExpr::Const(IRConst::Int(n)) => assert_eq(n, 3)
+    _ => fail("Expected Const(Int(3))")
   }
 }
 
@@ -344,7 +344,7 @@ test "optimize: dead code elimination - keep side effects" {
   // Since display has side effects, it is executed with begin.
   match result {
     IRExpr::Begin(_exprs) => ()  // OK
-    _ => fail!("Expected Begin (side effect preserved)")
+    _ => fail("Expected Begin (side effect preserved)")
   }
 }
 
@@ -360,10 +360,10 @@ test "optimize: dead code elimination - used binding kept" {
   let result = optimize(expr)
   match result {
     IRExpr::Let(bindings, _body) => {
-      assert_eq!(bindings.length(), 1)
-      assert_eq!(bindings[0].name, "x")
+      assert_eq(bindings.length(), 1)
+      assert_eq(bindings[0].name, "x")
     }
-    _ => fail!("Expected Let with x binding")
+    _ => fail("Expected Let with x binding")
   }
 }
 
@@ -388,14 +388,14 @@ test "optimize: inline expansion - simple lambda" {
   // Inlined and converted to Let
   match result {
     IRExpr::Let(bindings, _body) => {
-      assert_eq!(bindings.length(), 1)
-      assert_eq!(bindings[0].name, "x")
+      assert_eq(bindings.length(), 1)
+      assert_eq(bindings[0].name, "x")
       match bindings[0].init {
-        IRExpr::Const(IRConst::Int(n)) => assert_eq!(n, 5)
-        _ => fail!("Expected binding init to be Const(5)")
+        IRExpr::Const(IRConst::Int(n)) => assert_eq(n, 5)
+        _ => fail("Expected binding init to be Const(5)")
       }
     }
-    _ => fail!("Expected Let")
+    _ => fail("Expected Let")
   }
 }
 
@@ -419,11 +419,11 @@ test "optimize: inline expansion - multiple args" {
   let result = optimize(expr)
   match result {
     IRExpr::Let(bindings, _body) => {
-      assert_eq!(bindings.length(), 2)
-      assert_eq!(bindings[0].name, "x")
-      assert_eq!(bindings[1].name, "y")
+      assert_eq(bindings.length(), 2)
+      assert_eq(bindings[0].name, "x")
+      assert_eq(bindings[1].name, "y")
     }
-    _ => fail!("Expected Let with 2 bindings")
+    _ => fail("Expected Let with 2 bindings")
   }
 }
 
@@ -444,9 +444,9 @@ test "optimize: inline expansion - tail call" {
   let result = optimize(expr)
   match result {
     IRExpr::Let(bindings, _body) => {
-      assert_eq!(bindings.length(), 1)
-      assert_eq!(bindings[0].name, "x")
+      assert_eq(bindings.length(), 1)
+      assert_eq(bindings[0].name, "x")
     }
-    _ => fail!("Expected Let")
+    _ => fail("Expected Let")
   }
 }
