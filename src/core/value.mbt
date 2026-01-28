@@ -121,10 +121,16 @@ pub fn store_continuation(id : Int, env : Env, captured_at : String) -> Unit {
 pub fn get_continuation(id : Int) -> ContinuationState? {
   for entry in continuation_store {
     if entry.0 == id {
+      touch_continuation_state(entry.1)
       return Some(entry.1)
     }
   }
   None
+}
+
+fn touch_continuation_state(state : ContinuationState) -> Unit {
+  let _ = state.env
+  let _ = state.captured_at
 }
 
 /// Remove a continuation by id.
