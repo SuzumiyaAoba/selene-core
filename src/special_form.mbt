@@ -1,19 +1,19 @@
-/// 特殊形式（Special Forms）
+/// Special Forms
 ///
-/// Scheme の特殊形式を実装する。
-/// 特殊形式は通常の関数とは異なり、引数を評価する前に処理を行う。
+/// Implement special forms of Scheme.
+/// Special forms differ from regular functions in that they perform processing before evaluating their arguments.
 
-/// if 特殊形式: (if test consequent alternative)
+/// if special form: (if test consequent alternative)
 fn eval_if(args : SExpr, env : Env) -> Result[Value, EvalError] {
   match args {
     SExpr::Pair(test_expr, SExpr::Pair(consequent, rest)) => {
-      // testを評価
+      // evaluate test
       let test_val = match eval(test_expr, env) {
         Ok(v) => v
         Err(e) => return Err(e)
       }
 
-      // #fのみがfalse、それ以外はtrue
+      // Only #f is false, otherwise true
       let is_true = match test_val {
         Value::Bool(false) => false
         _ => true
@@ -24,7 +24,7 @@ fn eval_if(args : SExpr, env : Env) -> Result[Value, EvalError] {
       } else {
         match rest {
           SExpr::Pair(alternative, SExpr::Nil) => eval(alternative, env)
-          SExpr::Nil => Ok(Value::Nil) // alternativeが省略された場合
+          SExpr::Nil => Ok(Value::Nil) // If alternative is omitted
           _ => Err(EvalError::InvalidSyntax("if: invalid syntax"))
         }
       }
@@ -33,24 +33,24 @@ fn eval_if(args : SExpr, env : Env) -> Result[Value, EvalError] {
   }
 }
 
-/// lambda 特殊形式: (lambda (params...) body)
+/// lambda special form: (lambda (params...) body)
 fn eval_lambda(args : SExpr, env : Env) -> Result[Value, EvalError] {
   match args {
     SExpr::Pair(params_expr, SExpr::Pair(body, SExpr::Nil)) => {
-      // パラメータリストを抽出
+      // Extract parameter list
       let params = match extract_param_names(params_expr) {
         Ok(p) => p
         Err(e) => return Err(e)
       }
 
-      // クロージャを作成
+      // create a closure
       Ok(Value::Procedure(Procedure::Closure(params, body, env)))
     }
     _ => Err(EvalError::InvalidSyntax("lambda: requires parameter list and body"))
   }
 }
 
-/// パラメータリストからパラメータ名を抽出する。
+/// Extract parameter names from parameter list.
 fn extract_param_names(params : SExpr) -> Result[Array[String], EvalError] {
   let names : Array[String] = []
   let mut current = params
@@ -69,9 +69,9 @@ fn extract_param_names(params : SExpr) -> Result[Array[String], EvalError] {
   Ok(names)
 }
 
-/// define 特殊形式: (define name value)
-/// 注: この実装は環境を返せないため、式コンテキストでは使用できません。
-/// REPLで特別に処理される必要があります。
+/// define special form: (define name value)
+/// Note: This implementation cannot return an environment, so it cannot be used in an expression context.
+/// Must be specially handled in the REPL.
 fn eval_define(_args : SExpr, _env : Env) -> Result[Value, EvalError] {
   Err(
     EvalError::InvalidSyntax(
@@ -80,16 +80,16 @@ fn eval_define(_args : SExpr, _env : Env) -> Result[Value, EvalError] {
   )
 }
 
-/// set! 特殊形式: (set! name value)
-/// 注: この実装は環境を返せないため、式コンテキストでは使用できません。
-/// REPLで特別に処理される必要があります。
+/// set! special form: (set! name value)
+/// Note: This implementation cannot return an environment, so it cannot be used in an expression context.
+/// Must be specially handled in the REPL.
 fn eval_set(_args : SExpr, _env : Env) -> Result[Value, EvalError] {
   Err(
     EvalError::InvalidSyntax("set!: not supported in expression context (use REPL)"),
   )
 }
 
-/// begin 特殊形式: (begin expr...)
+/// begin special form: (begin expr...)
 fn eval_begin(args : SExpr, env : Env) -> Result[Value, EvalError] {
   let mut current = args
   let mut last_value = Value::Nil
@@ -111,9 +111,9 @@ fn eval_begin(args : SExpr, env : Env) -> Result[Value, EvalError] {
   Ok(last_value)
 }
 
-/// and 特殊形式: (and test...)
-/// 短絡評価を行い、最初の偽値を返すか、全て真なら最後の値を返す。
-/// 引数がない場合は #t を返す。
+/// and special form: (and test...)
+/// Performs short-circuit evaluation and returns the first false value, or the last value if all are true.
+/// Returns #t if there are no arguments.
 fn eval_and(args : SExpr, env : Env) -> Result[Value, EvalError] {
   let mut current = args
   let mut last_value = Value::Bool(true)
@@ -125,7 +125,7 @@ fn eval_and(args : SExpr, env : Env) -> Result[Value, EvalError] {
           Ok(v) => v
           Err(e) => return Err(e)
         }
-        // #f のみが偽、それ以外は全て真
+        // Only #f is false, all others are true
         match last_value {
           Value::Bool(false) => return Ok(Value::Bool(false))
           _ => current = rest
@@ -139,9 +139,9 @@ fn eval_and(args : SExpr, env : Env) -> Result[Value, EvalError] {
   Ok(last_value)
 }
 
-/// or 特殊形式: (or test...)
-/// 短絡評価を行い、最初の真値を返すか、全て偽なら最後の値を返す。
-/// 引数がない場合は #f を返す。
+/// or special form: (or test...)
+/// Performs a short-circuit evaluation and returns the first true value, or if all are false, returns the last value.
+/// Returns #f if there are no arguments.
 fn eval_or(args : SExpr, env : Env) -> Result[Value, EvalError] {
   let mut current = args
   let mut last_value = Value::Bool(false)
@@ -153,7 +153,7 @@ fn eval_or(args : SExpr, env : Env) -> Result[Value, EvalError] {
           Ok(v) => v
           Err(e) => return Err(e)
         }
-        // #f のみが偽、それ以外は全て真
+        // Only #f is false, all others are true
         match last_value {
           Value::Bool(false) => current = rest
           _ => return Ok(last_value)
@@ -167,22 +167,22 @@ fn eval_or(args : SExpr, env : Env) -> Result[Value, EvalError] {
   Ok(last_value)
 }
 
-/// let 特殊形式を評価する。
+/// Evaluate the let special form.
 /// (let ((var1 val1) (var2 val2) ...) body ...)
 fn eval_let(args : SExpr, env : Env) -> Result[Value, EvalError] {
   match args {
     SExpr::Pair(bindings_expr, body) => {
-      // バインディングリストを解析
+      // Parse binding list
       let bindings : Array[Binding] = []
       let mut current = bindings_expr
       let _ = while true {
         match current {
           SExpr::Nil => break
           SExpr::Pair(binding, rest) => {
-            // 各バインディングは (var val) の形式
+            // Each binding is of the form (var val)
             match binding {
               SExpr::Pair(SExpr::Symbol(name), SExpr::Pair(val_expr, SExpr::Nil)) => {
-                // 値を現在の環境で評価
+                // Evaluate value in current environment
                 let value = match eval(val_expr, env) {
                   Ok(v) => v
                   Err(e) => return Err(e)
@@ -199,37 +199,37 @@ fn eval_let(args : SExpr, env : Env) -> Result[Value, EvalError] {
         ()
       }
 
-      // 新しい環境を作成
+      // Create a new environment
       let new_env = extend(env, bindings)
 
-      // ボディを評価
+      // evaluate the body
       eval_begin(body, new_env)
     }
     _ => Err(EvalError::InvalidSyntax("let: invalid syntax"))
   }
 }
 
-/// let* 特殊形式を評価する。
+/// Evaluate the let* special form.
 /// (let* ((var1 val1) (var2 val2) ...) body ...)
 fn eval_let_star(args : SExpr, env : Env) -> Result[Value, EvalError] {
   match args {
     SExpr::Pair(bindings_expr, body) => {
-      // バインディングを順次評価し、環境を拡張
+      // Evaluate bindings sequentially and expand your environment
       let mut current_env = env
       let mut current = bindings_expr
       let _ = while true {
         match current {
           SExpr::Nil => break
           SExpr::Pair(binding, rest) => {
-            // 各バインディングは (var val) の形式
+            // Each binding is of the form (var val)
             match binding {
               SExpr::Pair(SExpr::Symbol(name), SExpr::Pair(val_expr, SExpr::Nil)) => {
-                // 値を現在の環境で評価
+                // Evaluate value in current environment
                 let value = match eval(val_expr, current_env) {
                   Ok(v) => v
                   Err(e) => return Err(e)
                 }
-                // 環境を拡張（1つずつ）
+                // Extend your environment (one by one)
                 current_env = extend(current_env, [(name, value)])
                 current = rest
               }
@@ -243,23 +243,23 @@ fn eval_let_star(args : SExpr, env : Env) -> Result[Value, EvalError] {
         ()
       }
 
-      // ボディを評価
+      // evaluate the body
       eval_begin(body, current_env)
     }
     _ => Err(EvalError::InvalidSyntax("let*: invalid syntax"))
   }
 }
 
-/// letrec 特殊形式を評価する。
+/// Evaluate the letrec special form.
 /// (letrec ((var1 val1) (var2 val2) ...) body ...)
 ///
-/// 注: 不変環境での letrec の完全な実装は困難です。
-/// この実装では、各バインディングを順次評価し、その時点での環境を次の評価に使用します。
-/// これにより、後のバインディングが前のバインディングを参照できます。
+/// Note: A complete implementation of letrec in an immutable environment is difficult.
+/// This implementation evaluates each binding sequentially and uses the current environment for the next evaluation.
+/// This allows later bindings to reference earlier bindings.
 fn eval_letrec(args : SExpr, env : Env) -> Result[Value, EvalError] {
   match args {
     SExpr::Pair(bindings_expr, body) => {
-      // バインディングリストを解析
+      // Parse binding list
       let names : Array[String] = []
       let val_exprs : Array[SExpr] = []
 
@@ -287,15 +287,15 @@ fn eval_letrec(args : SExpr, env : Env) -> Result[Value, EvalError] {
         ()
       }
 
-      // すべての変数を未定義値（Nil）で束縛
+      // Bind all variables with undefined values ​​(Nil)
       let initial_bindings : Array[Binding] = []
       for name in names {
         initial_bindings.push((name, Value::Nil))
       }
       let mut recursive_env = extend(env, initial_bindings)
 
-      // 各値を順次評価し、環境を更新
-      // これにより、クロージャが現在の環境をキャプチャできる
+      // Evaluate each value in turn and update the environment
+      // This allows the closure to capture the current environment
       let mut i = 0
       let len = names.length()
       let _ = while i < len {
@@ -303,58 +303,58 @@ fn eval_letrec(args : SExpr, env : Env) -> Result[Value, EvalError] {
           Ok(v) => v
           Err(e) => return Err(e)
         }
-        // 環境を更新（この更新された環境が次の評価で使用される）
+        // Update the environment (this updated environment will be used in the next evaluation)
         recursive_env = define_var(recursive_env, names[i], value)
         i = i + 1
       } else {
         ()
       }
 
-      // ボディを評価
+      // evaluate the body
       eval_begin(body, recursive_env)
     }
     _ => Err(EvalError::InvalidSyntax("letrec: invalid syntax"))
   }
 }
 
-/// cond 特殊形式を評価する。
+/// Evaluate the cond special form.
 /// (cond (test1 expr1 ...) (test2 expr2 ...) ... [(else exprN ...)])
 fn eval_cond(clauses : SExpr, env : Env) -> Result[Value, EvalError] {
   let mut current = clauses
   let _ = while true {
     match current {
       SExpr::Nil => {
-        // すべての節が偽で、else もない場合
-        // R5RS では未定義だが、ここでは未定義値（Nil）を返す
+        // If all clauses are false and there is no else
+        // Undefined in R5RS, but returns an undefined value (Nil) here
         return Ok(Value::Nil)
       }
       SExpr::Pair(clause, rest) => {
         match clause {
-          // else 節: (else expr ...)
+          // else clause: (else expr ...)
           SExpr::Pair(SExpr::Symbol("else"), body) => {
-            // else 節は最後でなければならない（ただし、ここでは厳密にチェックしない）
+            // else clause must be last (but not strictly checked here)
             return eval_begin(body, env)
           }
-          // 通常の節: (test expr ...)
+          // Regular clause: (test expr ...)
           SExpr::Pair(test_expr, body) => {
-            // test を評価
+            // evaluate test
             let test_value = match eval(test_expr, env) {
               Ok(v) => v
               Err(e) => return Err(e)
             }
-            // test が真（#f 以外）かどうかを判定
+            // Determine whether test is true (other than #f)
             let is_true = match test_value {
               Value::Bool(false) => false
               _ => true
             }
             if is_true {
-              // body が空の場合、test の値を返す
+              // If body is empty, return the value of test
               match body {
                 SExpr::Nil => return Ok(test_value)
                 _ => return eval_begin(body, env)
               }
             } else {
-              // 次の節へ
+              // Next section
               current = rest
             }
           }
@@ -369,38 +369,38 @@ fn eval_cond(clauses : SExpr, env : Env) -> Result[Value, EvalError] {
   Ok(Value::Nil)
 }
 
-/// case 特殊形式を評価する。
+/// Evaluate the case special form.
 /// (case key
 ///   ((datum1 ...) expr1 ...)
 ///   ((datum2 ...) expr2 ...)
 ///   (else expr ...))
-/// key を評価し、その値を各節の datum リストと eqv? で比較する。
+/// Evaluate key and compare its value with each clause's datum list using eqv?.
 fn eval_case(args : SExpr, env : Env) -> Result[Value, EvalError] {
   match args {
     SExpr::Pair(key_expr, clauses) => {
-      // key を評価
+      // evaluate key
       let key_value = match eval(key_expr, env) {
         Ok(v) => v
         Err(e) => return Err(e)
       }
 
-      // 各節を順番に処理
+      // Process each clause in turn
       let mut current = clauses
       let _ = while true {
         match current {
           SExpr::Nil => {
-            // すべての節がマッチせず、else もない場合
+            // If all clauses do not match and there is no else
             return Ok(Value::Nil)
           }
           SExpr::Pair(clause, rest) => {
             match clause {
-              // else 節: (else expr ...)
+              // else clause: (else expr ...)
               SExpr::Pair(SExpr::Symbol("else"), body) => {
                 return eval_begin(body, env)
               }
-              // 通常の節: ((datum1 datum2 ...) expr ...)
+              // Regular clause: ((datum1 datum2 ...) expr ...)
               SExpr::Pair(datums, body) => {
-                // datums リストと key_value を比較
+                // Compare datums list and key_value
                 let matched = match check_case_datums(key_value, datums) {
                   Ok(m) => m
                   Err(e) => return Err(e)
@@ -425,16 +425,16 @@ fn eval_case(args : SExpr, env : Env) -> Result[Value, EvalError] {
   }
 }
 
-/// case の datum リストに key が含まれているかチェックする（eqv? で比較）
+/// Check if key is included in the datum list of case (compared with eqv?)
 fn check_case_datums(key : Value, datums : SExpr) -> Result[Bool, EvalError] {
   let mut current = datums
   let _ = while true {
     match current {
       SExpr::Nil => return Ok(false)
       SExpr::Pair(datum_expr, rest) => {
-        // datum は評価せずにそのまま値に変換
+        // datum is converted to a value without evaluation
         let datum_value = sexpr_to_value(datum_expr)
-        // eqv? による比較
+        // comparison by eqv?
         if values_eqv(key, datum_value) {
           return Ok(true)
         }
@@ -448,7 +448,7 @@ fn check_case_datums(key : Value, datums : SExpr) -> Result[Bool, EvalError] {
   Ok(false)
 }
 
-/// eqv? による値の比較
+/// Comparing values ​​with eqv?
 fn values_eqv(a : Value, b : Value) -> Bool {
   match (a, b) {
     (Value::Nil, Value::Nil) => true
@@ -461,12 +461,12 @@ fn values_eqv(a : Value, b : Value) -> Bool {
   }
 }
 
-/// delay 特殊形式を評価する。
-/// (delay expr) - expr の評価を遅延し、プロミスを返す
+/// Evaluate the delay special form.
+/// (delay expr) - delay evaluation of expr and return a promise
 fn eval_delay(args : SExpr, env : Env) -> Result[Value, EvalError] {
   match args {
     SExpr::Pair(expr, SExpr::Nil) => {
-      // プロミスを作成（未評価状態）
+      // Create promise (unevaluated state)
       let promise = Promise::{
         forced: { val: false },
         content: { val: PromiseContent::Delayed(expr, env) },
@@ -477,14 +477,14 @@ fn eval_delay(args : SExpr, env : Env) -> Result[Value, EvalError] {
   }
 }
 
-/// do 特殊形式を評価する。
+/// Evaluate the do special form.
 /// (do ((var1 init1 step1) (var2 init2 step2) ...)
 ///     (test expr ...)
 ///   command ...)
 fn eval_do(args : SExpr, env : Env) -> Result[Value, EvalError] {
   match args {
     SExpr::Pair(bindings_expr, SExpr::Pair(test_clause, commands)) => {
-      // バインディングリストを解析
+      // Parse binding list
       let var_names : Array[String] = []
       let step_exprs : Array[SExpr?] = []
       let init_values : Array[Value] = []
@@ -495,7 +495,7 @@ fn eval_do(args : SExpr, env : Env) -> Result[Value, EvalError] {
         Ok(_) => ()
       }
 
-      // test 節を解析
+      // Parse test clause
       let test_expr : SExpr = match test_clause {
         SExpr::Pair(t, _) => t
         _ => return Err(EvalError::InvalidSyntax("do: invalid test clause"))
@@ -505,7 +505,7 @@ fn eval_do(args : SExpr, env : Env) -> Result[Value, EvalError] {
         _ => return Err(EvalError::InvalidSyntax("do: invalid test clause"))
       }
 
-      // 初期環境を作成
+      // Create initial environment
       let bindings : Array[Binding] = []
       let len = var_names.length()
       let mut i = 0
@@ -515,9 +515,9 @@ fn eval_do(args : SExpr, env : Env) -> Result[Value, EvalError] {
       }
       let mut loop_env = extend(env, bindings)
 
-      // ループ
+      // loop
       while true {
-        // test を評価
+        // evaluate test
         let test_val = match eval(test_expr, loop_env) {
           Ok(v) => v
           Err(e) => return Err(e)
@@ -529,23 +529,23 @@ fn eval_do(args : SExpr, env : Env) -> Result[Value, EvalError] {
         }
 
         if is_true {
-          // test が真なら result を評価して返す
+          // If test is true, evaluate and return result
           return eval_begin(result_exprs, loop_env)
         }
 
-        // commands を実行
+        // run commands
         let cmd_result = eval_do_commands(commands, loop_env)
         match cmd_result {
           Err(e) => return Err(e)
           Ok(_) => ()
         }
 
-        // step 式を評価（並列に）
+        // Evaluate step expressions (in parallel)
         let new_values = eval_do_steps(step_exprs, var_names, loop_env)
         match new_values {
           Err(e) => return Err(e)
           Ok(vals) => {
-            // 環境を更新
+            // Update environment
             let new_bindings : Array[Binding] = []
             let mut k = 0
             while k < len {
@@ -563,7 +563,7 @@ fn eval_do(args : SExpr, env : Env) -> Result[Value, EvalError] {
   }
 }
 
-/// do のバインディングリストをパースする
+/// Parse the binding list of do
 fn parse_do_bindings(
   bindings_expr : SExpr,
   env : Env,
@@ -577,16 +577,16 @@ fn parse_do_bindings(
       SExpr::Nil => break
       SExpr::Pair(binding, rest) => {
         match binding {
-          // (var init step) の形式
+          // (var init step) format
           SExpr::Pair(SExpr::Symbol(name), SExpr::Pair(init_expr, step_rest)) => {
             var_names.push(name)
-            // init を評価
+            // evaluate init
             let init_val = match eval(init_expr, env) {
               Ok(v) => v
               Err(e) => return Err(e)
             }
             init_values.push(init_val)
-            // step があれば取得
+            // Get step if it exists
             match step_rest {
               SExpr::Pair(step_expr, SExpr::Nil) => step_exprs.push(Some(step_expr))
               SExpr::Nil => step_exprs.push(None)
@@ -603,7 +603,7 @@ fn parse_do_bindings(
   Ok(())
 }
 
-/// do の commands を実行する
+/// execute do commands
 fn eval_do_commands(commands : SExpr, env : Env) -> Result[Unit, EvalError] {
   let mut cmd = commands
   while true {
@@ -622,7 +622,7 @@ fn eval_do_commands(commands : SExpr, env : Env) -> Result[Unit, EvalError] {
   Ok(())
 }
 
-/// do の step 式を評価する
+/// Evaluate the step expression in do
 fn eval_do_steps(
   step_exprs : Array[SExpr?],
   var_names : Array[String],
@@ -640,7 +640,7 @@ fn eval_do_steps(
         }
       }
       None => {
-        // step がない場合は現在の値を維持
+        // If no step, keep current value
         match lookup(env, var_names[j]) {
           Some(v) => v
           None => return Err(EvalError::UnboundVariable(var_names[j]))
@@ -653,10 +653,10 @@ fn eval_do_steps(
   Ok(new_values)
 }
 
-/// define-syntax 特殊形式: (define-syntax name transformer)
-/// マクロを定義する
-/// 注: この実装は環境を返せないため、式コンテキストでは使用できません。
-/// REPLで特別に処理される必要があります。
+/// define-syntax special form: (define-syntax name transformer)
+/// Define a macro
+/// Note: This implementation cannot return an environment, so it cannot be used in an expression context.
+/// Must be specially handled in the REPL.
 fn eval_define_syntax(_args : SExpr, _env : Env) -> Result[Value, EvalError] {
   Err(
     EvalError::InvalidSyntax(
@@ -665,12 +665,12 @@ fn eval_define_syntax(_args : SExpr, _env : Env) -> Result[Value, EvalError] {
   )
 }
 
-/// let-syntax 特殊形式: (let-syntax ((name transformer) ...) body)
-/// ローカルマクロを定義する
+/// let-syntax special form: (let-syntax ((name transformer) ...) body)
+/// Define local macros
 fn eval_let_syntax(args : SExpr, env : Env) -> Result[Value, EvalError] {
   match args {
     SExpr::Pair(bindings_sexpr, body_rest) => {
-      // バインディングを処理
+      // Handle binding
       let new_bindings : Array[Binding] = []
       let mut current = bindings_sexpr
       let _ = while true {
@@ -682,7 +682,7 @@ fn eval_let_syntax(args : SExpr, env : Env) -> Result[Value, EvalError] {
                 SExpr::Symbol(name),
                 SExpr::Pair(transformer_expr, SExpr::Nil)
               ) => {
-                // トランスフォーマを現在の環境で評価
+                // Evaluate the transformer in your current environment
                 let transformer = match eval(transformer_expr, env) {
                   Ok(Value::Syntax(rules)) => rules
                   Ok(_) =>
@@ -710,22 +710,22 @@ fn eval_let_syntax(args : SExpr, env : Env) -> Result[Value, EvalError] {
         ()
       }
 
-      // 新しい環境を作成
+      // Create a new environment
       let new_env = extend(env, new_bindings)
 
-      // ボディを評価（begin と同様）
+      // Evaluate body (same as begin)
       eval_body(body_rest, new_env)
     }
     _ => Err(EvalError::InvalidSyntax("let-syntax: expected bindings and body"))
   }
 }
 
-/// letrec-syntax 特殊形式: (letrec-syntax ((name transformer) ...) body)
-/// 再帰的なローカルマクロを定義する
+/// letrec-syntax special form: (letrec-syntax ((name transformer) ...) body)
+/// Define recursive local macros
 fn eval_letrec_syntax(args : SExpr, env : Env) -> Result[Value, EvalError] {
   match args {
     SExpr::Pair(bindings_sexpr, body_rest) => {
-      // まず新しい環境を作成（未定義の値でバインド）
+      // First create a new environment (bind with undefined value)
       let binding_names : Array[String] = []
       let transformer_exprs : Array[SExpr] = []
       let mut current = bindings_sexpr
@@ -757,14 +757,14 @@ fn eval_letrec_syntax(args : SExpr, env : Env) -> Result[Value, EvalError] {
         ()
       }
 
-      // 未定義の値で新しい環境を作成
+      // Create new environment with undefined values
       let placeholder_bindings : Array[Binding] = []
       for name in binding_names {
         placeholder_bindings.push((name, Value::Nil))
       }
       let new_env = extend(env, placeholder_bindings)
 
-      // 新しい環境でトランスフォーマを評価し、フレームを直接更新
+      // Evaluate transformers in new environment and update frames directly
       let mut i = 0
       let len = binding_names.length()
       let _ = while i < len {
@@ -778,21 +778,21 @@ fn eval_letrec_syntax(args : SExpr, env : Env) -> Result[Value, EvalError] {
             )
           Err(e) => return Err(e)
         }
-        // フレームを直接更新
+        // Update frame directly
         new_env.frame[i] = (binding_names[i], Value::Syntax(transformer))
         i = i + 1
       } else {
         ()
       }
 
-      // ボディを評価
+      // evaluate the body
       eval_body(body_rest, new_env)
     }
     _ => Err(EvalError::InvalidSyntax("letrec-syntax: expected bindings and body"))
   }
 }
 
-/// ボディ（式のリスト）を評価し、最後の式の値を返す
+/// Evaluate the body (list of expressions) and return the value of the last expression
 fn eval_body(body : SExpr, env : Env) -> Result[Value, EvalError] {
   let mut result = Value::Nil
   let mut current = body
@@ -814,37 +814,37 @@ fn eval_body(body : SExpr, env : Env) -> Result[Value, EvalError] {
   Ok(result)
 }
 
-/// load 特殊形式: (load "filename")
-/// ファイルを読み込んで評価する。
-/// 注: define は現在の環境には反映されない制限があります。
+/// load special form: (load "filename")
+/// Load and evaluate the file.
+/// Note: define has limitations that are not reflected in the current environment.
 fn eval_load(args : SExpr, env : Env) -> Result[Value, EvalError] {
   match args {
     SExpr::Pair(filename_expr, SExpr::Nil) => {
-      // ファイル名を評価
+      // Evaluate file name
       let filename = match eval(filename_expr, env) {
         Ok(Value::String(s)) => s
         Ok(_) => return Err(EvalError::TypeError("load: expected string filename"))
         Err(e) => return Err(e)
       }
-      // ファイルが存在するか確認
+      // Check if file exists
       if not(file_exists(filename)) {
         return Err(EvalError::TypeError("load: cannot open file: " + filename))
       }
-      // ファイルを読み込む
+      // load file
       let content = read_file(filename)
       if content.length() == 0 {
         return Err(EvalError::TypeError("load: cannot read file: " + filename))
       }
-      // パースして式のリストに変換
+      // Parse and convert to list of expressions
       let exprs = parse(content)
-      // 各式を順番に評価（envを変更しながら）
+      // Evaluate each expression in turn (while changing env)
       let mut current_env = env
       let mut result = Value::Nil
       let len = exprs.length()
       let mut i = 0
       while i < len {
         let expr = exprs[i]
-        // define の特別処理
+        // Special handling of define
         match expr {
           SExpr::Pair(SExpr::Symbol("define"), SExpr::Pair(SExpr::Symbol(name), SExpr::Pair(value_expr, SExpr::Nil))) => {
             match eval(value_expr, current_env) {
@@ -856,7 +856,7 @@ fn eval_load(args : SExpr, env : Env) -> Result[Value, EvalError] {
             }
           }
           SExpr::Pair(SExpr::Symbol("define"), SExpr::Pair(SExpr::Pair(name_expr, params), SExpr::Pair(body, SExpr::Nil))) => {
-            // (define (name params...) body) 形式
+            // (define (name params...) body) format
             match name_expr {
               SExpr::Symbol(name) => {
                 let param_names = match extract_param_names(params) {

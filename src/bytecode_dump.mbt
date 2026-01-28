@@ -1,24 +1,24 @@
-/// バイトコードダンプツール
+/// Bytecode Dump Tool
 ///
-/// コンパイル済みモジュールを人間が読める形式で表示する:
-/// - モジュール全体のダンプ
-/// - チャンクごとの詳細表示
-/// - 命令の逆アセンブル
-/// - 定数プール・名前テーブルの表示
+/// Display compiled modules in a human-readable format:
+/// - Dump the entire module
+/// - Detailed view by chunk
+/// - Disassembling orders
+/// - View Constant Pool Name Table
 
-/// ダンプオプション
+/// Dump Options
 pub(all) struct DumpOptions {
-  /// 詳細モード（定数プール、名前テーブルを含める）
+  /// Advanced Mode (Include Constant Pool, Name Table)
   verbose : Bool
-  /// 命令アドレスを16進数で表示
+  /// Display instruction address in hexadecimal
   hex_addresses : Bool
-  /// 定数値をインラインで表示
+  /// Show constant values inline
   inline_constants : Bool
-  /// インデント幅
+  /// Indent Width
   indent_width : Int
 }
 
-/// デフォルトのダンプオプション
+/// Default dump options
 pub fn default_dump_options() -> DumpOptions {
   {
     verbose: true,
@@ -28,7 +28,7 @@ pub fn default_dump_options() -> DumpOptions {
   }
 }
 
-/// 簡潔なダンプオプション
+/// Concise dump options
 pub fn compact_dump_options() -> DumpOptions {
   {
     verbose: false,
@@ -38,19 +38,19 @@ pub fn compact_dump_options() -> DumpOptions {
   }
 }
 
-/// モジュール全体をダンプ
+/// Dump Entire Module
 pub fn dump_module(module : CompiledModule, options : DumpOptions) -> String {
   let mut result = "=".repeat(60) + "\n"
   result = result + "BYTECODE MODULE DUMP\n"
   result = result + "=".repeat(60) + "\n\n"
 
-  // メインチャンク
+  // Main chunk
   result = result + "MAIN CHUNK:\n"
   result = result + "-".repeat(40) + "\n"
   result = result + dump_chunk(module.main, -1, module, options)
   result = result + "\n"
 
-  // 子チャンク
+  // Child chunks
   if module.chunks.length() > 0 {
     result = result + "CHILD CHUNKS (" + module.chunks.length().to_string() + "):\n"
     result = result + "-".repeat(40) + "\n\n"
@@ -77,7 +77,7 @@ pub fn dump_module(module : CompiledModule, options : DumpOptions) -> String {
   result
 }
 
-/// 単一チャンクをダンプ
+/// Dump Single Chunk
 pub fn dump_chunk(
   chunk : CodeChunk,
   chunk_idx : Int,
@@ -87,7 +87,7 @@ pub fn dump_chunk(
   let indent = " ".repeat(options.indent_width)
   let mut result = ""
 
-  // 基本情報
+  // Basic Info
   result = result + indent + "Arity: " + chunk.arity.to_string() + "\n"
   result = result + indent + "Locals: " + chunk.num_locals.to_string() + "\n"
   result = result + indent + "Free vars: " + chunk.num_free_vars.to_string() + "\n"
@@ -97,19 +97,19 @@ pub fn dump_chunk(
   }
   result = result + "\n"
 
-  // 詳細モードの場合、定数プールと名前テーブルを表示
+  // Show Constant Pool and Name Table in Advanced Mode
   if options.verbose {
     result = result + dump_constants(chunk, options)
     result = result + dump_names(chunk, options)
   }
 
-  // コード
+  // Code
   result = result + dump_code(chunk, chunk_idx, module, options)
 
   result
 }
 
-/// 定数プールをダンプ
+/// Dump Constant Pool
 fn dump_constants(chunk : CodeChunk, options : DumpOptions) -> String {
   if chunk.constants.length() == 0 {
     return ""
@@ -130,7 +130,7 @@ fn dump_constants(chunk : CodeChunk, options : DumpOptions) -> String {
   result
 }
 
-/// 名前テーブルをダンプ
+/// Dump Name Table
 fn dump_names(chunk : CodeChunk, options : DumpOptions) -> String {
   if chunk.names.length() == 0 {
     return ""
@@ -150,7 +150,7 @@ fn dump_names(chunk : CodeChunk, options : DumpOptions) -> String {
   result
 }
 
-/// コードをダンプ（逆アセンブル）
+/// Dump code (disassembly)
 fn dump_code(
   chunk : CodeChunk,
   _chunk_idx : Int,
@@ -172,7 +172,7 @@ fn dump_code(
   result
 }
 
-/// インデックスをフォーマット
+/// Format Index
 fn format_index(idx : Int, options : DumpOptions) -> String {
   if options.hex_addresses {
     "0x" + int_to_hex(idx)
@@ -181,7 +181,7 @@ fn format_index(idx : Int, options : DumpOptions) -> String {
   }
 }
 
-/// アドレスをフォーマット
+/// Format Address
 fn format_address(addr : Int, options : DumpOptions) -> String {
   if options.hex_addresses {
     dump_pad_left("0x" + int_to_hex(addr), 8, ' ')
@@ -190,7 +190,7 @@ fn format_address(addr : Int, options : DumpOptions) -> String {
   }
 }
 
-/// 整数を16進数文字列に変換
+/// Convert an integer to a hexadecimal string
 fn int_to_hex(n : Int) -> String {
   if n == 0 {
     return "0"
@@ -210,7 +210,7 @@ fn int_to_hex(n : Int) -> String {
   result
 }
 
-/// BCValue をダンプ
+/// Dump BCValue
 fn dump_bc_value(value : BCValue) -> String {
   match value {
     BCValue::Nil => "nil"
@@ -225,7 +225,7 @@ fn dump_bc_value(value : BCValue) -> String {
   }
 }
 
-/// 文字列をエスケープ
+/// Escape String
 fn escape_string(s : String) -> String {
   let mut result = ""
   let chars = s.to_array()
@@ -247,7 +247,7 @@ fn escape_string(s : String) -> String {
   result
 }
 
-/// オペコードをダンプ
+/// Dump Opcode
 fn dump_opcode(opcode : Opcode, chunk : CodeChunk, options : DumpOptions) -> String {
   match opcode {
     Opcode::Push(idx) => {
@@ -329,10 +329,10 @@ fn dump_opcode(opcode : Opcode, chunk : CodeChunk, options : DumpOptions) -> Str
   }
 }
 
-/// PrimOpKind を文字列に変換
+/// Convert PrimOpKind to String
 fn dump_primop_name(kind : PrimOpKind) -> String {
   match kind {
-    // 算術演算
+    // Arithmetic operations
     PrimOpKind::Add => "ADD"
     PrimOpKind::Sub => "SUB"
     PrimOpKind::Mul => "MUL"
@@ -345,7 +345,7 @@ fn dump_primop_name(kind : PrimOpKind) -> String {
     PrimOpKind::Min => "MIN"
     PrimOpKind::Gcd => "GCD"
     PrimOpKind::Lcm => "LCM"
-    // 比較演算
+    // Relations
     PrimOpKind::NumEq => "NUM_EQ"
     PrimOpKind::Lt => "LT"
     PrimOpKind::Gt => "GT"
@@ -354,13 +354,13 @@ fn dump_primop_name(kind : PrimOpKind) -> String {
     PrimOpKind::Eq => "EQ"
     PrimOpKind::Eqv => "EQV"
     PrimOpKind::Equal => "EQUAL"
-    // 数値述語
+    // Numeric predicate
     PrimOpKind::ZeroP => "ZERO_P"
     PrimOpKind::PositiveP => "POSITIVE_P"
     PrimOpKind::NegativeP => "NEGATIVE_P"
     PrimOpKind::OddP => "ODD_P"
     PrimOpKind::EvenP => "EVEN_P"
-    // 型述語
+    // Type predicate
     PrimOpKind::PairP => "PAIR_P"
     PrimOpKind::NumberP => "NUMBER_P"
     PrimOpKind::IntegerP => "INTEGER_P"
@@ -375,7 +375,7 @@ fn dump_primop_name(kind : PrimOpKind) -> String {
     PrimOpKind::VectorP => "VECTOR_P"
     PrimOpKind::PromiseP => "PROMISE_P"
     PrimOpKind::PortP => "PORT_P"
-    // リスト操作
+    // List operations
     PrimOpKind::Cons => "CONS"
     PrimOpKind::Car => "CAR"
     PrimOpKind::Cdr => "CDR"
@@ -387,7 +387,7 @@ fn dump_primop_name(kind : PrimOpKind) -> String {
     PrimOpKind::Reverse => "REVERSE"
     PrimOpKind::ListRef => "LIST_REF"
     PrimOpKind::ListTail => "LIST_TAIL"
-    // 文字操作
+    // Character manipulation
     PrimOpKind::CharEq => "CHAR_EQ"
     PrimOpKind::CharLt => "CHAR_LT"
     PrimOpKind::CharGt => "CHAR_GT"
@@ -402,7 +402,7 @@ fn dump_primop_name(kind : PrimOpKind) -> String {
     PrimOpKind::CharDowncase => "CHAR_DOWNCASE"
     PrimOpKind::CharToInteger => "CHAR_TO_INTEGER"
     PrimOpKind::IntegerToChar => "INTEGER_TO_CHAR"
-    // 文字列操作
+    // String manipulation
     PrimOpKind::StringLength => "STRING_LENGTH"
     PrimOpKind::StringRef => "STRING_REF"
     PrimOpKind::StringAppend => "STRING_APPEND"
@@ -415,7 +415,7 @@ fn dump_primop_name(kind : PrimOpKind) -> String {
     PrimOpKind::Substring => "SUBSTRING"
     PrimOpKind::StringToList => "STRING_TO_LIST"
     PrimOpKind::ListToString => "LIST_TO_STRING"
-    // ベクトル操作
+    // Vector manipulation
     PrimOpKind::MakeVector => "MAKE_VECTOR"
     PrimOpKind::Vector => "VECTOR"
     PrimOpKind::VectorLength => "VECTOR_LENGTH"
@@ -423,7 +423,7 @@ fn dump_primop_name(kind : PrimOpKind) -> String {
     PrimOpKind::VectorSet => "VECTOR_SET"
     PrimOpKind::VectorToList => "VECTOR_TO_LIST"
     PrimOpKind::ListToVector => "LIST_TO_VECTOR"
-    // 数学関数
+    // Mathematical Functions
     PrimOpKind::Floor => "FLOOR"
     PrimOpKind::Ceiling => "CEILING"
     PrimOpKind::Truncate => "TRUNCATE"
@@ -438,14 +438,14 @@ fn dump_primop_name(kind : PrimOpKind) -> String {
     PrimOpKind::Atan => "ATAN"
     PrimOpKind::Exp => "EXP"
     PrimOpKind::Log => "LOG"
-    // 変換
+    // Conversion
     PrimOpKind::NumberToString => "NUMBER_TO_STRING"
     PrimOpKind::StringToNumber => "STRING_TO_NUMBER"
     PrimOpKind::SymbolToString => "SYMBOL_TO_STRING"
     PrimOpKind::StringToSymbol => "STRING_TO_SYMBOL"
-    // 論理演算
+    // Logical connective
     PrimOpKind::Not => "NOT"
-    // 複素数
+    // Complex number
     PrimOpKind::MakeRectangular => "MAKE_RECTANGULAR"
     PrimOpKind::MakePolar => "MAKE_POLAR"
     PrimOpKind::RealPart => "REAL_PART"
@@ -453,11 +453,11 @@ fn dump_primop_name(kind : PrimOpKind) -> String {
     PrimOpKind::Magnitude => "MAGNITUDE"
     PrimOpKind::Angle => "ANGLE"
     PrimOpKind::ComplexP => "COMPLEX_P"
-    // 有理数
+    // Set of rational numbers
     PrimOpKind::Numerator => "NUMERATOR"
     PrimOpKind::Denominator => "DENOMINATOR"
     PrimOpKind::RationalP => "RATIONAL_P"
-    // 数値判定
+    // Numerical Interpretation
     PrimOpKind::ExactP => "EXACT_P"
     PrimOpKind::InexactP => "INEXACT_P"
     // I/O
@@ -465,7 +465,7 @@ fn dump_primop_name(kind : PrimOpKind) -> String {
     PrimOpKind::Newline => "NEWLINE"
     PrimOpKind::Write => "WRITE"
     PrimOpKind::Read => "READ"
-    // ポート
+    // Port
     PrimOpKind::InputPortP => "INPUT_PORT_P"
     PrimOpKind::OutputPortP => "OUTPUT_PORT_P"
     PrimOpKind::OpenInputFile => "OPEN_INPUT_FILE"
@@ -476,7 +476,7 @@ fn dump_primop_name(kind : PrimOpKind) -> String {
     PrimOpKind::PeekChar => "PEEK_CHAR"
     PrimOpKind::WriteChar => "WRITE_CHAR"
     PrimOpKind::EofObjectP => "EOF_OBJECT_P"
-    // 制御
+    // Controlled
     PrimOpKind::Apply => "APPLY"
     PrimOpKind::Map => "MAP"
     PrimOpKind::ForEach => "FOR_EACH"
@@ -487,15 +487,15 @@ fn dump_primop_name(kind : PrimOpKind) -> String {
     PrimOpKind::Values => "VALUES"
     PrimOpKind::CallWithValues => "CALL_WITH_VALUES"
     PrimOpKind::DynamicWind => "DYNAMIC_WIND"
-    // 連想リスト
+    // Associations List
     PrimOpKind::Assq => "ASSQ"
     PrimOpKind::Assv => "ASSV"
     PrimOpKind::Assoc => "ASSOC"
-    // メンバーシップ
+    // Membership
     PrimOpKind::Memq => "MEMQ"
     PrimOpKind::Memv => "MEMV"
     PrimOpKind::Member => "MEMBER"
-    // cXXr アクセサ
+    // cXXr accessor
     PrimOpKind::Caar => "CAAR"
     PrimOpKind::Cadr => "CADR"
     PrimOpKind::Cdar => "CDAR"
@@ -511,7 +511,7 @@ fn dump_primop_name(kind : PrimOpKind) -> String {
   }
 }
 
-/// 文字列を左パディング
+/// Left padding of strings
 fn dump_pad_left(s : String, width : Int, pad_char : Char) -> String {
   let len = s.length()
   if len >= width {
@@ -526,7 +526,7 @@ fn dump_pad_left(s : String, width : Int, pad_char : Char) -> String {
   result + s
 }
 
-/// 文字列を繰り返し
+/// Repeat String
 fn repeat(self : String, n : Int) -> String {
   let mut result = ""
   let mut i = 0
@@ -537,7 +537,7 @@ fn repeat(self : String, n : Int) -> String {
   result
 }
 
-/// S式をコンパイルしてダンプ
+/// Compile and dump S-expression
 pub fn compile_and_dump(source : String, options : DumpOptions) -> Result[String, String] {
   let expr = parse_one(source)
   match compile_to_module(expr) {
@@ -546,23 +546,23 @@ pub fn compile_and_dump(source : String, options : DumpOptions) -> Result[String
   }
 }
 
-/// S式をコンパイルしてデフォルトオプションでダンプ
+/// Compile S Expression and dump with default options
 pub fn compile_and_dump_default(source : String) -> Result[String, String] {
   compile_and_dump(source, default_dump_options())
 }
 
-/// モジュールの統計情報を取得
+/// Get module statistics
 pub fn dump_module_stats(module : CompiledModule) -> String {
   let mut result = "Module Statistics:\n"
   result = result + "-".repeat(30) + "\n"
 
-  // メインチャンク統計
+  // Main Chunk Statistics
   result = result + "Main chunk:\n"
   result = result + "  Code size: " + module.main.code.length().to_string() + " instructions\n"
   result = result + "  Constants: " + module.main.constants.length().to_string() + "\n"
   result = result + "  Names: " + module.main.names.length().to_string() + "\n"
 
-  // 子チャンク統計
+  // Child Chunk Statistics
   result = result + "Child chunks: " + module.chunks.length().to_string() + "\n"
 
   let mut total_code = module.main.code.length()
@@ -580,7 +580,7 @@ pub fn dump_module_stats(module : CompiledModule) -> String {
   result = result + "  Total constants: " + total_constants.to_string() + "\n"
   result = result + "  Total names: " + total_names.to_string() + "\n"
 
-  // 命令種別の統計
+  // Order type statistics
   result = result + "\nInstruction breakdown:\n"
   let instr_counts = count_instructions(module)
   for entry in instr_counts {
@@ -593,7 +593,7 @@ pub fn dump_module_stats(module : CompiledModule) -> String {
   result
 }
 
-/// モジュール内の命令をカウント
+/// Count Instructions in Module
 fn count_instructions(module : CompiledModule) -> Array[(String, Int)] {
   let counts : @hashmap.T[String, Int] = @hashmap.new()
 
@@ -615,13 +615,13 @@ fn count_instructions(module : CompiledModule) -> Array[(String, Int)] {
   let result : Array[(String, Int)] = []
   counts.each(fn(name, count) { result.push((name, count)) })
 
-  // 名前でソート
+  // Sort by Name
   sort_by_name(result)
 
   result
 }
 
-/// オペコードの名前を取得
+/// Get the name of the opcode
 fn opcode_name(opcode : Opcode) -> String {
   match opcode {
     Opcode::Push(_) => "Push"
@@ -654,7 +654,7 @@ fn opcode_name(opcode : Opcode) -> String {
   }
 }
 
-/// 名前でソート
+/// Sort by Name
 fn sort_by_name(list : Array[(String, Int)]) -> Unit {
   let n = list.length()
   let mut i = 0

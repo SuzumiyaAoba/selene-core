@@ -1,9 +1,9 @@
-/// エントリーポイント。
+/// entry point.
 ///
-/// JavaScript バックエンド（Node.js）では対話的 REPL を起動します：
+/// The JavaScript backend (Node.js) launches an interactive REPL:
 ///   moon run src --target js
 ///
-/// WASM バックエンドではサンプル式を実行します：
+/// The WASM backend runs a sample expression:
 ///   moon run src
 fn main {
   run_vm_interactive()

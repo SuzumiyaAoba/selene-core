@@ -1,8 +1,8 @@
-/// バイトコード定義
+/// bytecode definition
 ///
-/// スタックベース仮想マシンの命令セット
+/// Stack-based virtual machine instruction set
 
-/// バイトコード値（定数プールに格納される値）
+/// Bytecode value (value stored in constant pool)
 pub(all) enum BCValue {
   Nil
   Bool(Bool)
@@ -11,121 +11,121 @@ pub(all) enum BCValue {
   Char(Char)
   String(String)
   Symbol(String)
-  /// コンパイル済みの手続き（クロージャテンプレート）
-  Closure(Int)  // 定数プール内のコードチャンクインデックス
+  /// Compiled procedures (closure templates)
+  Closure(Int)  // Code chunk index in constant pool
 } derive(Show)
 
-/// バイトコード命令
+/// bytecode instructions
 pub(all) enum Opcode {
-  /// 定数をスタックにプッシュ
-  Push(Int)  // 定数プールインデックス
+  /// Push constant onto stack
+  Push(Int)  // constant pool index
 
-  /// スタックトップをポップ
+  /// pop stack top
   Pop
 
-  /// ローカル変数をロード (depth, index)
+  /// Load local variables (depth, index)
   LoadLocal(Int, Int)
 
-  /// ローカル変数にストア (depth, index)
+  /// Store in local variable (depth, index)
   StoreLocal(Int, Int)
 
-  /// グローバル変数をロード
-  LoadGlobal(Int)  // 名前テーブルインデックス
+  /// Load global variable
+  LoadGlobal(Int)  // name table index
 
-  /// グローバル変数にストア
-  StoreGlobal(Int)  // 名前テーブルインデックス
+  /// Store in global variable
+  StoreGlobal(Int)  // name table index
 
-  /// クロージャを作成 (chunk_idx, num_captures)
+  /// Create closure (chunk_idx, num_captures)
   MakeClosure(Int, Int)
 
-  /// ボックスを作成（スタックトップをボックスに包む）
+  /// Create box (wrap stack top in box)
   MakeBox
 
-  /// ボックスから値を取り出す
+  /// extract value from box
   BoxGet
 
-  /// ボックスの値を更新
+  /// Update box value
   BoxSet
 
-  /// 関数呼び出し (引数の数)
+  /// Function call (number of arguments)
   Call(Int)
 
-  /// 末尾呼び出し (引数の数)
+  /// Tail call (number of arguments)
   TailCall(Int)
 
-  /// 関数からリターン
+  /// return from function
   Return
 
-  /// 無条件ジャンプ
-  Jump(Int)  // 命令オフセット
+  /// unconditional jump
+  Jump(Int)  // instruction offset
 
-  /// 条件付きジャンプ（falseの場合）
-  JumpIfFalse(Int)  // 命令オフセット
+  /// Conditional jump (if false)
+  JumpIfFalse(Int)  // instruction offset
 
-  /// プリミティブ操作を呼び出し
-  PrimCall(PrimOpKind, Int)  // 操作種類, 引数の数
+  /// call primitive operation
+  PrimCall(PrimOpKind, Int)  // Operation type, number of arguments
 
-  /// 継続をキャプチャ
+  /// capture continuation
   CaptureCC
 
-  /// プログラム終了
+  /// Program ends
   Halt
 
-  /// ペアを作成（スタックから2つポップ）
+  /// Create a pair (pop two from the stack)
   MakePair
 
-  /// リストを作成（スタックからn個ポップ）
+  /// Create list (pop n items from stack)
   MakeList(Int)
 
-  /// ベクトルを作成（スタックからn個ポップ）
+  /// Create vector (pop n pieces from stack)
   MakeVector(Int)
 
-  /// プロミスを作成（遅延評価）
-  MakePromise(Int)  // コードチャンクインデックス
+  /// Create promise (lazy evaluation)
+  MakePromise(Int)  // code chunk index
 
-  /// and 特殊形式用：falseならジャンプ、そうでなければポップして継続
+  /// and for special formats: jump if false, otherwise pop and continue
   AndJump(Int)
 
-  /// or 特殊形式用：trueならジャンプ、そうでなければポップして継続
+  /// or for special formats: jump if true, otherwise pop and continue
   OrJump(Int)
 
-  /// スタックトップを複製
+  /// Duplicate stack top
   Dup
 
-  /// letrec 用：未初期化スロットを作成
+  /// For letrec: create uninitialized slot
   AllocateLocals(Int)
 
-  /// letrec 用：スロットを初期化
+  /// For letrec: initialize slot
   InitLocal(Int, Int)  // depth, index
 } derive(Show)
 
-/// コードチャンク（コンパイル済みの手続き）
+/// Code chunks (compiled procedures)
 pub(all) struct CodeChunk {
-  /// 命令列
+  /// instruction string
   code : Array[Opcode]
-  /// 定数プール
+  /// constant pool
   constants : Array[BCValue]
-  /// グローバル名テーブル
+  /// global name table
   names : Array[String]
-  /// パラメータ数（-1はトップレベル）
+  /// Number of parameters (-1 is top level)
   arity : Int
-  /// 自由変数の数
+  /// number of free variables
   num_free_vars : Int
-  /// ローカル変数の数
+  /// Number of local variables
   num_locals : Int
-  /// デバッグ情報（オプション）
+  /// Debug information (optional)
   debug_name : String?
 } derive(Show)
 
-/// コンパイル済みモジュール
+/// compiled module
 pub(all) struct CompiledModule {
-  /// メインのコードチャンク
+  /// main code chunk
   main : CodeChunk
-  /// 子チャンク（ネストした関数など）
+  /// Child chunks (such as nested functions)
   chunks : Array[CodeChunk]
 } derive(Show)
 
-/// 新しいコードチャンクを作成
+/// Create new code chunk
 pub fn new_code_chunk() -> CodeChunk {
   {
     code: [],
@@ -138,29 +138,29 @@ pub fn new_code_chunk() -> CodeChunk {
   }
 }
 
-/// コードチャンクビルダー
+/// code chunk builder
 pub(all) struct CodeChunkBuilder {
-  /// 命令列
+  /// instruction string
   code : Array[Opcode]
-  /// 定数プール
+  /// constant pool
   constants : Array[BCValue]
-  /// 定数の重複チェック用マップ
+  /// Map for constant duplication check
   const_map : @hashmap.T[String, Int]
-  /// グローバル名テーブル
+  /// global name table
   names : Array[String]
-  /// 名前の重複チェック用マップ
+  /// Map for checking duplicate names
   name_map : @hashmap.T[String, Int]
-  /// パラメータ数
+  /// Number of parameters
   mut arity : Int
-  /// 自由変数の数
+  /// number of free variables
   mut num_free_vars : Int
-  /// ローカル変数の数
+  /// Number of local variables
   mut num_locals : Int
-  /// デバッグ名
+  /// debug name
   debug_name : String?
 }
 
-/// 新しいビルダーを作成
+/// create new builder
 pub fn new_builder(debug_name : String?) -> CodeChunkBuilder {
   {
     code: [],
@@ -175,24 +175,24 @@ pub fn new_builder(debug_name : String?) -> CodeChunkBuilder {
   }
 }
 
-/// 命令を追加
+/// add instruction
 pub fn emit(self : CodeChunkBuilder, op : Opcode) -> Unit {
   self.code.push(op)
 }
 
-/// 現在の命令位置を取得
+/// Get current instruction position
 pub fn current_pos(self : CodeChunkBuilder) -> Int {
   self.code.length()
 }
 
-/// 命令を特定の位置で更新（ジャンプ先パッチング用）
+/// Update instructions at specific locations (for jump destination patching)
 pub fn patch(self : CodeChunkBuilder, pos : Int, op : Opcode) -> Unit {
   self.code[pos] = op
 }
 
-/// 定数を追加して定数プールインデックスを返す
+/// Add constant and return constant pool index
 pub fn add_const(self : CodeChunkBuilder, value : BCValue) -> Int {
-  // 重複チェック用のキーを生成
+  // Generate key for duplicate check
   let key = bc_value_to_key(value)
   match self.const_map.get(key) {
     Some(idx) => idx
@@ -205,7 +205,7 @@ pub fn add_const(self : CodeChunkBuilder, value : BCValue) -> Int {
   }
 }
 
-/// BCValue をキー文字列に変換
+/// Convert BCValue to key string
 fn bc_value_to_key(value : BCValue) -> String {
   match value {
     BCValue::Nil => "nil"
@@ -219,7 +219,7 @@ fn bc_value_to_key(value : BCValue) -> String {
   }
 }
 
-/// グローバル名を追加して名前テーブルインデックスを返す
+/// Add global name and return name table index
 pub fn add_name(self : CodeChunkBuilder, name : String) -> Int {
   match self.name_map.get(name) {
     Some(idx) => idx
@@ -232,7 +232,7 @@ pub fn add_name(self : CodeChunkBuilder, name : String) -> Int {
   }
 }
 
-/// ビルダーからコードチャンクを生成
+/// Generate code chunks from builder
 pub fn build(self : CodeChunkBuilder) -> CodeChunk {
   {
     code: self.code,
@@ -245,7 +245,7 @@ pub fn build(self : CodeChunkBuilder) -> CodeChunk {
   }
 }
 
-/// IRConst を BCValue に変換
+/// Convert IRConst to BCValue
 pub fn ir_const_to_bc_value(c : IRConst) -> BCValue {
   match c {
     IRConst::Nil => BCValue::Nil
@@ -255,13 +255,13 @@ pub fn ir_const_to_bc_value(c : IRConst) -> BCValue {
     IRConst::Char(c) => BCValue::Char(c)
     IRConst::String(s) => BCValue::String(s)
     IRConst::Symbol(s) => BCValue::Symbol(s)
-    // Pair と Vector は別途処理が必要
-    IRConst::Pair(_, _) => BCValue::Nil  // TODO: 構造体として扱う
-    IRConst::Vector(_) => BCValue::Nil   // TODO: 構造体として扱う
+    // Pair and Vector require separate processing
+    IRConst::Pair(_, _) => BCValue::Nil  // TODO: Treat as a structure
+    IRConst::Vector(_) => BCValue::Nil   // TODO: Treat as a structure
   }
 }
 
-/// BCValue を Value に変換
+/// Convert BCValue to Value
 pub fn bc_value_to_value(v : BCValue) -> Value {
   match v {
     BCValue::Nil => Value::Nil
@@ -271,6 +271,6 @@ pub fn bc_value_to_value(v : BCValue) -> Value {
     BCValue::Char(c) => Value::Char(c)
     BCValue::String(s) => Value::String(s)
     BCValue::Symbol(s) => Value::Symbol(s)
-    BCValue::Closure(_) => Value::Nil  // クロージャは VM で別途処理
+    BCValue::Closure(_) => Value::Nil  // Closures are handled separately in the VM
   }
 }

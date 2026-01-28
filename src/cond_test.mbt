@@ -1,6 +1,6 @@
-/// cond 特殊形式のテスト
+/// Testing the cond special form
 
-/// cond の基本的な動作（最初の節が真）
+/// Basic behavior of cond (first clause is true)
 test "cond basic - first clause true" {
   let env = initial_env()
   let expr = parse_one("(cond (#t 1) (#f 2) (else 3))")
@@ -10,7 +10,7 @@ test "cond basic - first clause true" {
   }
 }
 
-/// cond で2番目の節が真
+/// second clause is true in cond
 test "cond second clause true" {
   let env = initial_env()
   let expr = parse_one("(cond (#f 1) (#t 2) (else 3))")
@@ -20,7 +20,7 @@ test "cond second clause true" {
   }
 }
 
-/// cond の else 節
+/// else clause of cond
 test "cond else clause" {
   let env = initial_env()
   let expr = parse_one("(cond (#f 1) (#f 2) (else 3))")
@@ -30,7 +30,7 @@ test "cond else clause" {
   }
 }
 
-/// cond で条件式を評価
+/// Evaluate conditional expression with cond
 test "cond with evaluated test" {
   let env = initial_env()
   let expr = parse_one("(cond ((= 1 1) 42) (else 0))")
@@ -40,7 +40,7 @@ test "cond with evaluated test" {
   }
 }
 
-/// cond で複数の式を評価
+/// Evaluate multiple expressions with cond
 test "cond with multiple expressions in body" {
   let env = initial_env()
   let expr = parse_one("(cond (#t (+ 1 2) (* 3 4)) (else 0))")
@@ -50,7 +50,7 @@ test "cond with multiple expressions in body" {
   }
 }
 
-/// cond で body が空の場合、test の値を返す
+/// If body is empty in cond, return value of test
 test "cond returns test value when body is empty" {
   let env = initial_env()
   let expr = parse_one("(cond ((+ 1 2)))")
@@ -60,7 +60,7 @@ test "cond returns test value when body is empty" {
   }
 }
 
-/// cond ですべての節が偽（else なし）
+/// All clauses are false in cond (no else)
 test "cond all clauses false without else" {
   let env = initial_env()
   let expr = parse_one("(cond (#f 1) (#f 2))")
@@ -70,7 +70,7 @@ test "cond all clauses false without else" {
   }
 }
 
-/// cond で数値の大小を判定
+/// Determine the size of a number with cond
 test "cond with numeric comparison" {
   let env = initial_env()
   let expr = parse_one("(cond ((< 5 3) 1) ((> 5 3) 2) (else 3))")
@@ -80,7 +80,7 @@ test "cond with numeric comparison" {
   }
 }
 
-/// ネストされた cond
+/// nested cond
 test "cond nested" {
   let env = initial_env()
   let expr = parse_one("(cond (#t (cond (#f 1) (else 2))) (else 3))")
@@ -90,7 +90,7 @@ test "cond nested" {
   }
 }
 
-/// cond で変数を使用
+/// Using variables with cond
 test "cond with variables" {
   let env = initial_env()
   let expr = parse_one("(let ((x 5)) (cond ((< x 3) 1) ((< x 7) 2) (else 3)))")
@@ -100,7 +100,7 @@ test "cond with variables" {
   }
 }
 
-/// cond で複雑な条件
+/// Complex conditions with cond
 test "cond with complex conditions" {
   let env = initial_env()
   let expr = parse_one("(cond ((and #f #t) 1) ((or #f #t) 2) (else 3))")
@@ -110,7 +110,7 @@ test "cond with complex conditions" {
   }
 }
 
-/// cond で0も真として扱う
+/// Treat 0 as true with cond
 test "cond treats zero as true" {
   let env = initial_env()
   let expr = parse_one("(cond (0 42) (else 0))")
@@ -120,7 +120,7 @@ test "cond treats zero as true" {
   }
 }
 
-/// cond で空リストも真として扱う
+/// treat empty list as true with cond
 test "cond treats empty list as true" {
   let env = initial_env()
   let expr = parse_one("(cond (() 42) (else 0))")
@@ -130,7 +130,7 @@ test "cond treats empty list as true" {
   }
 }
 
-/// cond で #f のみが偽
+/// Only #f is false in cond
 test "cond only false is false" {
   let env = initial_env()
   let expr = parse_one("(cond (#f 1) (1 2) (else 3))")

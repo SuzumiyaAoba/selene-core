@@ -1,9 +1,9 @@
-/// 文字列操作組み込み関数
+/// String manipulation built-in functions
 ///
-/// Scheme の文字列操作を実装する。
+/// Implement the string operation of Scheme.
 
-/// 組み込み関数: string?
-/// (string? obj) - obj が文字列かどうかを判定
+/// Built-in function: string?
+/// (string? obj) - Determine if obj is a string
 fn builtin_string_p(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("string?: requires exactly 1 argument"))
@@ -14,8 +14,8 @@ fn builtin_string_p(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: string-length
-/// (string-length str) - 文字列の長さを返す
+/// Built-in functions: string-length
+/// (string-length str) - Returns the length of a string
 fn builtin_string_length(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(
@@ -28,8 +28,8 @@ fn builtin_string_length(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: string-ref
-/// (string-ref str k) - 文字列の k 番目の文字を返す
+/// Built-in functions: string-ref
+/// (string-ref str k) - returns the kth character of the string
 fn builtin_string_ref(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 2 {
     return Err(EvalError::ArityError("string-ref: requires exactly 2 arguments"))
@@ -50,8 +50,8 @@ fn builtin_string_ref(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: string-append
-/// (string-append str1 str2 ...) - 文字列を連結する
+/// Built-in function: string-append
+/// (string-append str1 str2...) - concatenate strings
 fn builtin_string_append(args : Array[Value]) -> Result[Value, EvalError] {
   let builder = StringBuilder::new()
   for arg in args {
@@ -66,8 +66,8 @@ fn builtin_string_append(args : Array[Value]) -> Result[Value, EvalError] {
   Ok(Value::String(builder.to_string()))
 }
 
-/// 組み込み関数: string=?
-/// (string=? str1 str2) - 文字列が等しいかを判定
+/// Built-in function: string =?
+/// (string =? str1 str2) - Determine if the strings are equal
 fn builtin_string_eq(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 2 {
     return Err(EvalError::ArityError("string=?: requires exactly 2 arguments"))
@@ -78,8 +78,8 @@ fn builtin_string_eq(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: string<?
-/// (string<? str1 str2) - 文字列の辞書順比較（str1 < str2）
+/// Built-in function: string <?
+/// (string <? str1 str2) - Dictionary order comparison of strings (str1 < str2)
 fn builtin_string_lt(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 2 {
     return Err(EvalError::ArityError("string<?: requires exactly 2 arguments"))
@@ -90,8 +90,8 @@ fn builtin_string_lt(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: string>?
-/// (string>? str1 str2) - 文字列の辞書順比較（str1 > str2）
+/// Built-in function: string >?
+/// (string >? str1 str2) - Dictionary order comparison of strings (str1 > str2)
 fn builtin_string_gt(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 2 {
     return Err(EvalError::ArityError("string>?: requires exactly 2 arguments"))
@@ -102,8 +102,8 @@ fn builtin_string_gt(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: string<=?
-/// (string<=? str1 str2) - 文字列の辞書順比較（str1 <= str2）
+/// Built-in functions: string < =?
+/// (string < =? str1 str2) - Dictionary order comparison of strings (str1 < = str2)
 fn builtin_string_le(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 2 {
     return Err(EvalError::ArityError("string<=?: requires exactly 2 arguments"))
@@ -114,8 +114,8 @@ fn builtin_string_le(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: string>=?
-/// (string>=? str1 str2) - 文字列の辞書順比較（str1 >= str2）
+/// Built-in function: string > =?
+/// (string > =? str1 str2) - Dictionary order comparison of strings (str1 > = str2)
 fn builtin_string_ge(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 2 {
     return Err(EvalError::ArityError("string>=?: requires exactly 2 arguments"))
@@ -126,7 +126,7 @@ fn builtin_string_ge(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 文字列を小文字に変換するヘルパー関数
+/// Helper function to convert strings to lowercase
 fn string_downcase(s : String) -> String {
   let builder = StringBuilder::new()
   for c in s {
@@ -141,8 +141,8 @@ fn string_downcase(s : String) -> String {
   builder.to_string()
 }
 
-/// 組み込み関数: string-ci=?
-/// (string-ci=? str1 str2) - 大文字小文字を区別しない文字列比較（等しい）
+/// Built-in function: string-ci =?
+/// (string-ci =? str1 str2) - Case-insensitive string comparison (equal)
 fn builtin_string_ci_eq(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 2 {
     return Err(
@@ -157,8 +157,8 @@ fn builtin_string_ci_eq(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: string-ci<?
-/// (string-ci<? str1 str2) - 大文字小文字を区別しない文字列比較（str1 < str2）
+/// Built-in function: string-ci <?
+/// (string-ci <? str1 str2) - case-insensitive string comparison (str1 < str2)
 fn builtin_string_ci_lt(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 2 {
     return Err(
@@ -173,8 +173,8 @@ fn builtin_string_ci_lt(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: string-ci>?
-/// (string-ci>? str1 str2) - 大文字小文字を区別しない文字列比較（str1 > str2）
+/// Built-in function: string-ci >?
+/// (string-ci >? str1 str2) - Case-insensitive string comparison (str1 > str2)
 fn builtin_string_ci_gt(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 2 {
     return Err(
@@ -189,8 +189,8 @@ fn builtin_string_ci_gt(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: string-ci<=?
-/// (string-ci<=? str1 str2) - 大文字小文字を区別しない文字列比較（str1 <= str2）
+/// Built-in function: string-ci < =?
+/// (string-ci < =? str1 str2) - Case-insensitive string comparison (str1 < = str2)
 fn builtin_string_ci_le(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 2 {
     return Err(
@@ -205,8 +205,8 @@ fn builtin_string_ci_le(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: string-ci>=?
-/// (string-ci>=? str1 str2) - 大文字小文字を区別しない文字列比較（str1 >= str2）
+/// Built-in function: string-ci > =?
+/// (string-ci > =? str1 str2) - Case-insensitive string comparison (str1 > = str2)
 fn builtin_string_ci_ge(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 2 {
     return Err(
@@ -221,8 +221,8 @@ fn builtin_string_ci_ge(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: make-string
-/// (make-string k [char]) - 長さ k の文字列を作成（オプションで文字を指定）
+/// Built-in function: make-string
+/// (make-string k [char]) - Creates a string of length k (optional character)
 fn builtin_make_string(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() < 1 || args.length() > 2 {
     return Err(EvalError::ArityError("make-string: requires 1 or 2 arguments"))
@@ -245,7 +245,7 @@ fn builtin_make_string(args : Array[Value]) -> Result[Value, EvalError] {
             )
         }
       } else {
-        ' ' // デフォルトはスペース
+        ' ' // The default is space
       }
       let builder = StringBuilder::new()
       let mut i = 0
@@ -264,8 +264,8 @@ fn builtin_make_string(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: substring
-/// (substring str start end) - 文字列の部分文字列を返す
+/// Built-in function: substring
+/// (substring str start end) - Returns the substring of a string
 fn builtin_substring(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 3 {
     return Err(EvalError::ArityError("substring: requires exactly 3 arguments"))
@@ -300,8 +300,8 @@ fn builtin_substring(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: string->list
-/// (string->list str) - 文字列を文字のリストに変換
+/// Built-in functions: string- > list
+/// (string- > list str) - Converts a string to a list of characters
 fn builtin_string_to_list(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(
@@ -325,8 +325,8 @@ fn builtin_string_to_list(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: list->string
-/// (list->string list) - 文字のリストを文字列に変換
+/// Built-in functions: list- > string
+/// (list- > string list) - Convert a list of characters to a string
 fn builtin_list_to_string(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(
@@ -362,8 +362,8 @@ fn builtin_list_to_string(args : Array[Value]) -> Result[Value, EvalError] {
   Ok(Value::String(result))
 }
 
-/// 組み込み関数: number->string
-/// (number->string num) - 数値を文字列に変換
+/// Built-in function: number- > string
+/// (number- > string num) - Converts a number to a string
 fn builtin_number_to_string(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(
@@ -377,8 +377,8 @@ fn builtin_number_to_string(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: string->number
-/// (string->number str) - 文字列を数値に変換
+/// Built-in functions: string- > number
+/// (string- > number str) - Converts a string to a number
 fn builtin_string_to_number(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(
@@ -387,20 +387,20 @@ fn builtin_string_to_number(args : Array[Value]) -> Result[Value, EvalError] {
   }
   match args[0] {
     Value::String(s) => {
-      // まず整数としてパースを試みる
-      // try?を使ってResult型に変換
+      // Try parsing as an integer first
+      // use try? to convert to Result type
       let int_result = try? @strconv.parse_int(s)
       match int_result {
         Ok(n) => return Ok(Value::Number(Number::Int(n)))
         Err(_) => ()
       }
-      // 整数でなければ実数としてパースを試みる
+      // Try parsing as a real number if not an integer
       let double_result = try? @strconv.parse_double(s)
       match double_result {
         Ok(d) => return Ok(Value::Number(Number::Real(d)))
         Err(_) => ()
       }
-      // どちらも失敗したら#fを返す
+      // Return # f if both fail
       Ok(Value::Bool(false))
     }
     _ => Err(EvalError::TypeError("string->number: argument must be a string"))

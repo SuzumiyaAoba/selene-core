@@ -1,4 +1,4 @@
-/// リーダ/パーサ段階の S 式表現。
+/// S-expression representation of the reader/parser stage.
 pub(all) enum SExpr {
   Nil
   Bool(Bool)
@@ -14,12 +14,12 @@ pub(all) enum SExpr {
   UnquoteSplicing(SExpr)
 } derive(Show, Eq)
 
-/// 2 要素のリストを作る。
+/// Create a list of 2 elements.
 pub fn list2(a : SExpr, b : SExpr) -> SExpr {
   SExpr::Pair(a, SExpr::Pair(b, SExpr::Nil))
 }
 
-/// シンボルを生成する。
+/// Generate symbols.
 pub fn sym(name : String) -> SExpr {
   SExpr::Symbol(name)
 }

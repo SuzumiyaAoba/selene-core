@@ -1,9 +1,9 @@
-/// バイトコードのシリアライズ/デシリアライズ
+/// Bytecode serialization/deserialization
 ///
-/// テキスト形式でコンパイル済みモジュールを保存・読み込み
-/// (バイナリ形式は将来の実装に委ねる)
+/// Save and load compiled modules in text format
+/// (Binary format is left to future implementation)
 
-/// シリアライズエラー
+/// Serialization error
 pub(all) enum SerializeError {
   InvalidFormat(String)
   UnexpectedEnd
@@ -12,12 +12,12 @@ pub(all) enum SerializeError {
   InvalidPrimOpKind(String)
 } derive(Show)
 
-/// PrimOpKind を文字列に変換
+/// Convert PrimOpKind to String
 fn primop_to_string(kind : PrimOpKind) -> String {
   kind.to_string()
 }
 
-/// 文字列から PrimOpKind に変換
+/// Convert from string to PrimOpKind
 fn string_to_primop(s : String) -> Result[PrimOpKind, SerializeError] {
   match s {
     "Add" => Ok(PrimOpKind::Add)
@@ -180,17 +180,17 @@ fn string_to_primop(s : String) -> Result[PrimOpKind, SerializeError] {
   }
 }
 
-/// BCValue を文字列に変換
+/// Convert BCValue to string
 fn bc_value_to_str(v : BCValue) -> String {
   v.to_string()
 }
 
-/// Opcode を文字列に変換
+/// Convert Opcode to String
 fn opcode_to_str(op : Opcode) -> String {
   op.to_string()
 }
 
-/// CodeChunk を文字列に変換
+/// Convert CodeChunk to string
 fn chunk_to_str(chunk : CodeChunk) -> String {
   let mut result = ""
   result = result + "arity:" + chunk.arity.to_string() + "\n"
@@ -201,19 +201,19 @@ fn chunk_to_str(chunk : CodeChunk) -> String {
     None => result = result + "debug_name:\n"
   }
 
-  // 定数
+  // constant
   result = result + "constants:" + chunk.constants.length().to_string() + "\n"
   for c in chunk.constants {
     result = result + bc_value_to_str(c) + "\n"
   }
 
-  // 名前
+  // name
   result = result + "names:" + chunk.names.length().to_string() + "\n"
   for name in chunk.names {
     result = result + name + "\n"
   }
 
-  // コード
+  // Code
   result = result + "code:" + chunk.code.length().to_string() + "\n"
   for op in chunk.code {
     result = result + opcode_to_str(op) + "\n"
@@ -222,15 +222,15 @@ fn chunk_to_str(chunk : CodeChunk) -> String {
   result
 }
 
-/// CompiledModule を文字列にシリアライズ
+/// Serialize CompiledModule to string
 pub fn serialize_module_to_string(m : CompiledModule) -> String {
   let mut result = "SELENE_BYTECODE_V1\n"
 
-  // メインチャンク
+  // Main chunk
   result = result + "main_chunk:\n"
   result = result + chunk_to_str(m.main)
 
-  // 子チャンク
+  // Child chunks
   result = result + "chunks:" + m.chunks.length().to_string() + "\n"
   for chunk in m.chunks {
     result = result + "chunk:\n"
@@ -241,10 +241,10 @@ pub fn serialize_module_to_string(m : CompiledModule) -> String {
 }
 
 /// ========================================
-/// デシリアライズ
+/// deserialize
 /// ========================================
 
-/// 文字列のスライスを取得
+/// Get slice of string
 fn str_slice(s : String, start : Int, end : Int) -> String {
   let chars : Array[Char] = s.iter().collect()
   let mut result = ""
@@ -256,7 +256,7 @@ fn str_slice(s : String, start : Int, end : Int) -> String {
   result
 }
 
-/// 安全に整数をパース
+/// Parse integers safely
 fn safe_parse_int(s : String) -> Result[Int, SerializeError] {
   let result = try? @strconv.parse_int(s)
   match result {
@@ -265,7 +265,7 @@ fn safe_parse_int(s : String) -> Result[Int, SerializeError] {
   }
 }
 
-/// 安全に実数をパース
+/// Parse real numbers safely
 fn safe_parse_double(s : String) -> Result[Double, SerializeError] {
   let result = try? @strconv.parse_double(s)
   match result {
@@ -274,7 +274,7 @@ fn safe_parse_double(s : String) -> Result[Double, SerializeError] {
   }
 }
 
-/// 文字列から BCValue に変換
+/// Convert from string to BCValue
 fn string_to_bc_value(s : String) -> Result[BCValue, SerializeError] {
   if s == "Nil" {
     return Ok(BCValue::Nil)
@@ -303,7 +303,7 @@ fn string_to_bc_value(s : String) -> Result[BCValue, SerializeError] {
   }
   if s.has_prefix("Char(") && s.has_suffix(")") {
     let inner = str_slice(s, 5, s.length() - 1)
-    // 'x' 形式
+    // 'x' format
     if inner.length() >= 3 && inner.has_prefix("'") && inner.has_suffix("'") {
       let char_str = str_slice(inner, 1, inner.length() - 1)
       if char_str.length() == 1 {
@@ -317,7 +317,7 @@ fn string_to_bc_value(s : String) -> Result[BCValue, SerializeError] {
   }
   if s.has_prefix("String(") && s.has_suffix(")") {
     let inner = str_slice(s, 7, s.length() - 1)
-    // "xxx" 形式
+    // "xxx" format
     if inner.length() >= 2 && inner.has_prefix("\"") && inner.has_suffix("\"") {
       let str_content = str_slice(inner, 1, inner.length() - 1)
       return Ok(BCValue::String(str_content))
@@ -338,9 +338,9 @@ fn string_to_bc_value(s : String) -> Result[BCValue, SerializeError] {
   Err(SerializeError::InvalidBCValueType(s))
 }
 
-/// 文字列から Opcode に変換
+/// Convert from string to opcode
 fn string_to_opcode(s : String) -> Result[Opcode, SerializeError] {
-  // 引数なしのオペコード
+  // Opcode without arguments
   match s {
     "Pop" => return Ok(Opcode::Pop)
     "MakeBox" => return Ok(Opcode::MakeBox)
@@ -354,7 +354,7 @@ fn string_to_opcode(s : String) -> Result[Opcode, SerializeError] {
     _ => ()
   }
 
-  // 1引数のオペコード
+  // 1-argument opcode
   if s.has_prefix("Push(") && s.has_suffix(")") {
     let inner = str_slice(s, 5, s.length() - 1)
     match safe_parse_int(inner) {
@@ -447,7 +447,7 @@ fn string_to_opcode(s : String) -> Result[Opcode, SerializeError] {
     }
   }
 
-  // 2引数のオペコード
+  // 2-argument opcode
   if s.has_prefix("LoadLocal(") && s.has_suffix(")") {
     let inner = str_slice(s, 10, s.length() - 1)
     match parse_two_ints(inner) {
@@ -489,20 +489,20 @@ fn string_to_opcode(s : String) -> Result[Opcode, SerializeError] {
   Err(SerializeError::InvalidOpcode(s))
 }
 
-/// 空白を除去
+/// remove white space
 fn trim_spaces(s : String) -> String {
   let chars : Array[Char] = s.iter().collect()
-  // 先頭の空白をスキップ
+  // Skip leading whitespace
   let mut start = 0
   while start < chars.length() && chars[start] == ' ' {
     start = start + 1
   }
-  // 末尾の空白をスキップ
+  // Skip trailing whitespace
   let mut end = chars.length()
   while end > start && chars[end - 1] == ' ' {
     end = end - 1
   }
-  // 結果を構築
+  // build results
   let mut result = ""
   let mut i = start
   while i < end {
@@ -512,7 +512,7 @@ fn trim_spaces(s : String) -> String {
   result
 }
 
-/// "a, b" 形式の文字列から2つの整数をパース
+/// Parse two integers from a string of the form "a, b"
 fn parse_two_ints(s : String) -> Result[(Int, Int), SerializeError] {
   let parts = split_by_comma(s)
   if parts.length() != 2 {
@@ -526,7 +526,7 @@ fn parse_two_ints(s : String) -> Result[(Int, Int), SerializeError] {
   }
 }
 
-/// "PrimOpKind, arity" 形式の文字列をパース
+/// Parse a string in the format "PrimOpKind, arity"
 fn parse_primcall(s : String) -> Result[(PrimOpKind, Int), SerializeError] {
   let parts = split_by_comma(s)
   if parts.length() != 2 {
@@ -545,7 +545,7 @@ fn parse_primcall(s : String) -> Result[(PrimOpKind, Int), SerializeError] {
   }
 }
 
-/// カンマで文字列を分割
+/// Split string on comma
 fn split_by_comma(s : String) -> Array[String] {
   let result : Array[String] = []
   let mut current = ""
@@ -561,13 +561,13 @@ fn split_by_comma(s : String) -> Array[String] {
   result
 }
 
-/// パーサ状態
+/// parser state
 struct DeserializeState {
   lines : Array[String]
   mut pos : Int
 }
 
-/// 次の行を取得
+/// get next row
 fn next_line(state : DeserializeState) -> Result[String, SerializeError] {
   if state.pos >= state.lines.length() {
     return Err(SerializeError::UnexpectedEnd)
@@ -577,7 +577,7 @@ fn next_line(state : DeserializeState) -> Result[String, SerializeError] {
   Ok(line)
 }
 
-/// 行をピーク
+/// peak line
 fn peek_line(state : DeserializeState) -> String? {
   if state.pos >= state.lines.length() {
     None
@@ -586,7 +586,7 @@ fn peek_line(state : DeserializeState) -> String? {
   }
 }
 
-/// "key:value" 形式の行からvalueを取得
+/// Get value from line in "key:value" format
 fn parse_key_value(line : String, expected_key : String) -> Result[String, SerializeError] {
   let colon_idx = find_char(line, ':')
   if colon_idx < 0 {
@@ -599,7 +599,7 @@ fn parse_key_value(line : String, expected_key : String) -> Result[String, Seria
   Ok(str_slice(line, colon_idx + 1, line.length()))
 }
 
-/// 文字列内で文字を検索
+/// Find characters within a string
 fn find_char(s : String, target : Char) -> Int {
   let mut i = 0
   for c in s {
@@ -611,7 +611,7 @@ fn find_char(s : String, target : Char) -> Int {
   -1
 }
 
-/// 定数リストをデシリアライズ
+/// Deserialize constant list
 fn deserialize_constants(state : DeserializeState, count : Int) -> Result[Array[BCValue], SerializeError] {
   let constants : Array[BCValue] = []
   let mut i = 0
@@ -630,7 +630,7 @@ fn deserialize_constants(state : DeserializeState, count : Int) -> Result[Array[
   Ok(constants)
 }
 
-/// 名前リストをデシリアライズ
+/// Deserialize name list
 fn deserialize_names(state : DeserializeState, count : Int) -> Result[Array[String], SerializeError] {
   let names : Array[String] = []
   let mut i = 0
@@ -644,7 +644,7 @@ fn deserialize_names(state : DeserializeState, count : Int) -> Result[Array[Stri
   Ok(names)
 }
 
-/// オペコードリストをデシリアライズ
+/// Deserialize opcode list
 fn deserialize_opcodes(state : DeserializeState, count : Int) -> Result[Array[Opcode], SerializeError] {
   let code : Array[Opcode] = []
   let mut i = 0
@@ -663,7 +663,7 @@ fn deserialize_opcodes(state : DeserializeState, count : Int) -> Result[Array[Op
   Ok(code)
 }
 
-/// CodeChunk をデシリアライズ
+/// Deserialize CodeChunk
 fn deserialize_chunk(state : DeserializeState) -> Result[CodeChunk, SerializeError] {
   // arity
   let arity_line = match next_line(state) {
@@ -783,7 +783,7 @@ fn deserialize_chunk(state : DeserializeState) -> Result[CodeChunk, SerializeErr
   })
 }
 
-/// 子チャンクリストをデシリアライズ
+/// Deserialize child chunk list
 fn deserialize_chunks(state : DeserializeState, count : Int) -> Result[Array[CodeChunk], SerializeError] {
   let chunks : Array[CodeChunk] = []
   let mut i = 0
@@ -806,12 +806,12 @@ fn deserialize_chunks(state : DeserializeState, count : Int) -> Result[Array[Cod
   Ok(chunks)
 }
 
-/// 文字列から CompiledModule をデシリアライズ
+/// Deserialize CompiledModule from string
 pub fn deserialize_module_from_string(s : String) -> Result[CompiledModule, SerializeError] {
   let lines = split_lines(s)
   let state : DeserializeState = { lines, pos: 0 }
 
-  // ヘッダー確認
+  // Check header
   let header = match next_line(state) {
     Ok(line) => line
     Err(e) => return Err(e)
@@ -856,7 +856,7 @@ pub fn deserialize_module_from_string(s : String) -> Result[CompiledModule, Seri
   Ok({ main, chunks })
 }
 
-/// 文字列を行に分割
+/// Split string into lines
 fn split_lines(s : String) -> Array[String] {
   let result : Array[String] = []
   let mut current = ""
@@ -868,7 +868,7 @@ fn split_lines(s : String) -> Array[String] {
       current = current + c.to_string()
     }
   }
-  // 最後の行（改行なし）
+  // Last line (no line break)
   if current != "" {
     result.push(current)
   }
@@ -876,20 +876,20 @@ fn split_lines(s : String) -> Array[String] {
 }
 
 /// ========================================
-/// バイナリ形式のシリアライズ/デシリアライズ
+/// Binary format serialization/deserialization
 /// ========================================
 
-/// マジックナンバー: "SLNB" (Selene Binary)
+/// Magic number: "SLNB" (Selene Binary)
 fn binary_magic() -> Array[Int] {
   [0x53, 0x4C, 0x4E, 0x42]
 }
 
-/// バージョン
+/// version
 fn binary_version() -> Int {
   1
 }
 
-/// BCValue タグ
+/// BCValue tag
 fn tag_nil() -> Int { 0 }
 fn tag_bool() -> Int { 1 }
 fn tag_int() -> Int { 2 }
@@ -899,7 +899,7 @@ fn tag_string() -> Int { 5 }
 fn tag_symbol() -> Int { 6 }
 fn tag_closure() -> Int { 7 }
 
-/// Opcode タグ
+/// Opcode tag
 fn op_push() -> Int { 0 }
 fn op_pop() -> Int { 1 }
 fn op_load_local() -> Int { 2 }
@@ -928,22 +928,22 @@ fn op_dup() -> Int { 24 }
 fn op_allocate_locals() -> Int { 25 }
 fn op_init_local() -> Int { 26 }
 
-/// バイナリバッファ
+/// binary buffer
 struct BinaryBuffer {
   data : Array[Int]
 }
 
-/// 新しいバッファを作成
+/// create new buffer
 fn new_binary_buffer() -> BinaryBuffer {
   { data: [] }
 }
 
-/// バイトを書き込み
+/// write byte
 fn write_byte(buf : BinaryBuffer, b : Int) -> Unit {
   buf.data.push(b & 0xFF)
 }
 
-/// 32ビット整数を書き込み (リトルエンディアン)
+/// Write 32-bit integer (little endian)
 fn write_int32(buf : BinaryBuffer, n : Int) -> Unit {
   buf.data.push(n & 0xFF)
   buf.data.push((n >> 8) & 0xFF)
@@ -951,19 +951,19 @@ fn write_int32(buf : BinaryBuffer, n : Int) -> Unit {
   buf.data.push((n >> 24) & 0xFF)
 }
 
-/// 64ビット浮動小数点を書き込み
+/// Write 64-bit floating point
 fn write_double(buf : BinaryBuffer, d : Double) -> Unit {
-  // 浮動小数点数を文字列経由で保存 (簡易実装)
+  // Storing floating point numbers via string (simple implementation)
   let s = d.to_string()
   write_string(buf, s)
 }
 
-/// 文字列を書き込み (長さプレフィックス)
+/// write string (length prefix)
 fn write_string(buf : BinaryBuffer, s : String) -> Unit {
   let chars : Array[Char] = s.iter().collect()
   write_int32(buf, chars.length())
   for c in chars {
-    // UTF-8として書き込み (簡易実装: ASCII範囲のみ)
+    // Write as UTF-8 (simple implementation: ASCII range only)
     let code = c.to_int()
     if code < 128 {
       write_byte(buf, code)
@@ -978,7 +978,7 @@ fn write_string(buf : BinaryBuffer, s : String) -> Unit {
   }
 }
 
-/// BCValue をバイナリで書き込み
+/// Write BCValue in binary
 fn write_bc_value(buf : BinaryBuffer, v : BCValue) -> Unit {
   match v {
     BCValue::Nil => write_byte(buf, tag_nil())
@@ -1013,7 +1013,7 @@ fn write_bc_value(buf : BinaryBuffer, v : BCValue) -> Unit {
   }
 }
 
-/// PrimOpKind を数値に変換
+/// Convert PrimOpKind to number
 fn primop_to_int(kind : PrimOpKind) -> Int {
   match kind {
     PrimOpKind::Add => 0
@@ -1175,7 +1175,7 @@ fn primop_to_int(kind : PrimOpKind) -> Int {
   }
 }
 
-/// Opcode をバイナリで書き込み
+/// Write opcode in binary
 fn write_opcode(buf : BinaryBuffer, op : Opcode) -> Unit {
   match op {
     Opcode::Push(idx) => {
@@ -1267,7 +1267,7 @@ fn write_opcode(buf : BinaryBuffer, op : Opcode) -> Unit {
   }
 }
 
-/// CodeChunk をバイナリで書き込み
+/// Write CodeChunk in binary
 fn write_chunk(buf : BinaryBuffer, chunk : CodeChunk) -> Unit {
   write_int32(buf, chunk.arity)
   write_int32(buf, chunk.num_free_vars)
@@ -1301,22 +1301,22 @@ fn write_chunk(buf : BinaryBuffer, chunk : CodeChunk) -> Unit {
   }
 }
 
-/// CompiledModule をバイナリにシリアライズ
+/// Serialize CompiledModule to binary
 pub fn serialize_module_to_binary(m : CompiledModule) -> Array[Int] {
   let buf = new_binary_buffer()
 
-  // マジックナンバー
+  // magic number
   for b in binary_magic() {
     write_byte(buf, b)
   }
 
-  // バージョン
+  // version
   write_int32(buf, binary_version())
 
-  // メインチャンク
+  // Main chunk
   write_chunk(buf, m.main)
 
-  // 子チャンク
+  // Child chunks
   write_int32(buf, m.chunks.length())
   for chunk in m.chunks {
     write_chunk(buf, chunk)
@@ -1326,16 +1326,16 @@ pub fn serialize_module_to_binary(m : CompiledModule) -> Array[Int] {
 }
 
 /// ========================================
-/// バイナリデシリアライズ
+/// binary deserialization
 /// ========================================
 
-/// バイナリリーダー
+/// binary reader
 struct BinaryReader {
   data : Array[Int]
   mut pos : Int
 }
 
-/// バイトを読み込み
+/// read bytes
 fn read_byte(r : BinaryReader) -> Result[Int, SerializeError] {
   if r.pos >= r.data.length() {
     return Err(SerializeError::UnexpectedEnd)
@@ -1345,7 +1345,7 @@ fn read_byte(r : BinaryReader) -> Result[Int, SerializeError] {
   Ok(b)
 }
 
-/// 32ビット整数を読み込み (リトルエンディアン)
+/// Read 32-bit integer (little endian)
 fn read_int32(r : BinaryReader) -> Result[Int, SerializeError] {
   let b0 = match read_byte(r) {
     Ok(b) => b
@@ -1363,12 +1363,12 @@ fn read_int32(r : BinaryReader) -> Result[Int, SerializeError] {
     Ok(b) => b
     Err(e) => return Err(e)
   }
-  // 符号拡張を考慮
+  // Consider sign extension
   let value = b0 | (b1 << 8) | (b2 << 16) | (b3 << 24)
   Ok(value)
 }
 
-/// 文字列を読み込み
+/// read string
 fn read_string_binary(r : BinaryReader) -> Result[String, SerializeError] {
   let len = match read_int32(r) {
     Ok(n) => n
@@ -1381,7 +1381,7 @@ fn read_string_binary(r : BinaryReader) -> Result[String, SerializeError] {
       Ok(b) => b
       Err(e) => return Err(e)
     }
-    // UTF-8 デコード (簡易実装)
+    // UTF-8 decoding (simple implementation)
     if b < 128 {
       result = result + Char::from_int(b).to_string()
     } else if (b & 0xE0) == 0xC0 {
@@ -1408,7 +1408,7 @@ fn read_string_binary(r : BinaryReader) -> Result[String, SerializeError] {
   Ok(result)
 }
 
-/// Double を読み込み
+/// Load Double
 fn read_double(r : BinaryReader) -> Result[Double, SerializeError] {
   let s = match read_string_binary(r) {
     Ok(s) => s
@@ -1417,7 +1417,7 @@ fn read_double(r : BinaryReader) -> Result[Double, SerializeError] {
   safe_parse_double(s)
 }
 
-/// BCValue を読み込み
+/// Read BCValue
 fn read_bc_value(r : BinaryReader) -> Result[BCValue, SerializeError] {
   let tag = match read_byte(r) {
     Ok(t) => t
@@ -1478,7 +1478,7 @@ fn read_bc_value(r : BinaryReader) -> Result[BCValue, SerializeError] {
   }
 }
 
-/// 数値から PrimOpKind に変換
+/// Convert from number to PrimOpKind
 fn int_to_primop(n : Int) -> Result[PrimOpKind, SerializeError] {
   match n {
     0 => Ok(PrimOpKind::Add)
@@ -1641,7 +1641,7 @@ fn int_to_primop(n : Int) -> Result[PrimOpKind, SerializeError] {
   }
 }
 
-/// Opcode を読み込み
+/// Load Opcode
 fn read_opcode(r : BinaryReader) -> Result[Opcode, SerializeError] {
   let tag = match read_byte(r) {
     Ok(t) => t
@@ -1811,7 +1811,7 @@ fn read_opcode(r : BinaryReader) -> Result[Opcode, SerializeError] {
   }
 }
 
-/// CodeChunk を読み込み
+/// Load CodeChunk
 fn read_chunk(r : BinaryReader) -> Result[CodeChunk, SerializeError] {
   let arity = match read_int32(r) {
     Ok(n) => n
@@ -1896,11 +1896,11 @@ fn read_chunk(r : BinaryReader) -> Result[CodeChunk, SerializeError] {
   })
 }
 
-/// バイナリから CompiledModule をデシリアライズ
+/// Deserialize CompiledModule from binary
 pub fn deserialize_module_from_binary(data : Array[Int]) -> Result[CompiledModule, SerializeError] {
   let r : BinaryReader = { data, pos: 0 }
 
-  // マジックナンバー確認
+  // Magic number confirmation
   let mut i = 0
   while i < binary_magic().length() {
     let b = match read_byte(r) {
@@ -1913,7 +1913,7 @@ pub fn deserialize_module_from_binary(data : Array[Int]) -> Result[CompiledModul
     i = i + 1
   }
 
-  // バージョン確認
+  // Check version
   let version = match read_int32(r) {
     Ok(v) => v
     Err(e) => return Err(e)
@@ -1922,13 +1922,13 @@ pub fn deserialize_module_from_binary(data : Array[Int]) -> Result[CompiledModul
     return Err(SerializeError::InvalidFormat("Unsupported version: " + version.to_string()))
   }
 
-  // メインチャンク
+  // Main chunk
   let main = match read_chunk(r) {
     Ok(c) => c
     Err(e) => return Err(e)
   }
 
-  // 子チャンク
+  // Child chunks
   let chunks_count = match read_int32(r) {
     Ok(n) => n
     Err(e) => return Err(e)

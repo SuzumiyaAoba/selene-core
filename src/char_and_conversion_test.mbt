@@ -1,8 +1,8 @@
-/// 文字関数と変換関数のテスト。
+/// Testing of character and conversion functions.
 
-// === 文字比較関数 ===
+// = = = character comparison function = = =
 
-/// char=? は同じ文字に対して #t を返す。
+/// char =? returns # t for the same character.
 test "char=? same" {
   let env = initial_env()
   let expr = parse_one("(char=? #\\a #\\a)")
@@ -13,7 +13,7 @@ test "char=? same" {
   }
 }
 
-/// char=? は異なる文字に対して #f を返す。
+/// char =? returns # f for different characters.
 test "char=? different" {
   let env = initial_env()
   let expr = parse_one("(char=? #\\a #\\b)")
@@ -24,7 +24,7 @@ test "char=? different" {
   }
 }
 
-/// char<? は文字コードで比較する。
+/// char <? is compared by character code.
 test "char<?" {
   let env = initial_env()
   let expr = parse_one("(char<? #\\a #\\b)")
@@ -35,7 +35,7 @@ test "char<?" {
   }
 }
 
-/// char>? は文字コードで比較する。
+/// char >? is compared with the character code.
 test "char>?" {
   let env = initial_env()
   let expr = parse_one("(char>? #\\b #\\a)")
@@ -46,7 +46,7 @@ test "char>?" {
   }
 }
 
-/// char<=? は文字コードで比較する。
+/// char < =? is compared by character code.
 test "char<=?" {
   let env = initial_env()
   let expr = parse_one("(char<=? #\\a #\\a)")
@@ -57,7 +57,7 @@ test "char<=?" {
   }
 }
 
-/// char>=? は文字コードで比較する。
+/// char > =? compares by character code.
 test "char>=?" {
   let env = initial_env()
   let expr = parse_one("(char>=? #\\b #\\a)")
@@ -68,9 +68,9 @@ test "char>=?" {
   }
 }
 
-// === 文字分類関数 ===
+// = = = Character classification function = = =
 
-/// char-alphabetic? はアルファベットに対して #t を返す。
+/// char-alphabetic? returns # t for the alphabet.
 test "char-alphabetic? true" {
   let env = initial_env()
   let expr = parse_one("(char-alphabetic? #\\a)")
@@ -81,7 +81,7 @@ test "char-alphabetic? true" {
   }
 }
 
-/// char-alphabetic? は数字に対して #f を返す。
+/// char-alphabetic? returns # f for a number.
 test "char-alphabetic? false" {
   let env = initial_env()
   let expr = parse_one("(char-alphabetic? #\\5)")
@@ -92,7 +92,7 @@ test "char-alphabetic? false" {
   }
 }
 
-/// char-numeric? は数字に対して #t を返す。
+/// char-numeric? returns # t for a number.
 test "char-numeric? true" {
   let env = initial_env()
   let expr = parse_one("(char-numeric? #\\5)")
@@ -103,7 +103,7 @@ test "char-numeric? true" {
   }
 }
 
-/// char-numeric? はアルファベットに対して #f を返す。
+/// char-numeric? returns # f for the alphabet.
 test "char-numeric? false" {
   let env = initial_env()
   let expr = parse_one("(char-numeric? #\\a)")
@@ -114,7 +114,7 @@ test "char-numeric? false" {
   }
 }
 
-/// char-whitespace? は空白文字に対して #t を返す。
+/// char-whitespace? returns # t for whitespace characters.
 test "char-whitespace? true" {
   let env = initial_env()
   let expr = parse_one("(char-whitespace? #\\space)")
@@ -125,7 +125,7 @@ test "char-whitespace? true" {
   }
 }
 
-/// char-whitespace? は通常の文字に対して #f を返す。
+/// char-whitespace? returns # f for normal characters.
 test "char-whitespace? false" {
   let env = initial_env()
   let expr = parse_one("(char-whitespace? #\\a)")
@@ -136,7 +136,7 @@ test "char-whitespace? false" {
   }
 }
 
-/// char-upper-case? は大文字に対して #t を返す。
+/// char-upper-case? returns # t for a capital letter.
 test "char-upper-case? true" {
   let env = initial_env()
   let expr = parse_one("(char-upper-case? #\\A)")
@@ -147,7 +147,7 @@ test "char-upper-case? true" {
   }
 }
 
-/// char-upper-case? は小文字に対して #f を返す。
+/// char-upper-case? returns # f for lowercase.
 test "char-upper-case? false" {
   let env = initial_env()
   let expr = parse_one("(char-upper-case? #\\a)")
@@ -158,7 +158,7 @@ test "char-upper-case? false" {
   }
 }
 
-/// char-lower-case? は小文字に対して #t を返す。
+/// char-lower-case? returns # t for lowercase.
 test "char-lower-case? true" {
   let env = initial_env()
   let expr = parse_one("(char-lower-case? #\\a)")
@@ -169,7 +169,7 @@ test "char-lower-case? true" {
   }
 }
 
-/// char-lower-case? は大文字に対して #f を返す。
+/// char-lower-case? returns # f for a capital letter.
 test "char-lower-case? false" {
   let env = initial_env()
   let expr = parse_one("(char-lower-case? #\\A)")
@@ -180,9 +180,9 @@ test "char-lower-case? false" {
   }
 }
 
-// === 文字変換関数 ===
+// = = = Transcription function = = =
 
-/// char-upcase は小文字を大文字に変換する。
+/// char-upcase converts lowercase to uppercase.
 test "char-upcase" {
   let env = initial_env()
   let expr = parse_one("(char-upcase #\\a)")
@@ -193,7 +193,7 @@ test "char-upcase" {
   }
 }
 
-/// char-upcase は大文字をそのまま返す。
+/// char-upcase returns the capital letter as it is.
 test "char-upcase already upper" {
   let env = initial_env()
   let expr = parse_one("(char-upcase #\\A)")
@@ -204,7 +204,7 @@ test "char-upcase already upper" {
   }
 }
 
-/// char-downcase は大文字を小文字に変換する。
+/// char-downcase converts uppercase to lowercase.
 test "char-downcase" {
   let env = initial_env()
   let expr = parse_one("(char-downcase #\\A)")
@@ -215,7 +215,7 @@ test "char-downcase" {
   }
 }
 
-/// char-downcase は小文字をそのまま返す。
+/// char-downcase returns the lowercase letter exactly as it is.
 test "char-downcase already lower" {
   let env = initial_env()
   let expr = parse_one("(char-downcase #\\a)")
@@ -226,7 +226,7 @@ test "char-downcase already lower" {
   }
 }
 
-/// char->integer は文字を文字コードに変換する。
+/// char- > integer converts a character into a character encoding.
 test "char->integer" {
   let env = initial_env()
   let expr = parse_one("(char->integer #\\a)")
@@ -237,7 +237,7 @@ test "char->integer" {
   }
 }
 
-/// integer->char は文字コードを文字に変換する。
+/// integer- > char converts a character code into a character.
 test "integer->char" {
   let env = initial_env()
   let expr = parse_one("(integer->char 97)")
@@ -248,7 +248,7 @@ test "integer->char" {
   }
 }
 
-/// 往復変換
+/// Round Trip Conversion
 test "char integer round trip" {
   let env = initial_env()
   let expr = parse_one("(integer->char (char->integer #\\z))")
@@ -259,9 +259,9 @@ test "char integer round trip" {
   }
 }
 
-// === 文字列/リスト変換関数 ===
+// = = = String/list conversion function = = =
 
-/// string->list は文字列を文字のリストに変換する。
+/// string - > list converts a string into a list of characters.
 test "string->list" {
   let env = initial_env()
   let expr = parse_one("(string->list \"abc\")")
@@ -272,7 +272,7 @@ test "string->list" {
   }
 }
 
-/// string->list は空文字列に対して空リストを返す。
+/// string - > list returns an empty list for an empty string.
 test "string->list empty" {
   let env = initial_env()
   let expr = parse_one("(string->list \"\")")
@@ -283,7 +283,7 @@ test "string->list empty" {
   }
 }
 
-/// list->string は文字のリストを文字列に変換する。
+/// list- > string converts a list of characters into a string.
 test "list->string" {
   let env = initial_env()
   let expr = parse_one("(list->string (list #\\a #\\b #\\c))")
@@ -294,7 +294,7 @@ test "list->string" {
   }
 }
 
-/// list->string は空リストに対して空文字列を返す。
+/// list- > string returns an empty string for an empty list.
 test "list->string empty" {
   let env = initial_env()
   let expr = parse_one("(list->string (list))")
@@ -305,7 +305,7 @@ test "list->string empty" {
   }
 }
 
-/// 往復変換
+/// Round Trip Conversion
 test "string list round trip" {
   let env = initial_env()
   let expr = parse_one("(list->string (string->list \"hello\"))")
@@ -316,9 +316,9 @@ test "string list round trip" {
   }
 }
 
-// === 数値関数 ===
+// Numeric Functions
 
-/// gcd は最大公約数を返す。
+/// gcd returns the greatest common divisor.
 test "gcd two numbers" {
   let env = initial_env()
   let expr = parse_one("(gcd 12 8)")
@@ -329,7 +329,7 @@ test "gcd two numbers" {
   }
 }
 
-/// gcd は複数の引数を受け取れる。
+/// gcd can receive multiple arguments.
 test "gcd multiple numbers" {
   let env = initial_env()
   let expr = parse_one("(gcd 12 18 24)")
@@ -340,7 +340,7 @@ test "gcd multiple numbers" {
   }
 }
 
-/// gcd は引数なしで 0 を返す。
+/// gcd returns 0 without arguments.
 test "gcd no args" {
   let env = initial_env()
   let expr = parse_one("(gcd)")
@@ -351,7 +351,7 @@ test "gcd no args" {
   }
 }
 
-/// gcd は負の数も扱える。
+/// gcd can also handle negative numbers.
 test "gcd negative" {
   let env = initial_env()
   let expr = parse_one("(gcd (- 0 12) 8)")
@@ -362,7 +362,7 @@ test "gcd negative" {
   }
 }
 
-/// lcm は最小公倍数を返す。
+/// lcm returns the least common multiple.
 test "lcm two numbers" {
   let env = initial_env()
   let expr = parse_one("(lcm 4 6)")
@@ -373,7 +373,7 @@ test "lcm two numbers" {
   }
 }
 
-/// lcm は複数の引数を受け取れる。
+/// lcm accepts multiple arguments.
 test "lcm multiple numbers" {
   let env = initial_env()
   let expr = parse_one("(lcm 2 3 4)")
@@ -384,7 +384,7 @@ test "lcm multiple numbers" {
   }
 }
 
-/// lcm は引数なしで 1 を返す。
+/// lcm returns 1 with no arguments.
 test "lcm no args" {
   let env = initial_env()
   let expr = parse_one("(lcm)")
@@ -395,7 +395,7 @@ test "lcm no args" {
   }
 }
 
-/// lcm は0を含む場合0を返す。
+/// lcm returns 0 if it contains 0.
 test "lcm with zero" {
   let env = initial_env()
   let expr = parse_one("(lcm 5 0)")

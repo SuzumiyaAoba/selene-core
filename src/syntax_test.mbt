@@ -1,6 +1,6 @@
-/// syntax-rules マクロシステムのテスト
+/// Testing the syntax-rules macro system
 
-/// 基本的なマクロ展開（let-syntax）
+/// Basic macro expansion (let-syntax)
 test "let-syntax basic" {
   let env = initial_env()
   let expr = parse_one(
@@ -19,7 +19,7 @@ test "let-syntax basic" {
   }
 }
 
-/// マクロによる定数展開
+/// Constant expansion using macros
 test "let-syntax constant" {
   let env = initial_env()
   let expr = parse_one(
@@ -31,7 +31,7 @@ test "let-syntax constant" {
   }
 }
 
-/// 複数の引数を持つマクロ
+/// Macros with multiple arguments
 test "let-syntax multiple args" {
   let env = initial_env()
   let expr = parse_one(
@@ -44,7 +44,7 @@ test "let-syntax multiple args" {
   }
 }
 
-/// リテラルキーワードを持つマクロ
+/// Macros with literal keywords
 test "let-syntax with literals" {
   let env = initial_env()
   let expr = parse_one(
@@ -57,10 +57,10 @@ test "let-syntax with literals" {
   }
 }
 
-/// 複数のルールを持つマクロ（パターンマッチ）
+/// Macros with multiple rules (pattern matching)
 test "let-syntax multiple rules" {
   let env = initial_env()
-  // 2引数と3引数の両方を処理
+  // Handles both 2 and 3 arguments
   let expr = parse_one(
     "(let-syntax ((add (syntax-rules () ((_ a b) (+ a b)) ((_ a b c) (+ a (+ b c)))))) (add 10 20))",
   )
@@ -71,7 +71,7 @@ test "let-syntax multiple rules" {
   }
 }
 
-/// ネストされたマクロ展開
+/// nested macro expansion
 test "let-syntax nested" {
   let env = initial_env()
   let expr = parse_one(
@@ -84,7 +84,7 @@ test "let-syntax nested" {
   }
 }
 
-/// ellipsis パターンを使用したマクロ
+/// Macros using the ellipsis pattern
 test "let-syntax with ellipsis" {
   let env = initial_env()
   let expr = parse_one(
@@ -103,7 +103,7 @@ test "let-syntax with ellipsis" {
   }
 }
 
-/// ellipsis で空リスト
+/// Empty list with ellipsis
 test "let-syntax with ellipsis empty" {
   let env = initial_env()
   let expr = parse_one(
@@ -116,7 +116,7 @@ test "let-syntax with ellipsis empty" {
   }
 }
 
-/// ワイルドカード（_）を使用したマクロ
+/// Macro with wildcard (_)
 test "let-syntax with wildcard" {
   let env = initial_env()
   let expr = parse_one(
@@ -129,10 +129,10 @@ test "let-syntax with wildcard" {
   }
 }
 
-/// letrec-syntax で再帰的マクロ
+/// Recursive macros with letrec-syntax
 test "letrec-syntax recursive" {
   let env = initial_env()
-  // count マクロ: 引数の数を数える
+  // count macro: count the number of arguments
   let expr = parse_one(
     "(letrec-syntax ((count (syntax-rules () ((_) 0) ((_ x . rest) (+ 1 (count . rest)))))) (count a b c))",
   )
@@ -143,7 +143,7 @@ test "letrec-syntax recursive" {
   }
 }
 
-/// テスト用: Value を文字列に変換
+/// For testing: convert Value to string
 fn syntax_value_to_string(value : Value) -> String {
   match value {
     Value::Nil => "()"

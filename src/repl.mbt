@@ -1,6 +1,6 @@
-/// REPL エントリポイントの実装。
+/// Implementing a REPL entry point.
 
-/// 値を文字列として表示する。
+/// Display the value as a string.
 fn value_to_string(value : Value) -> String {
   match value {
     Value::Nil => "()"
@@ -82,7 +82,7 @@ fn value_to_string(value : Value) -> String {
   }
 }
 
-/// REPL を起動する。
+/// Start REPL.
 pub fn run() -> Unit {
   println("selene-core: REPL")
   println("Type expressions to evaluate. (Ctrl+D to exit)")
@@ -90,7 +90,7 @@ pub fn run() -> Unit {
 
   let mut env = initial_env()
 
-  // TODO: 標準入力から読み取る（現在はサンプル式で動作確認）
+  // TODO: Read from standard input (Currently tested with sample expression)
   let test_inputs = [
     "(+ 1 2)",
     "(- 10 3)",
@@ -267,7 +267,7 @@ pub fn run() -> Unit {
     println("> " + input)
     match parse_one(input) {
       expr => {
-        // defineの特別処理
+        // Special handling of define
         match expr {
           SExpr::Pair(SExpr::Symbol("define"), SExpr::Pair(SExpr::Symbol(name), SExpr::Pair(value_expr, SExpr::Nil))) => {
             match eval(value_expr, env) {
@@ -278,7 +278,7 @@ pub fn run() -> Unit {
               Err(err) => println("Error: " + err.to_string())
             }
           }
-          // set!の特別処理
+          // Special handling of set!
           SExpr::Pair(SExpr::Symbol("set!"), SExpr::Pair(SExpr::Symbol(name), SExpr::Pair(value_expr, SExpr::Nil))) => {
             match eval(value_expr, env) {
               Ok(value) => {
@@ -306,8 +306,8 @@ pub fn run() -> Unit {
   }
 }
 
-/// インタラクティブ REPL を起動する（標準入力から読み取り）
-/// JS バックエンド専用
+/// Start an interactive REPL (read from standard input)
+/// JS backend only
 pub fn run_interactive() -> Unit {
   println("selene-core: Interactive REPL")
   println("Type expressions to evaluate. (Ctrl+D or empty line to exit)")
@@ -315,12 +315,12 @@ pub fn run_interactive() -> Unit {
 
   let mut env = initial_env()
 
-  // 標準入力から読み取りループ
-  // Note: MoonBit には print() がないため、プロンプト表示なし
+  // Loop reading from standard input
+  // Note: MoonBit does not have print(), so no prompting
   while true {
     let input = read_line()
 
-    // 空行またはEOFで終了
+    // Ends with a blank line or EOF
     if input.length() == 0 {
       println("\nBye!")
       break
@@ -328,7 +328,7 @@ pub fn run_interactive() -> Unit {
 
     match parse_one(input) {
       expr => {
-        // defineの特別処理
+        // Special handling of define
         match expr {
           SExpr::Pair(SExpr::Symbol("define"), SExpr::Pair(SExpr::Symbol(name), SExpr::Pair(value_expr, SExpr::Nil))) => {
             match eval(value_expr, env) {
@@ -339,7 +339,7 @@ pub fn run_interactive() -> Unit {
               Err(err) => println("Error: " + err.to_string())
             }
           }
-          // set!の特別処理
+          // Special handling of set!
           SExpr::Pair(SExpr::Symbol("set!"), SExpr::Pair(SExpr::Symbol(name), SExpr::Pair(value_expr, SExpr::Nil))) => {
             match eval(value_expr, env) {
               Ok(value) => {
@@ -366,16 +366,16 @@ pub fn run_interactive() -> Unit {
   }
 }
 
-/// VM ベースの REPL を起動する
+/// Start a VM-based REPL
 pub fn run_vm() -> Unit {
   println("selene-core: VM REPL")
   println("Type expressions to evaluate. (Ctrl+D to exit)")
   println("")
 
-  // REPL コンテキストを初期化
+  // Initialize REPL context
   let ctx = new_repl_context()
 
-  // サンプル式で動作確認
+  // Operation confirmed with sample formula
   let test_inputs = [
     "(+ 1 2)",
     "(* 3 4)",
@@ -412,7 +412,7 @@ pub fn run_vm() -> Unit {
     println("> " + input)
     match repl_eval(ctx, input) {
       Ok(value) => {
-        // GlobalSet の結果は void として表示
+        // GlobalSet results are displayed as void
         let expr = parse_one(input)
         match expr {
           SExpr::Pair(SExpr::Symbol("define"), _) => println("#<void>")
@@ -425,31 +425,31 @@ pub fn run_vm() -> Unit {
   }
 }
 
-/// VM ベースのインタラクティブ REPL を起動する
-/// JS バックエンド専用
+/// Launch a VM-based interactive REPL
+/// JS backend only
 pub fn run_vm_interactive() -> Unit {
   println("selene-core: VM Interactive REPL")
   println("Type expressions to evaluate. (Ctrl+D to exit)")
   println("")
 
-  // REPL コンテキストを初期化
+  // Initialize REPL context
   let ctx = new_repl_context()
 
   while true {
-    // プロンプト付きで入力を読み取る
+    // Read input with prompts
     let input = read_line_with_prompt("> ")
 
-    // 空行またはEOFで終了
+    // Ends with a blank line or EOF
     if input.length() == 0 {
       println("")
       println("Bye!")
       break
     }
 
-    // 式を評価
+    // evaluate expression
     match repl_eval(ctx, input) {
       Ok(value) => {
-        // define で始まる式の場合は void として表示
+        // Expressions starting with define are displayed as void
         let is_define = input.trim().starts_with("(define")
         if is_define {
           println("#<void>")

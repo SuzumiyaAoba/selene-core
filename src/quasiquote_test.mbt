@@ -1,6 +1,6 @@
-/// quasiquote 展開のテスト。
+/// Testing the quasiquote deployment.
 
-/// 単純な quasiquote（unquote なし）はリテラルを返す。
+/// A simple quasiquote (without unquote) returns a literal.
 test "quasiquote without unquote" {
   let env = initial_env()
   let expr = parse_one("`(a b c)")
@@ -11,7 +11,7 @@ test "quasiquote without unquote" {
   }
 }
 
-/// unquote で変数を展開する。
+/// Expand variables with unquote.
 test "quasiquote with unquote variable" {
   let env = initial_env()
   let env = define_var(env, "x", Value::Number(Number::Int(42)))
@@ -23,7 +23,7 @@ test "quasiquote with unquote variable" {
   }
 }
 
-/// unquote で式を評価する。
+/// Evaluate the expression with unquote.
 test "quasiquote with unquote expression" {
   let env = initial_env()
   let expr = parse_one("`(1 ,(+ 2 3) 4)")
@@ -34,7 +34,7 @@ test "quasiquote with unquote expression" {
   }
 }
 
-/// unquote-splicing でリストをスプライスする。
+/// Splice a list with unquote-splicing.
 test "quasiquote with unquote-splicing" {
   let env = initial_env()
   let env = define_var(env, "xs", Value::Pair(
@@ -49,7 +49,7 @@ test "quasiquote with unquote-splicing" {
   }
 }
 
-/// unquote-splicing で空リストをスプライスする。
+/// Splice an empty list with unquote-splicing.
 test "quasiquote with unquote-splicing empty list" {
   let env = initial_env()
   let env = define_var(env, "xs", Value::Nil)
@@ -61,7 +61,7 @@ test "quasiquote with unquote-splicing empty list" {
   }
 }
 
-/// quasiquote 特殊形式（括弧形式）。
+/// quasiquote special form (parenthesis form).
 test "quasiquote special form" {
   let env = initial_env()
   let expr = parse_one("(quasiquote (a b c))")
@@ -72,7 +72,7 @@ test "quasiquote special form" {
   }
 }
 
-/// ' 記法で quote。
+/// ' quote in notation.
 test "quote with apostrophe" {
   let env = initial_env()
   let expr = parse_one("'(a b c)")
@@ -83,7 +83,7 @@ test "quote with apostrophe" {
   }
 }
 
-/// シンボルの quasiquote。
+/// Symbol quasiquote.
 test "quasiquote symbol" {
   let env = initial_env()
   let expr = parse_one("`x")
@@ -94,7 +94,7 @@ test "quasiquote symbol" {
   }
 }
 
-/// 数値の quasiquote。
+/// quasiquote of numbers.
 test "quasiquote number" {
   let env = initial_env()
   let expr = parse_one("`42")
@@ -105,7 +105,7 @@ test "quasiquote number" {
   }
 }
 
-/// unquote が quasiquote 外で使用された場合はエラー。
+/// Error if unquote is used outside of quasiquote.
 test "unquote outside quasiquote is error" {
   let env = initial_env()
   let expr = parse_one(",x")
@@ -116,7 +116,7 @@ test "unquote outside quasiquote is error" {
   }
 }
 
-/// unquote-splicing が quasiquote 外で使用された場合はエラー。
+/// Error if unquote-splicing is used outside of quasiquote.
 test "unquote-splicing outside quasiquote is error" {
   let env = initial_env()
   let expr = parse_one(",@xs")
@@ -127,7 +127,7 @@ test "unquote-splicing outside quasiquote is error" {
   }
 }
 
-/// 複数の unquote。
+/// Multiple unquotes.
 test "quasiquote with multiple unquotes" {
   let env = initial_env()
   let env = define_var(env, "x", Value::Number(Number::Int(1)))
@@ -140,13 +140,13 @@ test "quasiquote with multiple unquotes" {
   }
 }
 
-/// ネストした quasiquote（外側の quasiquote のみ展開）。
+/// Nested quasiquotes (only the outer quasiquote is expanded).
 test "nested quasiquote" {
   let env = initial_env()
   let env = define_var(env, "x", Value::Number(Number::Int(42)))
   let expr = parse_one("``(a ,x)")
   let result = eval(expr, env)
-  // ネストした quasiquote は内側の unquote を展開しない
+  // Nested quasiquote does not expand inner unquote
   match result {
     Ok(Value::Pair(Value::Symbol("quasiquote"), _)) => ()
     _ => fail("expected nested quasiquote structure")

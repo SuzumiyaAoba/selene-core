@@ -1,6 +1,6 @@
-/// 算術演算のテスト。
+/// Testing of arithmetic operations.
 
-/// quotient演算のテスト。
+/// a test of the quotient operation.
 test "builtin quotient" {
   let env = initial_env()
   let expr1 = parse_one("(quotient 10 3)")
@@ -25,7 +25,7 @@ test "builtin quotient" {
   }
 }
 
-/// remainder演算のテスト。
+/// a test of the remainder operation.
 test "builtin remainder" {
   let env = initial_env()
   let expr1 = parse_one("(remainder 10 3)")
@@ -50,7 +50,7 @@ test "builtin remainder" {
   }
 }
 
-/// modulo演算のテスト。
+/// test modulo operation.
 test "builtin modulo" {
   let env = initial_env()
   let expr1 = parse_one("(modulo 10 3)")
@@ -75,7 +75,7 @@ test "builtin modulo" {
   }
 }
 
-/// absのテスト。
+/// testing abs.
 test "builtin abs" {
   let env = initial_env()
   let expr1 = parse_one("(abs 5)")
@@ -95,7 +95,7 @@ test "builtin abs" {
   }
 }
 
-/// maxのテスト。
+/// testing max.
 test "builtin max" {
   let env = initial_env()
   let expr1 = parse_one("(max 1)")
@@ -120,7 +120,7 @@ test "builtin max" {
   }
 }
 
-/// minのテスト。
+/// test min.
 test "builtin min" {
   let env = initial_env()
   let expr1 = parse_one("(min 1)")
@@ -145,7 +145,7 @@ test "builtin min" {
   }
 }
 
-/// 基本的な算術演算のテスト。
+/// Test basic arithmetic operations.
 test "basic arithmetic" {
   let env = initial_env()
   let expr1 = parse_one("(+ 1 2 3)")
@@ -170,7 +170,7 @@ test "basic arithmetic" {
   }
 }
 
-/// 単項演算のテスト。
+/// Test of unary operations.
 test "unary operations" {
   let env = initial_env()
   let expr1 = parse_one("(- 5)")
@@ -185,7 +185,7 @@ test "unary operations" {
   }
 }
 
-/// ゼロ引数の算術演算のテスト。
+/// Testing of arithmetic operations on zero arguments.
 test "zero argument arithmetic" {
   let env = initial_env()
   let expr1 = parse_one("(+)")
@@ -200,7 +200,7 @@ test "zero argument arithmetic" {
   }
 }
 
-/// ネストした算術演算のテスト。
+/// Test nested arithmetic operations.
 test "nested arithmetic" {
   let env = initial_env()
   let expr = parse_one("(+ (* 2 3) (- 10 5) (abs (- 3)))")
@@ -210,7 +210,7 @@ test "nested arithmetic" {
   }
 }
 
-/// =演算のテスト。
+/// = Test the operation.
 test "builtin =" {
   let env = initial_env()
   let expr1 = parse_one("(= 1 1)")
@@ -235,7 +235,7 @@ test "builtin =" {
   }
 }
 
-/// <演算のテスト。
+/// < Testing the operation.
 test "builtin <" {
   let env = initial_env()
   let expr1 = parse_one("(< 1 2)")
@@ -265,7 +265,7 @@ test "builtin <" {
   }
 }
 
-/// >演算のテスト。
+/// > Testing of operations.
 test "builtin >" {
   let env = initial_env()
   let expr1 = parse_one("(> 2 1)")
@@ -295,7 +295,7 @@ test "builtin >" {
   }
 }
 
-/// <=演算のテスト。
+/// < = Test the operation.
 test "builtin <=" {
   let env = initial_env()
   let expr1 = parse_one("(<= 1 2)")
@@ -325,7 +325,7 @@ test "builtin <=" {
   }
 }
 
-/// >=演算のテスト。
+/// > = Test the operation.
 test "builtin >=" {
   let env = initial_env()
   let expr1 = parse_one("(>= 2 1)")

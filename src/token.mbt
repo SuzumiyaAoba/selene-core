@@ -1,3 +1,4 @@
+///|
 /// Basic token types for the initial lexer phase.
 pub enum Token {
   LParen
@@ -7,9 +8,9 @@ pub enum Token {
   Boolean(Bool)
   String(String)
   Char(Char)
-  Quote           // '
-  Quasiquote      // `
-  Unquote         // ,
+  Quote // '
+  Quasiquote // `
+  Unquote // ,
   UnquoteSplicing // ,@
-  Dot             // . (improper list notation)
+  Dot // . (improper list notation)
 } derive(Show, Eq)

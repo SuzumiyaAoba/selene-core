@@ -1,6 +1,6 @@
-/// string->number 関数のテスト
+/// Testing the string->number function
 
-/// 整数の文字列をパース
+/// Parse a string of integers
 test "string->number with integer" {
   let env = initial_env()
   let expr = parse_one("(string->number \"42\")")
@@ -10,7 +10,7 @@ test "string->number with integer" {
   }
 }
 
-/// 負の整数の文字列をパース
+/// Parse a string of negative integers
 test "string->number with negative integer" {
   let env = initial_env()
   let expr = parse_one("(string->number \"-123\")")
@@ -20,7 +20,7 @@ test "string->number with negative integer" {
   }
 }
 
-/// ゼロの文字列をパース
+/// Parse string of zeros
 test "string->number with zero" {
   let env = initial_env()
   let expr = parse_one("(string->number \"0\")")
@@ -30,13 +30,13 @@ test "string->number with zero" {
   }
 }
 
-/// 実数の文字列をパース
+/// Parse a string of real numbers
 test "string->number with double" {
   let env = initial_env()
   let expr = parse_one("(string->number \"3.14\")")
   match eval(expr, env) {
     Ok(Value::Number(Number::Real(r))) => {
-      // 3.14に近い値であることを確認
+      // Make sure the value is close to 3.14
       let diff = if r > 3.14 { r - 3.14 } else { 3.14 - r }
       if diff > 0.0001 {
         fail("Expected approximately 3.14")
@@ -46,7 +46,7 @@ test "string->number with double" {
   }
 }
 
-/// 負の実数の文字列をパース
+/// Parse a string of negative real numbers
 test "string->number with negative double" {
   let env = initial_env()
   let expr = parse_one("(string->number \"-2.5\")")
@@ -61,7 +61,7 @@ test "string->number with negative double" {
   }
 }
 
-/// 指数表記の文字列をパース
+/// Parse string in scientific notation
 test "string->number with exponential notation" {
   let env = initial_env()
   let expr = parse_one("(string->number \"1.5e2\")")
@@ -77,7 +77,7 @@ test "string->number with exponential notation" {
   }
 }
 
-/// 不正な文字列（数値でない）
+/// Invalid string (not a number)
 test "string->number with invalid string" {
   let env = initial_env()
   let expr = parse_one("(string->number \"not a number\")")
@@ -87,7 +87,7 @@ test "string->number with invalid string" {
   }
 }
 
-/// 空文字列
+/// empty string
 test "string->number with empty string" {
   let env = initial_env()
   let expr = parse_one("(string->number \"\")")
@@ -97,19 +97,19 @@ test "string->number with empty string" {
   }
 }
 
-/// 空白を含む文字列
+/// string containing spaces
 test "string->number with whitespace" {
   let env = initial_env()
   let expr = parse_one("(string->number \" 42 \")")
   match eval(expr, env) {
-    // 空白がトリムされるかどうかは実装依存
-    // 成功するか#fになるか
+    // Whether whitespace is trimmed is implementation dependent
+    // Will it be successful or #f?
     Ok(_) => ()
     _ => fail("Expected some value")
   }
 }
 
-/// 大きな整数
+/// large integer
 test "string->number with large integer" {
   let env = initial_env()
   let expr = parse_one("(string->number \"999999\")")
@@ -119,7 +119,7 @@ test "string->number with large integer" {
   }
 }
 
-/// 小数点だけの文字列
+/// string with only decimal point
 test "string->number with just decimal point" {
   let env = initial_env()
   let expr = parse_one("(string->number \".\")")
@@ -129,7 +129,7 @@ test "string->number with just decimal point" {
   }
 }
 
-/// 符号だけの文字列
+/// string of signs only
 test "string->number with just sign" {
   let env = initial_env()
   let expr = parse_one("(string->number \"-\")")
@@ -139,7 +139,7 @@ test "string->number with just sign" {
   }
 }
 
-/// string->numberの結果を計算で使用
+/// Use the result of string->number in calculations
 test "string->number in calculation" {
   let env = initial_env()
   let expr = parse_one("(+ (string->number \"10\") (string->number \"32\"))")
@@ -149,7 +149,7 @@ test "string->number in calculation" {
   }
 }
 
-/// string->numberとnumber->stringの往復変換
+/// Round trip conversion of string->number and number->string
 test "string->number and number->string round trip" {
   let env = initial_env()
   let expr = parse_one("(string->number (number->string 42))")

@@ -1,6 +1,6 @@
-/// apply 関数のテスト
+/// test apply function
 
-/// apply の基本的な動作（リストのみ）
+/// basic behavior of apply (list only)
 test "apply basic - list only" {
   let env = initial_env()
   let expr = parse_one("(apply + (list 1 2 3))")
@@ -10,7 +10,7 @@ test "apply basic - list only" {
   }
 }
 
-/// apply で中間引数とリストを結合
+/// combine list with intermediate arguments in apply
 test "apply with intermediate arguments" {
   let env = initial_env()
   let expr = parse_one("(apply + 1 2 (list 3 4 5))")
@@ -20,19 +20,19 @@ test "apply with intermediate arguments" {
   }
 }
 
-/// apply と list 関数
+/// apply and list functions
 test "apply with list" {
   let env = initial_env()
   let expr = parse_one("(apply list (list 1 2 3))")
   match eval(expr, env) {
     Ok(Value::Pair(_, _)) => {
-      // リストが作成されたことを確認
+      // Verify that the list has been created
       let list_expr = parse_one("(list 1 2 3)")
       let expected = match eval(list_expr, env) {
         Ok(v) => v
         _ => fail("Failed to create expected list")
       }
-      // 値を文字列化して比較（簡易的な方法）
+      // Compare values as strings (easy way)
       let result_str = value_to_string(eval(expr, env).unwrap())
       let expected_str = value_to_string(expected)
       assert_eq(result_str, expected_str)
@@ -41,7 +41,7 @@ test "apply with list" {
   }
 }
 
-/// apply と max 関数
+/// apply and max functions
 test "apply with max" {
   let env = initial_env()
   let expr = parse_one("(apply max (list 1 5 3 2))")
@@ -51,7 +51,7 @@ test "apply with max" {
   }
 }
 
-/// apply と cons 関数
+/// apply and cons functions
 test "apply with cons" {
   let env = initial_env()
   let expr = parse_one("(apply cons (list 1 2))")
@@ -61,7 +61,7 @@ test "apply with cons" {
   }
 }
 
-/// apply とラムダ式
+/// apply and Lambda Expression
 test "apply with lambda" {
   let env = initial_env()
   let expr = parse_one("(apply (lambda (x y) (+ x y)) (list 3 4))")
@@ -71,7 +71,7 @@ test "apply with lambda" {
   }
 }
 
-/// apply とラムダ式（中間引数あり）
+/// apply and lambda expressions (with intermediate arguments)
 test "apply with lambda and intermediate args" {
   let env = initial_env()
   let expr = parse_one("(apply (lambda (x y z) (* x (+ y z))) 2 (list 3 4))")
@@ -81,7 +81,7 @@ test "apply with lambda and intermediate args" {
   }
 }
 
-/// apply で空のリスト
+/// empty list with apply
 test "apply with empty list" {
   let env = initial_env()
   let expr = parse_one("(apply + ())")
@@ -91,7 +91,7 @@ test "apply with empty list" {
   }
 }
 
-/// apply で中間引数と空のリスト
+/// intermediate arguments and empty list in apply
 test "apply with intermediate args and empty list" {
   let env = initial_env()
   let expr = parse_one("(apply + 1 2 ())")
@@ -101,7 +101,7 @@ test "apply with intermediate args and empty list" {
   }
 }
 
-/// apply で単一の中間引数
+/// single intermediate argument in apply
 test "apply with single intermediate arg" {
   let env = initial_env()
   let expr = parse_one("(apply + 10 (list 20 30))")
@@ -111,7 +111,7 @@ test "apply with single intermediate arg" {
   }
 }
 
-/// apply でネストされたリスト
+/// list nested with apply
 test "apply with nested expression" {
   let env = initial_env()
   let expr = parse_one("(apply + (cons 1 (cons 2 (cons 3 ()))))")
@@ -121,7 +121,7 @@ test "apply with nested expression" {
   }
 }
 
-/// apply と変数
+/// apply and variables
 test "apply with variable" {
   let env = initial_env()
   let expr = parse_one("(let ((nums (list 1 2 3 4))) (apply + nums))")
@@ -131,7 +131,7 @@ test "apply with variable" {
   }
 }
 
-/// REPL の value_to_string ヘルパー関数（テスト用）
+/// Value_to_string helper function for repl (for testing)
 fn value_to_string(value : Value) -> String {
   match value {
     Value::Nil => "()"

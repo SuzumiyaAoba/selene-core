@@ -1,6 +1,6 @@
-/// プロファイラのテスト
+/// Testing the profiler
 
-/// プロファイラの作成テスト
+/// Profiler creation test
 test "profiler: create" {
   let profiler = new_profiler()
   assert_true!(profiler.enabled)
@@ -8,11 +8,11 @@ test "profiler: create" {
   assert_eq!(profiler.total_calls, 0L)
 }
 
-/// プロファイラのリセットテスト
+/// Profiler reset test
 test "profiler: reset" {
   let profiler = new_profiler()
 
-  // データを追加
+  // add data
   profiler_record_instruction(profiler, Opcode::Push(0))
   profiler_record_instruction(profiler, Opcode::Pop)
   profiler_record_call(profiler, 0, Some("test"))
@@ -20,14 +20,14 @@ test "profiler: reset" {
   assert_true!(profiler.total_instructions > 0L)
   assert_true!(profiler.total_calls > 0L)
 
-  // リセット
+  // reset
   profiler_reset(profiler)
 
   assert_eq!(profiler.total_instructions, 0L)
   assert_eq!(profiler.total_calls, 0L)
 }
 
-/// 有効化/無効化テスト
+/// Enabling/disabling test
 test "profiler: enable/disable" {
   let profiler = new_profiler()
 
@@ -36,7 +36,7 @@ test "profiler: enable/disable" {
   profiler_disable(profiler)
   assert_true!(not(profiler.enabled))
 
-  // 無効時は記録されない
+  // Not recorded when disabled
   profiler_record_instruction(profiler, Opcode::Push(0))
   assert_eq!(profiler.total_instructions, 0L)
 
@@ -45,7 +45,7 @@ test "profiler: enable/disable" {
   assert_eq!(profiler.total_instructions, 1L)
 }
 
-/// 命令記録テスト
+/// Instruction record test
 test "profiler: record instructions" {
   let profiler = new_profiler()
 
@@ -56,20 +56,20 @@ test "profiler: record instructions" {
 
   assert_eq!(profiler.total_instructions, 4L)
 
-  // Push が 3 回記録されているはず
+  // Push should have been recorded 3 times.
   match profiler.instruction_stats.get("Push") {
     Some(stats) => assert_eq!(stats.count, 3L)
     None => fail!("Push stats not found")
   }
 
-  // Pop が 1 回記録されているはず
+  // Pop should have been recorded once.
   match profiler.instruction_stats.get("Pop") {
     Some(stats) => assert_eq!(stats.count, 1L)
     None => fail!("Pop stats not found")
   }
 }
 
-/// 関数呼び出し記録テスト
+/// Function call recording test
 test "profiler: record function calls" {
   let profiler = new_profiler()
 
@@ -80,7 +80,7 @@ test "profiler: record function calls" {
 
   assert_eq!(profiler.total_calls, 4L)
 
-  // factorial が 2 回呼び出されているはず
+  // factorial should have been called twice
   match profiler.function_stats.get(0) {
     Some(stats) => {
       assert_eq!(stats.call_count, 2L)
@@ -89,14 +89,14 @@ test "profiler: record function calls" {
     None => fail!("factorial stats not found")
   }
 
-  // 名前なしの lambda は自動生成名
+  // Unnamed lambda is an automatically generated name
   match profiler.function_stats.get(1) {
     Some(stats) => assert_true!(stats.name.contains("lambda"))
     None => fail!("lambda stats not found")
   }
 }
 
-/// 関数リターン記録テスト
+/// Function return recording test
 test "profiler: record returns" {
   let profiler = new_profiler()
 
@@ -112,7 +112,7 @@ test "profiler: record returns" {
   assert_eq!(profiler.call_stack.length(), 0)
 }
 
-/// 命令レポートテスト
+/// instruction report test
 test "profiler: instruction report" {
   let profiler = new_profiler()
 
@@ -127,7 +127,7 @@ test "profiler: instruction report" {
   assert_true!(report.contains("Total instructions: 3"))
 }
 
-/// 関数レポートテスト
+/// function report test
 test "profiler: function report" {
   let profiler = new_profiler()
 
@@ -141,11 +141,11 @@ test "profiler: function report" {
   assert_true!(report.contains("Total calls: 2"))
 }
 
-/// ホットスポットレポートテスト
+/// hotspot report test
 test "profiler: hotspot report" {
   let profiler = new_profiler()
 
-  // 複数の命令を記録
+  // Record multiple instructions
   let mut i = 0
   while i < 100 {
     profiler_record_instruction(profiler, Opcode::Push(0))
@@ -162,18 +162,18 @@ test "profiler: hotspot report" {
     k = k + 1
   }
 
-  // 関数呼び出しも記録
+  // Also records function calls
   profiler_record_call(profiler, 0, Some("hot-function"))
   profiler_record_call(profiler, 0, Some("hot-function"))
   profiler_record_call(profiler, 1, Some("cold-function"))
 
   let report = profiler_hotspot_report(profiler, 3)
   assert_true!(report.contains("Hotspot Analysis"))
-  assert_true!(report.contains("Push"))  // 最も多い
-  assert_true!(report.contains("hot-function"))  // 最も呼び出される
+  assert_true!(report.contains("Push"))  // most
+  assert_true!(report.contains("hot-function"))  // most called
 }
 
-/// サマリーレポートテスト
+/// Summary report test
 test "profiler: summary report" {
   let profiler = new_profiler()
 
@@ -186,7 +186,7 @@ test "profiler: summary report" {
   assert_true!(report.contains("Total function calls"))
 }
 
-/// 完全レポートテスト
+/// full report test
 test "profiler: full report" {
   let profiler = new_profiler()
 
@@ -201,7 +201,7 @@ test "profiler: full report" {
   assert_true!(report.contains("Hotspot Analysis"))
 }
 
-/// 空のプロファイラレポートテスト
+/// Empty profiler report test
 test "profiler: empty reports" {
   let profiler = new_profiler()
 
@@ -212,7 +212,7 @@ test "profiler: empty reports" {
   assert_true!(func_report.contains("No function calls recorded"))
 }
 
-/// 実際の式でのプロファイリングテスト
+/// Profiling tests with real expressions
 test "profiler: with simple expression" {
   reset_gc_stats()
   let profiler = new_profiler()
@@ -224,14 +224,14 @@ test "profiler: with simple expression" {
         Value::Number(Number::Int(n)) => assert_eq!(n, 3)
         _ => fail!("Expected number")
       }
-      // 命令が実行されたことを確認
+      // Verify that the instruction was executed
       assert_true!(profiler.total_instructions > 0L)
     }
     Err(e) => fail!("Eval failed: " + e)
   }
 }
 
-/// Lambda でのプロファイリングテスト
+/// Profiling tests with Lambda
 test "profiler: with lambda" {
   reset_gc_stats()
   let profiler = new_profiler()
@@ -243,19 +243,19 @@ test "profiler: with lambda" {
         Value::Number(Number::Int(n)) => assert_eq!(n, 6)
         _ => fail!("Expected number")
       }
-      // 関数呼び出しが記録されたことを確認
+      // Verify function call was recorded
       assert_true!(profiler.total_calls >= 1L)
     }
     Err(e) => fail!("Eval failed: " + e)
   }
 }
 
-/// 再帰関数でのプロファイリングテスト
+/// Profiling tests with recursive functions
 test "profiler: with recursion" {
   reset_gc_stats()
   let profiler = new_profiler()
 
-  // fact を定義して呼び出す代わりに、簡単な再帰的構造をテスト
+  // Test simple recursive constructs instead of defining and calling fact
   let expr = parse_one("(+ (+ 1 2) (+ 3 4))")
   match vm_eval_with_profiler(expr, profiler) {
     Ok(result) => {
@@ -263,14 +263,14 @@ test "profiler: with recursion" {
         Value::Number(Number::Int(n)) => assert_eq!(n, 10)
         _ => fail!("Expected number")
       }
-      // 命令が実行されたことを確認（少なくとも1つ以上）
+      // Verify that instructions have been executed (at least one)
       assert_true!(profiler.total_instructions >= 1L)
     }
     Err(e) => fail!("Eval failed: " + e)
   }
 }
 
-/// GC統計との連携テスト
+/// Cooperation test with GC statistics
 test "profiler: gc stats integration" {
   reset_gc_stats()
   let profiler = new_profiler()

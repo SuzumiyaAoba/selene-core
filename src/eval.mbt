@@ -1,16 +1,16 @@
-/// Scheme 評価器の中核実装。
+/// Core implementation of the Scheme evaluator.
 
-/// 評価エラーを表す型。
+/// A type that represents an evaluation error.
 pub(all) enum EvalError {
   UnboundVariable(String)
   InvalidSyntax(String)
   TypeError(String)
   ArityError(String)
-  /// 継続が呼び出されたことを示す（エスケープ継続）
+  /// Indicates that a continuation has been called (escape continuation)
   ContinuationInvoked(Int, Value)
 } derive(Show)
 
-/// SExpr を Value に変換（評価せずに変換）。
+/// Convert SExpr to Value (convert without evaluating).
 fn sexpr_to_value(sexpr : SExpr) -> Value {
   match sexpr {
     SExpr::Nil => Value::Nil
@@ -44,15 +44,15 @@ fn sexpr_to_value(sexpr : SExpr) -> Value {
   }
 }
 
-/// quasiquote 式を展開する。
-/// depth はネストレベルを表す（0 = トップレベル）
+/// Expand a quasiquote expression.
+/// depth represents the nesting level (0 = top level)
 fn expand_quasiquote(
   sexpr : SExpr,
   env : Env,
   depth : Int
 ) -> Result[Value, EvalError] {
   match sexpr {
-    // unquote: depth が 0 なら評価、そうでなければ再帰
+    // unquote: evaluate if depth is 0, recurse otherwise
     SExpr::Unquote(inner) =>
       if depth == 0 {
         eval(inner, env)
@@ -63,7 +63,7 @@ fn expand_quasiquote(
           Err(e) => Err(e)
         }
       }
-    // unquote-splicing: depth が 0 ならエラー（リストコンテキスト外）
+    // unquote-splicing: error if depth is 0 (outside list context)
     SExpr::UnquoteSplicing(_) =>
       if depth == 0 {
         Err(EvalError::InvalidSyntax("unquote-splicing: not in list context"))
@@ -79,7 +79,7 @@ fn expand_quasiquote(
           _ => panic()
         }
       }
-    // ネストした quasiquote
+    // nested quasiquotes
     SExpr::Quasiquote(inner) => {
       match expand_quasiquote(inner, env, depth + 1) {
         Ok(expanded) =>
@@ -87,41 +87,41 @@ fn expand_quasiquote(
         Err(e) => Err(e)
       }
     }
-    // リスト: 各要素を処理
+    // List: Process each element
     SExpr::Pair(car, cdr) => expand_quasiquote_list(car, cdr, env, depth)
-    // quote: 中身を変換
+    // quote: convert contents
     SExpr::Quote(inner) =>
       Ok(Value::Pair(Value::Symbol("quote"), Value::Pair(sexpr_to_value(inner), Value::Nil)))
-    // アトム: そのまま変換
+    // Atom: Convert as is
     _ => Ok(sexpr_to_value(sexpr))
   }
 }
 
-/// リストの quasiquote 展開（unquote-splicing 対応）
+/// quasiquote expansion of list (supports unquote-splicing)
 fn expand_quasiquote_list(
   car : SExpr,
   cdr : SExpr,
   env : Env,
   depth : Int
 ) -> Result[Value, EvalError] {
-  // car が unquote-splicing の場合
+  // If car is unquote-splicing
   match car {
     SExpr::UnquoteSplicing(inner) =>
       if depth == 0 {
-        // 評価してスプライス
+        // Evaluate and Splice
         let spliced = match eval(inner, env) {
           Ok(v) => v
           Err(e) => return Err(e)
         }
-        // cdr を展開
+        // expand cdr
         let rest = match expand_quasiquote(cdr, env, depth) {
           Ok(v) => v
           Err(e) => return Err(e)
         }
-        // spliced を rest の前に追加
+        // Add spliced ​​before rest
         append_values(spliced, rest)
       } else {
-        // depth > 0 の場合は構造を保持
+        // Preserve structure if depth > 0
         let expanded_inner = match expand_quasiquote(inner, env, depth - 1) {
           Ok(v) => v
           Err(e) => return Err(e)
@@ -136,7 +136,7 @@ fn expand_quasiquote_list(
         ))
       }
     _ => {
-      // 通常の要素
+      // normal element
       let expanded_car = match expand_quasiquote(car, env, depth) {
         Ok(v) => v
         Err(e) => return Err(e)
@@ -150,7 +150,7 @@ fn expand_quasiquote_list(
   }
 }
 
-/// 2 つの Value リストを連結する。
+/// Concatenate two Value lists.
 fn append_values(list1 : Value, list2 : Value) -> Result[Value, EvalError] {
   match list1 {
     Value::Nil => Ok(list2)
@@ -164,16 +164,16 @@ fn append_values(list1 : Value, list2 : Value) -> Result[Value, EvalError] {
   }
 }
 
-/// S 式を評価する（最小実装）。
+/// Evaluate an S expression (minimal implementation).
 pub fn eval(expr : SExpr, env : Env) -> Result[Value, EvalError] {
   match expr {
-    // 自己評価式
+    // self-assessment
     SExpr::Number(n) => Ok(Value::Number(Number::Int(n)))
     SExpr::Bool(b) => Ok(Value::Bool(b))
     SExpr::Char(c) => Ok(Value::Char(c))
     SExpr::String(s) => Ok(Value::String(s))
 
-    // 変数参照
+    // variable reference
     SExpr::Symbol(name) => {
       match lookup(env, name) {
         Some(value) => Ok(value)
@@ -184,12 +184,12 @@ pub fn eval(expr : SExpr, env : Env) -> Result[Value, EvalError] {
     // quote
     SExpr::Quote(quoted) => Ok(sexpr_to_value(quoted))
 
-    // 空リスト
+    // empty list
     SExpr::Nil => Ok(Value::Nil)
 
-    // リスト（特殊形式または関数適用）
+    // list (special form or function applied)
     SExpr::Pair(car, cdr) => {
-      // 特殊形式のチェック
+      // Check for special formats
       match car {
         SExpr::Symbol("if") => eval_if(cdr, env)
         SExpr::Symbol("lambda") => eval_lambda(cdr, env)
@@ -211,26 +211,26 @@ pub fn eval(expr : SExpr, env : Env) -> Result[Value, EvalError] {
         SExpr::Symbol("syntax-rules") => eval_syntax_rules(cdr, env)
         SExpr::Symbol("load") => eval_load(cdr, env)
         SExpr::Symbol("quote") => {
-          // quote特殊形式: (quote expr)
+          // quote special format: (quote expr)
           match cdr {
             SExpr::Pair(quoted, SExpr::Nil) => Ok(sexpr_to_value(quoted))
             _ => Err(EvalError::InvalidSyntax("quote: requires exactly one argument"))
           }
         }
         SExpr::Symbol("quasiquote") => {
-          // quasiquote特殊形式: (quasiquote expr)
+          // quasiquote special form: (quasiquote expr)
           match cdr {
             SExpr::Pair(inner, SExpr::Nil) => expand_quasiquote(inner, env, 0)
             _ => Err(EvalError::InvalidSyntax("quasiquote: requires exactly one argument"))
           }
         }
         _ => {
-          // マクロ展開のチェック
+          // Check macro expansion
           match car {
             SExpr::Symbol(name) =>
               match lookup(env, name) {
                 Some(Value::Syntax(syntax_rules)) => {
-                  // マクロ呼び出し：展開して評価
+                  // Macro call: expand and evaluate
                   let expanded = match expand_macro(syntax_rules, expr) {
                     Ok(e) => e
                     Err(e) => return Err(e)
@@ -242,13 +242,13 @@ pub fn eval(expr : SExpr, env : Env) -> Result[Value, EvalError] {
             _ => ()
           }
 
-          // 通常の関数適用
+          // Normal function application
           let op = match eval(car, env) {
             Ok(v) => v
             Err(e) => return Err(e)
           }
 
-          // 引数リストを取得
+          // get argument list
           let args : Array[Value] = []
           let mut current = cdr
           let _ = while true {
@@ -266,19 +266,19 @@ pub fn eval(expr : SExpr, env : Env) -> Result[Value, EvalError] {
             }
           } else { () }
 
-          // 適用
+          // Applicable
           apply(op, args)
         }
       }
     }
 
-    // Vector（自己評価）
+    // Vector (self-evaluation)
     SExpr::Vector(_) => Ok(sexpr_to_value(expr))
 
-    // quasiquote 展開
+    // quasiquote expansion
     SExpr::Quasiquote(inner) => expand_quasiquote(inner, env, 0)
 
-    // unquote/unquote-splicing は quasiquote 外で使用された場合エラー
+    // unquote/unquote-splicing errors when used outside of quasiquote
     SExpr::Unquote(_) =>
       Err(EvalError::InvalidSyntax("unquote: not in quasiquote"))
     SExpr::UnquoteSplicing(_) =>
@@ -286,19 +286,19 @@ pub fn eval(expr : SExpr, env : Env) -> Result[Value, EvalError] {
   }
 }
 
-/// 手続きを引数に適用する。
+/// Applies a procedure to its arguments.
 pub fn apply(proc : Value, args : Array[Value]) -> Result[Value, EvalError] {
   match proc {
     Value::Procedure(Procedure::Native(name)) => {
       apply_builtin(name, args)
     }
     Value::Procedure(Procedure::Closure(params, body, closure_env)) => {
-      // パラメータ数のチェック
+      // Check number of parameters
       if params.length() != args.length() {
         return Err(EvalError::ArityError("closure: arity mismatch"))
       }
 
-      // パラメータと引数を束縛
+      // Bind parameters and arguments
       let bindings : Array[Binding] = []
       let mut i = 0
       let len = params.length()
@@ -307,23 +307,23 @@ pub fn apply(proc : Value, args : Array[Value]) -> Result[Value, EvalError] {
         i = i + 1
       } else { () }
 
-      // 新しい環境で本体を評価
+      // Evaluate the main unit in a new environment
       let new_env = extend(closure_env, bindings)
       eval(body, new_env)
     }
     Value::Procedure(Procedure::Cont(cont)) => {
-      // 継続の呼び出し：引数は1つ
+      // Calling a continuation: one argument
       if args.length() != 1 {
         return Err(EvalError::ArityError("continuation: requires exactly 1 argument"))
       }
-      // 継続が呼び出されたことをエラーとして伝播
+      // Propagates that a continuation was called as an error
       Err(EvalError::ContinuationInvoked(cont.id, args[0]))
     }
     _ => Err(EvalError::TypeError("not a procedure"))
   }
 }
 
-/// 組み込み手続きを適用する。
+/// Apply built-in procedures.
 fn apply_builtin(name : String, args : Array[Value]) -> Result[Value, EvalError] {
   match name {
     "+" => builtin_add(args)
@@ -467,7 +467,7 @@ fn apply_builtin(name : String, args : Array[Value]) -> Result[Value, EvalError]
     "values" => builtin_values(args)
     "call-with-values" => builtin_call_with_values(args)
     "dynamic-wind" => builtin_dynamic_wind(args)
-    // 複素数関連
+    // Complex number related
     "make-rectangular" => builtin_make_rectangular(args)
     "make-polar" => builtin_make_polar(args)
     "real-part" => builtin_real_part(args)
@@ -475,11 +475,11 @@ fn apply_builtin(name : String, args : Array[Value]) -> Result[Value, EvalError]
     "magnitude" => builtin_magnitude(args)
     "angle" => builtin_angle(args)
     "complex?" => builtin_complex_p(args)
-    // 有理数関連
+    // Rational number related
     "numerator" => builtin_numerator(args)
     "denominator" => builtin_denominator(args)
     "rational?" => builtin_rational_p(args)
-    // ポート操作
+    // port operation
     "input-port?" => builtin_input_port_p(args)
     "output-port?" => builtin_output_port_p(args)
     "port?" => builtin_port_p(args)
@@ -495,10 +495,10 @@ fn apply_builtin(name : String, args : Array[Value]) -> Result[Value, EvalError]
   }
 }
 
-/// 初期環境を構築する（組み込み手続きを登録）。
+/// Build the initial environment (register built-in procedures).
 pub fn initial_env() -> Env {
   let env = empty_env()
-  // 算術演算
+  // Arithmetic operations
   let env = define_var(env, "+", Value::Procedure(Procedure::Native("+")))
   let env = define_var(env, "-", Value::Procedure(Procedure::Native("-")))
   let env = define_var(env, "*", Value::Procedure(Procedure::Native("*")))
@@ -511,7 +511,7 @@ pub fn initial_env() -> Env {
   let env = define_var(env, "min", Value::Procedure(Procedure::Native("min")))
   let env = define_var(env, "gcd", Value::Procedure(Procedure::Native("gcd")))
   let env = define_var(env, "lcm", Value::Procedure(Procedure::Native("lcm")))
-  // リスト操作
+  // List operations
   let env = define_var(env, "cons", Value::Procedure(Procedure::Native("cons")))
   let env = define_var(env, "car", Value::Procedure(Procedure::Native("car")))
   let env = define_var(env, "cdr", Value::Procedure(Procedure::Native("cdr")))
@@ -535,18 +535,18 @@ pub fn initial_env() -> Env {
   let env = define_var(env, "reverse", Value::Procedure(Procedure::Native("reverse")))
   let env = define_var(env, "list-ref", Value::Procedure(Procedure::Native("list-ref")))
   let env = define_var(env, "list-tail", Value::Procedure(Procedure::Native("list-tail")))
-  // 連想リスト
+  // Associations List
   let env = define_var(env, "assq", Value::Procedure(Procedure::Native("assq")))
   let env = define_var(env, "assv", Value::Procedure(Procedure::Native("assv")))
   let env = define_var(env, "assoc", Value::Procedure(Procedure::Native("assoc")))
-  // メンバーシップ
+  // Membership
   let env = define_var(env, "memq", Value::Procedure(Procedure::Native("memq")))
   let env = define_var(env, "memv", Value::Procedure(Procedure::Native("memv")))
   let env = define_var(env, "member", Value::Procedure(Procedure::Native("member")))
-  // シンボル変換
+  // symbol conversion
   let env = define_var(env, "symbol->string", Value::Procedure(Procedure::Native("symbol->string")))
   let env = define_var(env, "string->symbol", Value::Procedure(Procedure::Native("string->symbol")))
-  // 型判定
+  // Type determination
   let env = define_var(env, "pair?", Value::Procedure(Procedure::Native("pair?")))
   let env = define_var(env, "number?", Value::Procedure(Procedure::Native("number?")))
   let env = define_var(env, "integer?", Value::Procedure(Procedure::Native("integer?")))
@@ -556,7 +556,7 @@ pub fn initial_env() -> Env {
   let env = define_var(env, "null?", Value::Procedure(Procedure::Native("null?")))
   let env = define_var(env, "procedure?", Value::Procedure(Procedure::Native("procedure?")))
   let env = define_var(env, "list?", Value::Procedure(Procedure::Native("list?")))
-  // 比較演算
+  // Relations
   let env = define_var(env, "=", Value::Procedure(Procedure::Native("=")))
   let env = define_var(env, "<", Value::Procedure(Procedure::Native("<")))
   let env = define_var(env, ">", Value::Procedure(Procedure::Native(">")))
@@ -565,42 +565,42 @@ pub fn initial_env() -> Env {
   let env = define_var(env, "eq?", Value::Procedure(Procedure::Native("eq?")))
   let env = define_var(env, "eqv?", Value::Procedure(Procedure::Native("eqv?")))
   let env = define_var(env, "equal?", Value::Procedure(Procedure::Native("equal?")))
-  // 数値述語
+  // Numeric predicate
   let env = define_var(env, "zero?", Value::Procedure(Procedure::Native("zero?")))
   let env = define_var(env, "positive?", Value::Procedure(Procedure::Native("positive?")))
   let env = define_var(env, "negative?", Value::Procedure(Procedure::Native("negative?")))
   let env = define_var(env, "odd?", Value::Procedure(Procedure::Native("odd?")))
   let env = define_var(env, "even?", Value::Procedure(Procedure::Native("even?")))
-  // 論理演算
+  // Logical connective
   let env = define_var(env, "not", Value::Procedure(Procedure::Native("not")))
-  // 高階関数
+  // higher order function
   let env = define_var(env, "apply", Value::Procedure(Procedure::Native("apply")))
   let env = define_var(env, "map", Value::Procedure(Procedure::Native("map")))
   let env = define_var(env, "for-each", Value::Procedure(Procedure::Native("for-each")))
   let env = define_var(env, "filter", Value::Procedure(Procedure::Native("filter")))
   let env = define_var(env, "fold-left", Value::Procedure(Procedure::Native("fold-left")))
   let env = define_var(env, "fold-right", Value::Procedure(Procedure::Native("fold-right")))
-  // 文字列操作
+  // String manipulation
   let env = define_var(env, "string?", Value::Procedure(Procedure::Native("string?")))
   let env = define_var(env, "char?", Value::Procedure(Procedure::Native("char?")))
-  // 文字比較
+  // character comparison
   let env = define_var(env, "char=?", Value::Procedure(Procedure::Native("char=?")))
   let env = define_var(env, "char<?", Value::Procedure(Procedure::Native("char<?")))
   let env = define_var(env, "char>?", Value::Procedure(Procedure::Native("char>?")))
   let env = define_var(env, "char<=?", Value::Procedure(Procedure::Native("char<=?")))
   let env = define_var(env, "char>=?", Value::Procedure(Procedure::Native("char>=?")))
-  // 文字分類
+  // character classification
   let env = define_var(env, "char-alphabetic?", Value::Procedure(Procedure::Native("char-alphabetic?")))
   let env = define_var(env, "char-numeric?", Value::Procedure(Procedure::Native("char-numeric?")))
   let env = define_var(env, "char-whitespace?", Value::Procedure(Procedure::Native("char-whitespace?")))
   let env = define_var(env, "char-upper-case?", Value::Procedure(Procedure::Native("char-upper-case?")))
   let env = define_var(env, "char-lower-case?", Value::Procedure(Procedure::Native("char-lower-case?")))
-  // 文字変換
+  // character conversion
   let env = define_var(env, "char-upcase", Value::Procedure(Procedure::Native("char-upcase")))
   let env = define_var(env, "char-downcase", Value::Procedure(Procedure::Native("char-downcase")))
   let env = define_var(env, "char->integer", Value::Procedure(Procedure::Native("char->integer")))
   let env = define_var(env, "integer->char", Value::Procedure(Procedure::Native("integer->char")))
-  // 文字列/リスト変換
+  // String/list conversion
   let env = define_var(env, "string->list", Value::Procedure(Procedure::Native("string->list")))
   let env = define_var(env, "list->string", Value::Procedure(Procedure::Native("list->string")))
   let env = define_var(env, "string-length", Value::Procedure(Procedure::Native("string-length")))
@@ -618,7 +618,7 @@ pub fn initial_env() -> Env {
   let env = define_var(env, "string-ci>=?", Value::Procedure(Procedure::Native("string-ci>=?")))
   let env = define_var(env, "make-string", Value::Procedure(Procedure::Native("make-string")))
   let env = define_var(env, "substring", Value::Procedure(Procedure::Native("substring")))
-  // ベクトル操作
+  // Vector manipulation
   let env = define_var(env, "vector?", Value::Procedure(Procedure::Native("vector?")))
   let env = define_var(env, "make-vector", Value::Procedure(Procedure::Native("make-vector")))
   let env = define_var(env, "vector", Value::Procedure(Procedure::Native("vector")))
@@ -627,7 +627,7 @@ pub fn initial_env() -> Env {
   let env = define_var(env, "vector-set!", Value::Procedure(Procedure::Native("vector-set!")))
   let env = define_var(env, "vector->list", Value::Procedure(Procedure::Native("vector->list")))
   let env = define_var(env, "list->vector", Value::Procedure(Procedure::Native("list->vector")))
-  // 数値関数
+  // Numerical functions
   let env = define_var(env, "floor", Value::Procedure(Procedure::Native("floor")))
   let env = define_var(env, "ceiling", Value::Procedure(Procedure::Native("ceiling")))
   let env = define_var(env, "truncate", Value::Procedure(Procedure::Native("truncate")))
@@ -637,35 +637,35 @@ pub fn initial_env() -> Env {
   let env = define_var(env, "exact?", Value::Procedure(Procedure::Native("exact?")))
   let env = define_var(env, "inexact?", Value::Procedure(Procedure::Native("inexact?")))
   let env = define_var(env, "number->string", Value::Procedure(Procedure::Native("number->string")))
-  // 三角関数
+  // trigonometric functions
   let env = define_var(env, "sin", Value::Procedure(Procedure::Native("sin")))
   let env = define_var(env, "cos", Value::Procedure(Procedure::Native("cos")))
   let env = define_var(env, "tan", Value::Procedure(Procedure::Native("tan")))
   let env = define_var(env, "asin", Value::Procedure(Procedure::Native("asin")))
   let env = define_var(env, "acos", Value::Procedure(Procedure::Native("acos")))
   let env = define_var(env, "atan", Value::Procedure(Procedure::Native("atan")))
-  // 指数・対数関数
+  // Exponential/logarithmic functions
   let env = define_var(env, "exp", Value::Procedure(Procedure::Native("exp")))
   let env = define_var(env, "log", Value::Procedure(Procedure::Native("log")))
-  // I/O関数
+  // I/O functions
   let env = define_var(env, "display", Value::Procedure(Procedure::Native("display")))
   let env = define_var(env, "newline", Value::Procedure(Procedure::Native("newline")))
   let env = define_var(env, "write", Value::Procedure(Procedure::Native("write")))
   let env = define_var(env, "read", Value::Procedure(Procedure::Native("read")))
-  // 文字列変換
+  // String conversion
   let env = define_var(env, "string->number", Value::Procedure(Procedure::Native("string->number")))
-  // 継続
+  // continuation
   let env = define_var(env, "call/cc", Value::Procedure(Procedure::Native("call/cc")))
   let env = define_var(env, "call-with-current-continuation", Value::Procedure(Procedure::Native("call-with-current-continuation")))
-  // 遅延評価
+  // Lazy evaluation
   let env = define_var(env, "force", Value::Procedure(Procedure::Native("force")))
   let env = define_var(env, "promise?", Value::Procedure(Procedure::Native("promise?")))
-  // 多値
+  // multivalued
   let env = define_var(env, "values", Value::Procedure(Procedure::Native("values")))
   let env = define_var(env, "call-with-values", Value::Procedure(Procedure::Native("call-with-values")))
-  // 動的スコープ
+  // dynamic scope
   let env = define_var(env, "dynamic-wind", Value::Procedure(Procedure::Native("dynamic-wind")))
-  // 複素数関連
+  // Complex number related
   let env = define_var(env, "make-rectangular", Value::Procedure(Procedure::Native("make-rectangular")))
   let env = define_var(env, "make-polar", Value::Procedure(Procedure::Native("make-polar")))
   let env = define_var(env, "real-part", Value::Procedure(Procedure::Native("real-part")))
@@ -673,11 +673,11 @@ pub fn initial_env() -> Env {
   let env = define_var(env, "magnitude", Value::Procedure(Procedure::Native("magnitude")))
   let env = define_var(env, "angle", Value::Procedure(Procedure::Native("angle")))
   let env = define_var(env, "complex?", Value::Procedure(Procedure::Native("complex?")))
-  // 有理数関連
+  // Rational number related
   let env = define_var(env, "numerator", Value::Procedure(Procedure::Native("numerator")))
   let env = define_var(env, "denominator", Value::Procedure(Procedure::Native("denominator")))
   let env = define_var(env, "rational?", Value::Procedure(Procedure::Native("rational?")))
-  // ポート操作
+  // port operation
   let env = define_var(env, "input-port?", Value::Procedure(Procedure::Native("input-port?")))
   let env = define_var(env, "output-port?", Value::Procedure(Procedure::Native("output-port?")))
   let env = define_var(env, "port?", Value::Procedure(Procedure::Native("port?")))

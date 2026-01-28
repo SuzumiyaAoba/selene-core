@@ -1,9 +1,9 @@
-/// 拡張数学関数（三角関数、対数・指数関数）のテスト
+/// Testing of extended mathematical functions (trigonometric functions, logarithmic/exponential functions)
 
-/// 定数: π（円周率）
+/// Constant: π (pi)
 let pi : Double = 3.14159265358979323846
 
-/// sin の基本的な動作
+/// Basic operation of sin
 test "sin basic" {
   let env = initial_env()
   let expr = parse_one("(sin 0)")
@@ -16,7 +16,7 @@ test "sin basic" {
   }
 }
 
-/// cos の基本的な動作
+/// Basic operation of cos
 test "cos basic" {
   let env = initial_env()
   let expr = parse_one("(cos 0)")
@@ -29,7 +29,7 @@ test "cos basic" {
   }
 }
 
-/// tan の基本的な動作
+/// Basic operation of tan
 test "tan basic" {
   let env = initial_env()
   let expr = parse_one("(tan 0)")
@@ -42,7 +42,7 @@ test "tan basic" {
   }
 }
 
-/// asin の基本的な動作
+/// Basic operation of asin
 test "asin basic" {
   let env = initial_env()
   let expr = parse_one("(asin 0)")
@@ -55,7 +55,7 @@ test "asin basic" {
   }
 }
 
-/// acos の基本的な動作
+/// Basic operation of acos
 test "acos basic" {
   let env = initial_env()
   let expr = parse_one("(acos 1)")
@@ -68,7 +68,7 @@ test "acos basic" {
   }
 }
 
-/// atan の基本的な動作（1引数）
+/// Basic operation of atan (1 argument)
 test "atan basic" {
   let env = initial_env()
   let expr = parse_one("(atan 0)")
@@ -81,7 +81,7 @@ test "atan basic" {
   }
 }
 
-/// atan の2引数版（atan2）
+/// Two-argument version of atan (atan2)
 test "atan2 basic" {
   let env = initial_env()
   let expr = parse_one("(atan 0 1)")
@@ -94,7 +94,7 @@ test "atan2 basic" {
   }
 }
 
-/// exp の基本的な動作
+/// Basic operation of exp
 test "exp basic" {
   let env = initial_env()
   let expr = parse_one("(exp 0)")
@@ -107,7 +107,7 @@ test "exp basic" {
   }
 }
 
-/// log の基本的な動作
+/// Basic operation of log
 test "log basic" {
   let env = initial_env()
   let expr = parse_one("(log 1)")
@@ -120,7 +120,7 @@ test "log basic" {
   }
 }
 
-/// sin と asin の逆関数関係
+/// Inverse functional relationship between sin and asin
 test "sin asin inverse" {
   let env = initial_env()
   // asin(sin(0.5)) ≈ 0.5
@@ -131,7 +131,7 @@ test "sin asin inverse" {
   }
 }
 
-/// cos と acos の逆関数関係
+/// Inverse functional relationship between cos and acos
 test "cos acos inverse" {
   let env = initial_env()
   // acos(cos(0.5)) ≈ 0.5
@@ -142,7 +142,7 @@ test "cos acos inverse" {
   }
 }
 
-/// tan と atan の逆関数関係
+/// Inverse functional relationship between tan and atan
 test "tan atan inverse" {
   let env = initial_env()
   // atan(tan(0.5)) ≈ 0.5
@@ -153,14 +153,14 @@ test "tan atan inverse" {
   }
 }
 
-/// exp と log の逆関数関係
+/// Inverse functional relationship between exp and log
 test "exp log inverse" {
   let env = initial_env()
   // log(exp(1)) = 1
   let expr = parse_one("(log (exp 1))")
   match eval(expr, env) {
     Ok(Value::Number(Number::Real(r))) => {
-      // 浮動小数点の誤差を考慮
+      // Consider floating point errors
       let diff = if r > 1.0 { r - 1.0 } else { 1.0 - r }
       if diff > 0.0001 {
         fail("Expected approximately 1.0")
@@ -177,7 +177,7 @@ test "log exp inverse" {
   let expr = parse_one("(exp (log 2))")
   match eval(expr, env) {
     Ok(Value::Number(Number::Real(r))) => {
-      // 浮動小数点の誤差を考慮
+      // Consider floating point errors
       let diff = if r > 2.0 { r - 2.0 } else { 2.0 - r }
       if diff > 0.0001 {
         fail("Expected approximately 2.0")
@@ -187,14 +187,14 @@ test "log exp inverse" {
   }
 }
 
-/// 三角関数の恒等式: sin^2 + cos^2 = 1
+/// Trigonometric identity: sin^2 + cos^2 = 1
 test "trigonometric identity" {
   let env = initial_env()
   // (+ (expt (sin 1) 2) (expt (cos 1) 2)) = 1
   let expr = parse_one("(+ (expt (sin 1) 2) (expt (cos 1) 2))")
   match eval(expr, env) {
     Ok(Value::Number(Number::Real(r))) => {
-      // 浮動小数点の誤差を考慮
+      // Consider floating point errors
       let diff = if r > 1.0 { r - 1.0 } else { 1.0 - r }
       if diff > 0.0001 {
         fail("Expected approximately 1.0")
@@ -204,7 +204,7 @@ test "trigonometric identity" {
   }
 }
 
-/// sin で整数を渡した場合
+/// If you pass an integer with sin
 test "sin with integer" {
   let env = initial_env()
   let expr = parse_one("(sin 0)")
@@ -220,7 +220,7 @@ test "exp of 1" {
   let expr = parse_one("(exp 1)")
   match eval(expr, env) {
     Ok(Value::Number(Number::Real(r))) => {
-      // e ≈ 2.718 なので、2.7 < r < 2.8
+      // Since e ≈ 2.718, 2.7 < r < 2.8
       if r < 2.7 || r > 2.8 {
         fail("Expected approximately 2.718")
       }
@@ -229,10 +229,10 @@ test "exp of 1" {
   }
 }
 
-/// atan2 の象限判定
+/// atan2 quadrant determination
 test "atan2 quadrants" {
   let env = initial_env()
-  // 第1象限: atan2(1, 1) ≈ π/4
+  // Quadrant 1: atan2(1, 1) ≈ π/4
   let expr1 = parse_one("(atan 1 1)")
   match eval(expr1, env) {
     Ok(Value::Number(Number::Real(r))) => {
@@ -244,7 +244,7 @@ test "atan2 quadrants" {
     _ => fail("Expected Real")
   }
 
-  // 第2象限: atan2(1, -1) ≈ 3π/4
+  // Quadrant 2: atan2(1, -1) ≈ 3π/4
   let expr2 = parse_one("(atan 1 (- 0 1))")
   match eval(expr2, env) {
     Ok(Value::Number(Number::Real(r))) => {
@@ -257,7 +257,7 @@ test "atan2 quadrants" {
   }
 }
 
-/// 複雑な数式: log(exp(sin(1)))
+/// Complex formula: log(exp(sin(1)))
 test "complex expression" {
   let env = initial_env()
   let expr = parse_one("(log (exp (sin 1)))")

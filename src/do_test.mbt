@@ -1,6 +1,6 @@
-/// do ループのテスト
+/// Testing the do loop
 
-/// 基本的な do ループ（カウントアップ）
+/// Basic do loop (count up)
 test "do loop basic counting" {
   let env = initial_env()
   let expr = parse_one("(do ((i 0 (+ i 1))) ((= i 5) i))")
@@ -11,7 +11,7 @@ test "do loop basic counting" {
   }
 }
 
-/// do ループでリストを構築
+/// Build a list with a do loop
 test "do loop building list" {
   let env = initial_env()
   let expr = parse_one("(do ((i 0 (+ i 1)) (lst () (cons i lst))) ((= i 3) lst))")
@@ -22,7 +22,7 @@ test "do loop building list" {
   }
 }
 
-/// do ループの終了条件式なし（Nil を返す）
+/// No end condition expression for do loop (returns Nil)
 test "do loop no result expression" {
   let env = initial_env()
   let expr = parse_one("(do ((i 0 (+ i 1))) ((= i 3)))")
@@ -33,10 +33,10 @@ test "do loop no result expression" {
   }
 }
 
-/// do ループでコマンドを実行
+/// Execute commands in a do loop
 test "do loop with commands" {
   let env = initial_env()
-  // コマンドを実行するが、結果には影響しない
+  // Execute the command but do not affect the result
   let expr = parse_one("(do ((i 0 (+ i 1)) (sum 0 (+ sum i))) ((= i 4) sum) (+ 1 1))")
   let result = eval(expr, env)
   match result {
@@ -45,7 +45,7 @@ test "do loop with commands" {
   }
 }
 
-/// do ループの初期化のみ（ステップ式なし）
+/// do loop initialization only (no step expression)
 test "do loop without step" {
   let env = initial_env()
   let expr = parse_one("(do ((x 10)) (#t x))")
@@ -56,7 +56,7 @@ test "do loop without step" {
   }
 }
 
-/// do ループで複数変数を使用
+/// Using multiple variables in do loops
 test "do loop multiple variables" {
   let env = initial_env()
   let expr = parse_one("(do ((i 0 (+ i 1)) (sum 0 (+ sum i))) ((= i 5) sum))")
@@ -67,7 +67,7 @@ test "do loop multiple variables" {
   }
 }
 
-/// do ループで早期終了
+/// Early termination with do loop
 test "do loop early exit" {
   let env = initial_env()
   let expr = parse_one("(do ((i 0 (+ i 1))) ((> i 3) i))")

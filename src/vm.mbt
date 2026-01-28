@@ -1,12 +1,12 @@
-/// スタックベース仮想マシン
+/// stack-based virtual machine
 ///
-/// バイトコードを実行する VM の実装
+/// Implementing a VM to run bytecode
 ///
-/// 型定義:
-/// - VMClosure, VMContinuation, VMCallFrame は value.mbt で定義
-/// - Procedure enum に VMClosure, VMCont が追加されている
+/// Type definition:
+/// - VMClosure, VMContinuation, VMCallFrame are defined in value.mbt
+/// - VMClosure and VMCont have been added to Procedure enum.
 
-/// VM のエラー
+/// VM errors
 pub(all) enum VMError {
   StackUnderflow
   InvalidInstruction
@@ -20,35 +20,35 @@ pub(all) enum VMError {
   RuntimeError(String)
 } derive(Show)
 
-/// VM プロミス（遅延評価）
+/// VM promise (lazy evaluation)
 pub(all) struct VMPromise {
-  /// 評価済みかどうか
+  /// Has it been evaluated?
   mut forced : Bool
-  /// コードチャンクインデックス（未評価の場合）
+  /// Code chunk index (if unevaluated)
   chunk_idx : Int
-  /// 評価済みの値
+  /// Evaluated value
   mut value : Value
 }
 
-/// VM 状態
+/// VM state
 pub(all) struct VMState {
-  /// 値スタック
+  /// value stack
   stack : Array[Value]
-  /// コールスタック
+  /// call stack
   call_stack : Array[VMCallFrame]
-  /// 現在のコードチャンクインデックス（-1 はメイン）
+  /// Current code chunk index (-1 is main)
   mut current_chunk : Int
-  /// 命令ポインタ
+  /// instruction pointer
   mut ip : Int
-  /// グローバル環境
+  /// global environment
   globals : @hashmap.T[String, Value]
-  /// コンパイル済みモジュール
+  /// compiled module
   compiled_module : CompiledModule
-  /// 継続カウンタ
+  /// continuation counter
   mut cont_counter : Int
 }
 
-/// 新しい VM 状態を作成
+/// Create new VM state
 pub fn new_vm_state(compiled_module : CompiledModule) -> VMState {
   let globals = create_initial_globals()
   {
@@ -62,7 +62,7 @@ pub fn new_vm_state(compiled_module : CompiledModule) -> VMState {
   }
 }
 
-/// 外部グローバル環境を使用して VM 状態を作成
+/// Create VM state using external global environment
 pub fn new_vm_state_with_globals(
   compiled_module : CompiledModule,
   globals : @hashmap.T[String, Value]
@@ -78,7 +78,7 @@ pub fn new_vm_state_with_globals(
   }
 }
 
-/// 初期グローバル環境を作成
+/// Create initial global environment
 pub fn create_initial_globals() -> @hashmap.T[String, Value] {
   let globals : @hashmap.T[String, Value] = @hashmap.new()
   globals.set("+", Value::Procedure(Procedure::Native("+")))
@@ -105,7 +105,7 @@ pub fn create_initial_globals() -> @hashmap.T[String, Value] {
   globals
 }
 
-/// 現在のコードチャンクを取得
+/// Get current code chunk
 fn get_current_chunk(vm : VMState) -> CodeChunk {
   if vm.current_chunk < 0 {
     vm.compiled_module.main
@@ -114,7 +114,7 @@ fn get_current_chunk(vm : VMState) -> CodeChunk {
   }
 }
 
-/// スタックからポップ
+/// pop from stack
 fn vm_pop(vm : VMState) -> Result[Value, VMError] {
   if vm.stack.length() == 0 {
     Err(VMError::StackUnderflow)
@@ -123,12 +123,12 @@ fn vm_pop(vm : VMState) -> Result[Value, VMError] {
   }
 }
 
-/// スタックにプッシュ
+/// push onto stack
 fn vm_push(vm : VMState, value : Value) -> Unit {
   vm.stack.push(value)
 }
 
-/// スタックトップを取得（ポップしない）
+/// Get top of stack (don't pop)
 fn vm_peek(vm : VMState) -> Result[Value, VMError] {
   if vm.stack.length() == 0 {
     Err(VMError::StackUnderflow)
@@ -137,7 +137,7 @@ fn vm_peek(vm : VMState) -> Result[Value, VMError] {
   }
 }
 
-/// ローカル変数を取得
+/// get local variable
 fn vm_get_local(vm : VMState, depth : Int, index : Int) -> Result[Value, VMError] {
   let frame_idx = vm.call_stack.length() - 1 - depth
   if frame_idx < 0 {
@@ -151,7 +151,7 @@ fn vm_get_local(vm : VMState, depth : Int, index : Int) -> Result[Value, VMError
   Ok(vm.stack[stack_idx])
 }
 
-/// ローカル変数を設定
+/// Set local variable
 fn vm_set_local(
   vm : VMState,
   depth : Int,
@@ -171,7 +171,7 @@ fn vm_set_local(
   Ok(())
 }
 
-/// プリミティブ操作を実行
+/// Perform primitive operations
 fn vm_exec_primop(
   vm : VMState,
   kind : PrimOpKind,
@@ -221,7 +221,7 @@ fn vm_exec_primop(
   }
 }
 
-/// 加算
+/// addition
 fn vm_exec_add(args : Array[Value]) -> Result[Value, VMError] {
   let mut result = 0
   for arg in args {
@@ -233,7 +233,7 @@ fn vm_exec_add(args : Array[Value]) -> Result[Value, VMError] {
   Ok(Value::Number(Number::Int(result)))
 }
 
-/// 減算
+/// subtraction
 fn vm_exec_sub(args : Array[Value]) -> Result[Value, VMError] {
   if args.length() == 0 {
     return Err(VMError::ArityError("- requires at least 1 argument"))
@@ -260,7 +260,7 @@ fn vm_exec_sub(args : Array[Value]) -> Result[Value, VMError] {
   Ok(Value::Number(Number::Int(result)))
 }
 
-/// 乗算
+/// multiplication
 fn vm_exec_mul(args : Array[Value]) -> Result[Value, VMError] {
   let mut result = 1
   for arg in args {
@@ -272,7 +272,7 @@ fn vm_exec_mul(args : Array[Value]) -> Result[Value, VMError] {
   Ok(Value::Number(Number::Int(result)))
 }
 
-/// 除算
+/// division
 fn vm_exec_div(args : Array[Value]) -> Result[Value, VMError] {
   if args.length() < 2 {
     return Err(VMError::ArityError("/ requires at least 2 arguments"))
@@ -298,7 +298,7 @@ fn vm_exec_div(args : Array[Value]) -> Result[Value, VMError] {
   Ok(Value::Number(Number::Int(result)))
 }
 
-/// 数値等価
+/// Numerical equivalent
 fn vm_exec_num_eq(args : Array[Value]) -> Result[Value, VMError] {
   if args.length() < 2 {
     return Ok(Value::Bool(true))
@@ -321,7 +321,7 @@ fn vm_exec_num_eq(args : Array[Value]) -> Result[Value, VMError] {
   Ok(Value::Bool(true))
 }
 
-/// 小なり
+/// Smaller
 fn vm_exec_lt(args : Array[Value]) -> Result[Value, VMError] {
   if args.length() < 2 {
     return Ok(Value::Bool(true))
@@ -346,7 +346,7 @@ fn vm_exec_lt(args : Array[Value]) -> Result[Value, VMError] {
   Ok(Value::Bool(true))
 }
 
-/// 大なり
+/// big
 fn vm_exec_gt(args : Array[Value]) -> Result[Value, VMError] {
   if args.length() < 2 {
     return Ok(Value::Bool(true))
@@ -371,7 +371,7 @@ fn vm_exec_gt(args : Array[Value]) -> Result[Value, VMError] {
   Ok(Value::Bool(true))
 }
 
-/// 以下
+/// below
 fn vm_exec_le(args : Array[Value]) -> Result[Value, VMError] {
   if args.length() < 2 {
     return Ok(Value::Bool(true))
@@ -396,7 +396,7 @@ fn vm_exec_le(args : Array[Value]) -> Result[Value, VMError] {
   Ok(Value::Bool(true))
 }
 
-/// 以上
+/// That's all
 fn vm_exec_ge(args : Array[Value]) -> Result[Value, VMError] {
   if args.length() < 2 {
     return Ok(Value::Bool(true))
@@ -517,7 +517,7 @@ fn vm_exec_length(args : Array[Value]) -> Result[Value, VMError] {
   Ok(Value::Number(Number::Int(count)))
 }
 
-/// 値の同一性チェック（簡易版）
+/// Value identity check (simplified version)
 fn vm_values_eq(a : Value, b : Value) -> Bool {
   match (a, b) {
     (Value::Nil, Value::Nil) => true
@@ -529,7 +529,7 @@ fn vm_values_eq(a : Value, b : Value) -> Bool {
   }
 }
 
-/// 値の等価性チェック（再帰的）
+/// Value equality check (recursive)
 fn vm_values_equal(a : Value, b : Value) -> Bool {
   match (a, b) {
     (Value::Nil, Value::Nil) => true
@@ -653,7 +653,7 @@ fn vm_exec_procedure_p(args : Array[Value]) -> Result[Value, VMError] {
   }
 }
 
-/// 値が真かどうかをチェック（Scheme では #f 以外はすべて真）
+/// Check if value is true (all are true except #f in Scheme)
 fn vm_is_truthy(value : Value) -> Bool {
   match value {
     Value::Bool(false) => false
@@ -661,7 +661,7 @@ fn vm_is_truthy(value : Value) -> Bool {
   }
 }
 
-/// 関数を呼び出す
+/// call a function
 fn vm_call_function(
   vm : VMState,
   func : Value,
@@ -679,11 +679,11 @@ fn vm_call_function(
         while vm.stack.length() > frame.base_ptr {
           let _ = vm.stack.pop()
         }
-        // キャプチャ値をプッシュ
+        // push capture value
         for capture in closure.captures {
           vm_push(vm, capture)
         }
-        // 引数をプッシュ
+        // push argument
         for arg in args {
           vm_push(vm, arg)
         }
@@ -697,11 +697,11 @@ fn vm_call_function(
           num_locals: closure.captures.length() + args.length(),
         }
         vm.call_stack.push(frame)
-        // キャプチャ値をプッシュ
+        // push capture value
         for capture in closure.captures {
           vm_push(vm, capture)
         }
-        // 引数をプッシュ
+        // push argument
         for arg in args {
           vm_push(vm, arg)
         }
@@ -740,7 +740,7 @@ fn vm_call_function(
   }
 }
 
-/// 1 命令を実行
+/// Execute 1 instruction
 fn vm_step(vm : VMState) -> Result[Bool, VMError] {
   let chunk = get_current_chunk(vm)
   if vm.ip >= chunk.code.length() {
@@ -818,7 +818,7 @@ fn vm_step(vm : VMState) -> Result[Bool, VMError] {
         }
         i = i + 1
       }
-      captures.rev_in_place()  // 正しい順序に戻す
+      captures.rev_in_place()  // restore correct order
       let closure : VMClosure = { chunk_idx, captures }
       vm_push(vm, Value::Procedure(Procedure::VMClosure(closure)))
       gc_track_closure()
@@ -854,7 +854,7 @@ fn vm_step(vm : VMState) -> Result[Bool, VMError] {
           match vm_pop(vm) {
             Ok(Value::Box(cell)) => {
               cell.val = new_val
-              // set! は unspecified を返す（ここでは nil）
+              // set! returns unspecified (here nil)
               vm_push(vm, Value::Nil)
               Ok(true)
             }
@@ -1098,9 +1098,9 @@ fn vm_step(vm : VMState) -> Result[Bool, VMError] {
   }
 }
 
-/// VM を実行
+/// Run the VM
 pub fn vm_run(vm : VMState) -> Result[Value, VMError] {
-  // トップレベル用のダミーフレームを作成
+  // Create a dummy frame for the top level
   let initial_frame : VMCallFrame = {
     return_chunk: -1,
     return_ip: 0,
@@ -1110,13 +1110,13 @@ pub fn vm_run(vm : VMState) -> Result[Value, VMError] {
   vm.call_stack.push(initial_frame)
 
   let mut step_count = 0
-  let gc_check_interval = 1000  // 1000ステップごとにGCチェック
+  let gc_check_interval = 1000  // GC check every 1000 steps
 
   while true {
     match vm_step(vm) {
       Ok(true) => {
         step_count = step_count + 1
-        // 定期的にGCチェック
+        // Regular GC check
         if step_count % gc_check_interval == 0 {
           let _ = gc_check_and_run(vm)
         }
@@ -1133,13 +1133,13 @@ pub fn vm_run(vm : VMState) -> Result[Value, VMError] {
   }
 }
 
-/// コンパイル済みモジュールを実行
+/// Run compiled module
 pub fn vm_run_module(compiled_module : CompiledModule) -> Result[Value, VMError] {
   let vm = new_vm_state(compiled_module)
   vm_run(vm)
 }
 
-/// S 式を VM で実行
+/// Execute S-expression in VM
 pub fn vm_eval(expr : SExpr) -> Result[Value, String] {
   match compile_to_module(expr) {
     Ok(compiled_module) =>

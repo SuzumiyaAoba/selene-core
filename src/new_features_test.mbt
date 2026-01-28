@@ -1,8 +1,8 @@
-/// 新機能のテスト
+/// Testing new features
 ///
-/// 文字列比較、可変ペア操作、高階関数のテスト
+/// Testing string comparisons, variable pair operations, and higher-order functions
 
-// ===== 文字列比較演算子 =====
+// ===== String comparison operators =====
 
 test "string<? compares strings lexicographically" {
   let env = initial_env()
@@ -49,7 +49,7 @@ test "string>=? with greater string" {
   }
 }
 
-// ===== 大文字小文字を区別しない文字列比較 =====
+// ===== Case-insensitive string comparison =====
 
 test "string-ci=? ignores case" {
   let env = initial_env()
@@ -96,7 +96,7 @@ test "string-ci>=? ignores case" {
   }
 }
 
-// ===== 可変ペア操作 =====
+// ===== Variable pair operation =====
 
 test "set-car! creates new pair with new car" {
   let env = initial_env()

@@ -1,50 +1,50 @@
-/// プロファイラ
+/// profiler
 ///
-/// VM の実行パフォーマンスを計測する:
-/// - 命令実行回数
-/// - 関数呼び出し統計
-/// - メモリアロケーション統計
-/// - ホットスポット分析
+/// Measure VM execution performance:
+/// - Number of instruction executions
+/// - Function call statistics
+/// - Memory allocation statistics
+/// - Hotspot analysis
 
-/// 命令統計
+/// instruction statistics
 pub(all) struct InstructionStats {
-  /// 命令名
+  /// instruction name
   name : String
-  /// 実行回数
+  /// Number of executions
   mut count : Int64
 }
 
-/// 関数統計
+/// function statistics
 pub(all) struct FunctionStats {
-  /// チャンクインデックス（-1 はメイン）
+  /// Chunk index (-1 is main)
   chunk_idx : Int
-  /// 関数名（debug_name または自動生成）
+  /// Function name (debug_name or auto-generated)
   name : String
-  /// 呼び出し回数
+  /// Number of calls
   mut call_count : Int64
-  /// 総命令実行回数
+  /// Total number of instruction executions
   mut instruction_count : Int64
 }
 
-/// プロファイラ状態
+/// profiler state
 pub(all) struct Profiler {
-  /// 命令種別ごとの統計
+  /// Statistics by instruction type
   instruction_stats : @hashmap.T[String, InstructionStats]
-  /// 関数ごとの統計
+  /// Statistics per function
   function_stats : @hashmap.T[Int, FunctionStats]
-  /// 総命令実行回数
+  /// Total number of instruction executions
   mut total_instructions : Int64
-  /// 総関数呼び出し回数
+  /// Total number of function calls
   mut total_calls : Int64
-  /// プロファイリングが有効かどうか
+  /// Whether profiling is enabled
   mut enabled : Bool
-  /// 現在のコールスタック（関数統計用）
+  /// Current call stack (for function statistics)
   call_stack : Array[Int]
-  /// GC 開始時の統計スナップショット
+  /// Statistics snapshot when GC starts
   mut gc_start_allocations : Int
 }
 
-/// 新しいプロファイラを作成
+/// Create a new profiler
 pub fn new_profiler() -> Profiler {
   {
     instruction_stats: @hashmap.new(),
@@ -57,7 +57,7 @@ pub fn new_profiler() -> Profiler {
   }
 }
 
-/// プロファイラをリセット
+/// Reset profiler
 pub fn profiler_reset(profiler : Profiler) -> Unit {
   profiler.instruction_stats.clear()
   profiler.function_stats.clear()
@@ -67,17 +67,17 @@ pub fn profiler_reset(profiler : Profiler) -> Unit {
   profiler.gc_start_allocations = 0
 }
 
-/// プロファイリングを有効化
+/// Enable profiling
 pub fn profiler_enable(profiler : Profiler) -> Unit {
   profiler.enabled = true
 }
 
-/// プロファイリングを無効化
+/// Disable profiling
 pub fn profiler_disable(profiler : Profiler) -> Unit {
   profiler.enabled = false
 }
 
-/// 命令実行を記録
+/// Record instruction execution
 pub fn profiler_record_instruction(profiler : Profiler, opcode : Opcode) -> Unit {
   if not(profiler.enabled) {
     return
@@ -95,7 +95,7 @@ pub fn profiler_record_instruction(profiler : Profiler, opcode : Opcode) -> Unit
     }
   }
 
-  // 現在の関数の命令カウントも更新
+  // Also updates the instruction count of the current function
   if profiler.call_stack.length() > 0 {
     let current_chunk = profiler.call_stack[profiler.call_stack.length() - 1]
     match profiler.function_stats.get(current_chunk) {
@@ -105,7 +105,7 @@ pub fn profiler_record_instruction(profiler : Profiler, opcode : Opcode) -> Unit
   }
 }
 
-/// 関数呼び出しを記録
+/// Record function calls
 pub fn profiler_record_call(
   profiler : Profiler,
   chunk_idx : Int,
@@ -137,7 +137,7 @@ pub fn profiler_record_call(
   }
 }
 
-/// 関数リターンを記録
+/// Record function return
 pub fn profiler_record_return(profiler : Profiler) -> Unit {
   if not(profiler.enabled) {
     return
@@ -148,7 +148,7 @@ pub fn profiler_record_return(profiler : Profiler) -> Unit {
   }
 }
 
-/// オペコードを名前に変換
+/// Convert opcode to name
 fn opcode_to_name(opcode : Opcode) -> String {
   match opcode {
     Opcode::Push(_) => "Push"
@@ -181,7 +181,7 @@ fn opcode_to_name(opcode : Opcode) -> String {
   }
 }
 
-/// 命令統計のレポートを生成
+/// Generate a report of instruction statistics
 pub fn profiler_instruction_report(profiler : Profiler) -> String {
   if profiler.total_instructions == 0L {
     return "No instructions executed."
@@ -190,13 +190,13 @@ pub fn profiler_instruction_report(profiler : Profiler) -> String {
   let mut result = "=== Instruction Statistics ===\n\n"
   result = result + "Total instructions: " + profiler.total_instructions.to_string() + "\n\n"
 
-  // 統計を配列に収集してソート
+  // Collect and sort statistics into an array
   let stats_list : Array[(String, Int64)] = []
   profiler.instruction_stats.each(fn(name, stats) {
     stats_list.push((name, stats.count))
   })
 
-  // 実行回数でソート（降順）
+  // Sort by number of executions (descending order)
   sort_stats_descending(stats_list)
 
   result = result + "By instruction type:\n"
@@ -215,7 +215,7 @@ pub fn profiler_instruction_report(profiler : Profiler) -> String {
   result
 }
 
-/// 関数統計のレポートを生成
+/// Generate a report of function statistics
 pub fn profiler_function_report(profiler : Profiler) -> String {
   if profiler.total_calls == 0L {
     return "No function calls recorded."
@@ -224,13 +224,13 @@ pub fn profiler_function_report(profiler : Profiler) -> String {
   let mut result = "=== Function Statistics ===\n\n"
   result = result + "Total calls: " + profiler.total_calls.to_string() + "\n\n"
 
-  // 統計を配列に収集
+  // Collect statistics into array
   let stats_list : Array[(String, Int64, Int64)] = []
   profiler.function_stats.each(fn(_idx, stats) {
     stats_list.push((stats.name, stats.call_count, stats.instruction_count))
   })
 
-  // 呼び出し回数でソート（降順）
+  // Sort by number of calls (descending order)
   sort_function_stats_descending(stats_list)
 
   result = result + "By function:\n"
@@ -257,11 +257,11 @@ pub fn profiler_function_report(profiler : Profiler) -> String {
   result
 }
 
-/// ホットスポット分析レポートを生成
+/// Generate hotspot analysis report
 pub fn profiler_hotspot_report(profiler : Profiler, top_n : Int) -> String {
   let mut result = "=== Hotspot Analysis (Top " + top_n.to_string() + ") ===\n\n"
 
-  // 命令ホットスポット
+  // instruction hotspot
   result = result + "Most executed instruction types:\n"
   let instr_list : Array[(String, Int64)] = []
   profiler.instruction_stats.each(fn(name, stats) {
@@ -281,7 +281,7 @@ pub fn profiler_hotspot_report(profiler : Profiler, top_n : Int) -> String {
 
   result = result + "\n"
 
-  // 関数ホットスポット
+  // function hotspot
   result = result + "Most called functions:\n"
   let func_list : Array[(String, Int64, Int64)] = []
   profiler.function_stats.each(fn(_idx, stats) {
@@ -302,7 +302,7 @@ pub fn profiler_hotspot_report(profiler : Profiler, top_n : Int) -> String {
   result
 }
 
-/// サマリーレポートを生成
+/// Generate summary report
 pub fn profiler_summary(profiler : Profiler) -> String {
   let mut result = "=== Profiler Summary ===\n\n"
 
@@ -311,7 +311,7 @@ pub fn profiler_summary(profiler : Profiler) -> String {
   result = result + "Unique instruction types: " + count_hashmap_entries(profiler.instruction_stats).to_string() + "\n"
   result = result + "Unique functions called: " + count_hashmap_entries_int(profiler.function_stats).to_string() + "\n"
 
-  // GC統計との連携
+  // Cooperation with GC statistics
   let gc_stats = get_gc_stats()
   result = result + "\nMemory allocations (from GC):\n"
   result = result + "  Closures: " + gc_stats.closures_allocated.to_string() + "\n"
@@ -323,7 +323,7 @@ pub fn profiler_summary(profiler : Profiler) -> String {
   result
 }
 
-/// 完全なレポートを生成
+/// Generate complete report
 pub fn profiler_full_report(profiler : Profiler) -> String {
   let mut result = profiler_summary(profiler) + "\n"
   result = result + profiler_instruction_report(profiler) + "\n"
@@ -332,23 +332,23 @@ pub fn profiler_full_report(profiler : Profiler) -> String {
   result
 }
 
-/// HashMap のエントリ数をカウント
+/// Count the number of entries in HashMap
 fn count_hashmap_entries(map : @hashmap.T[String, InstructionStats]) -> Int {
   let mut count = 0
   map.each(fn(_k, _v) { count = count + 1 })
   count
 }
 
-/// HashMap のエントリ数をカウント（Int キー）
+/// Count the number of entries in HashMap (Int key)
 fn count_hashmap_entries_int(map : @hashmap.T[Int, FunctionStats]) -> Int {
   let mut count = 0
   map.each(fn(_k, _v) { count = count + 1 })
   count
 }
 
-/// 統計を降順ソート
+/// Sort statistics in descending order
 fn sort_stats_descending(list : Array[(String, Int64)]) -> Unit {
-  // 単純なバブルソート
+  // simple bubble sort
   let n = list.length()
   let mut i = 0
   while i < n {
@@ -365,7 +365,7 @@ fn sort_stats_descending(list : Array[(String, Int64)]) -> Unit {
   }
 }
 
-/// 関数統計を降順ソート（呼び出し回数でソート）
+/// Sort function statistics in descending order (sort by number of calls)
 fn sort_function_stats_descending(list : Array[(String, Int64, Int64)]) -> Unit {
   let n = list.length()
   let mut i = 0
@@ -383,7 +383,7 @@ fn sort_function_stats_descending(list : Array[(String, Int64, Int64)]) -> Unit 
   }
 }
 
-/// 文字列を右パディング
+/// right padding string
 fn pad_right(s : String, width : Int) -> String {
   let len = s.length()
   if len >= width {
@@ -398,7 +398,7 @@ fn pad_right(s : String, width : Int) -> String {
   result
 }
 
-/// 文字列を切り詰め
+/// truncate string
 fn truncate_string(s : String, max_len : Int) -> String {
   if s.length() <= max_len {
     return s
@@ -413,12 +413,12 @@ fn truncate_string(s : String, max_len : Int) -> String {
   result + "..."
 }
 
-/// パーセンテージをフォーマット
+/// format percentage
 fn format_percentage(p : Double) -> String {
   format_double(p, 1) + "%"
 }
 
-/// 小数をフォーマット
+/// format decimal
 fn format_double(d : Double, decimals : Int) -> String {
   let int_part = d.to_int()
   let frac = d - int_part.to_double()
@@ -427,7 +427,7 @@ fn format_double(d : Double, decimals : Int) -> String {
   int_part.to_string() + "." + pad_left_zero(frac_int, decimals)
 }
 
-/// 10のべき乗
+/// power of 10
 fn pow10(n : Int) -> Int {
   let mut result = 1
   let mut i = 0
@@ -438,7 +438,7 @@ fn pow10(n : Int) -> Int {
   result
 }
 
-/// ゼロ埋め左パディング
+/// Zero-filled left padding
 fn pad_left_zero(n : Int, width : Int) -> String {
   let s = n.to_string()
   let len = s.length()
@@ -454,12 +454,12 @@ fn pad_left_zero(n : Int, width : Int) -> String {
   result + s
 }
 
-/// プロファイリング付きで VM を実行
+/// Run VM with profiling
 pub fn vm_run_with_profiler(
   vm : VMState,
   profiler : Profiler
 ) -> Result[Value, VMError] {
-  // トップレベルフレームを追加
+  // Add top level frame
   let initial_frame : VMCallFrame = {
     return_chunk: -1,
     return_ip: 0,
@@ -468,7 +468,7 @@ pub fn vm_run_with_profiler(
   }
   vm.call_stack.push(initial_frame)
 
-  // メイン関数の呼び出しを記録
+  // Record main function call
   profiler_record_call(profiler, -1, Some("main"))
 
   while true {
@@ -484,13 +484,13 @@ pub fn vm_run_with_profiler(
 
     let opcode = chunk.code[vm.ip]
 
-    // 命令実行前にプロファイル記録
+    // Profile recording before instruction execution
     profiler_record_instruction(profiler, opcode)
 
-    // Call/TailCall の場合は関数呼び出しも記録
+    // For Call/TailCall, function calls are also recorded.
     match opcode {
       Opcode::Call(_) | Opcode::TailCall(_) => {
-        // 関数呼び出しは vm_step 後に記録（呼び出し先が確定してから）
+        // Function calls are recorded after vm_step (after the call destination is determined)
         ()
       }
       Opcode::Return => {
@@ -501,7 +501,7 @@ pub fn vm_run_with_profiler(
 
     match vm_step(vm) {
       Ok(true) => {
-        // Call 後にチャンクが変わった場合は関数呼び出しを記録
+        // Record function call if chunk changes after Call
         match opcode {
           Opcode::Call(_) | Opcode::TailCall(_) => {
             let new_chunk_idx = vm.current_chunk
@@ -521,7 +521,7 @@ pub fn vm_run_with_profiler(
     }
   }
 
-  profiler_record_return(profiler)  // メイン関数のリターン
+  profiler_record_return(profiler)  // main function return
 
   if vm.stack.length() > 0 {
     Ok(vm.stack[vm.stack.length() - 1])
@@ -530,7 +530,7 @@ pub fn vm_run_with_profiler(
   }
 }
 
-/// S 式をプロファイリング付きで評価
+/// Evaluate S-expression with profiling
 pub fn vm_eval_with_profiler(
   expr : SExpr,
   profiler : Profiler

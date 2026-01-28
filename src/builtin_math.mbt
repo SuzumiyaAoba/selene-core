@@ -1,9 +1,9 @@
-/// 数学関数組み込み関数
+/// Mathematical Functions Embedded Functions
 ///
-/// Scheme の数学関数を実装する。
+/// Implement the mathematical functions of Scheme.
 
-/// 組み込み関数: floor
-/// (floor x) - x 以下の最大の整数を返す
+/// Built-in function: floor
+/// (floor x) - Returns the largest integer less than or equal to x
 fn builtin_floor(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("floor: requires exactly 1 argument"))
@@ -16,8 +16,8 @@ fn builtin_floor(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: ceiling
-/// (ceiling x) - x 以上の最小の整数を返す
+/// Built-in function: ceiling
+/// (ceiling x) - Returns the smallest integer greater than or equal to x
 fn builtin_ceiling(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("ceiling: requires exactly 1 argument"))
@@ -30,8 +30,8 @@ fn builtin_ceiling(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: truncate
-/// (truncate x) - x を 0 に向かって丸める
+/// Built-in function: truncate
+/// (truncate x) Round -x towards 0
 fn builtin_truncate(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("truncate: requires exactly 1 argument"))
@@ -43,8 +43,8 @@ fn builtin_truncate(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: round
-/// (round x) - x を最も近い整数に丸める（.5 の場合は偶数に丸める）
+/// Built-in functions: round
+/// (round x) - Round x to the nearest integer (even for 5)
 fn builtin_round(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("round: requires exactly 1 argument"))
@@ -52,7 +52,7 @@ fn builtin_round(args : Array[Value]) -> Result[Value, EvalError] {
   match args[0] {
     Value::Number(Number::Int(n)) => Ok(Value::Number(Number::Int(n)))
     Value::Number(Number::Real(r)) => {
-      // 四捨五入（.5の場合は最も近い偶数に丸める）
+      // Round (round to nearest even in case of 5)
       let rounded = r.round()
       Ok(Value::Number(Number::Int(rounded.to_int())))
     }
@@ -60,8 +60,8 @@ fn builtin_round(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: sqrt
-/// (sqrt x) - x の平方根を返す
+/// Built-in function: sqrt
+/// (sqrt x) Returns the square root of -x
 fn builtin_sqrt(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("sqrt: requires exactly 1 argument"))
@@ -76,8 +76,8 @@ fn builtin_sqrt(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: expt
-/// (expt x y) - x の y 乗を返す
+/// Built-in functions: expt
+/// (expt x y) Returns the y-squared of -x
 fn builtin_expt(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 2 {
     return Err(EvalError::ArityError("expt: requires exactly 2 arguments"))
@@ -93,7 +93,7 @@ fn builtin_expt(args : Array[Value]) -> Result[Value, EvalError] {
   match (base, exp) {
     (Number::Int(b), Number::Int(e)) => {
       if e >= 0 {
-        // 整数のべき乗（非負の指数）
+        // Power of integers (non-negative exponent)
         let result = b.to_double().pow(e.to_double())
         if result.floor() == result && result.to_int() != 0 {
           Ok(Value::Number(Number::Int(result.to_int())))
@@ -101,7 +101,7 @@ fn builtin_expt(args : Array[Value]) -> Result[Value, EvalError] {
           Ok(Value::Number(Number::Real(result)))
         }
       } else {
-        // 負の指数は実数になる
+        // Negative exponents become real numbers
         Ok(Value::Number(Number::Real(b.to_double().pow(e.to_double()))))
       }
     }
@@ -113,8 +113,8 @@ fn builtin_expt(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: exact?
-/// (exact? z) - z が正確な数（整数または有理数）かどうかを判定
+/// Built-in functions: exact?
+/// (exact? z) - Determine if z is an exact number (integer or rational)
 fn builtin_exact_p(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("exact?: requires exactly 1 argument"))
@@ -128,8 +128,8 @@ fn builtin_exact_p(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: inexact?
-/// (inexact? z) - z が不正確な数（実数または複素数）かどうかを判定
+/// Built-in function: inexact?
+/// (inexact? z) - Determine if z is an incorrect number (real or complex)
 fn builtin_inexact_p(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("inexact?: requires exactly 1 argument"))
@@ -143,8 +143,8 @@ fn builtin_inexact_p(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: sin
-/// (sin x) - x のサイン（正弦）を返す（ラジアン）
+/// Built-in function: sin
+/// (sin x) - Returns the sign (sine) of x (radian)
 fn builtin_sin(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("sin: requires exactly 1 argument"))
@@ -160,8 +160,8 @@ fn builtin_sin(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: cos
-/// (cos x) - x のコサイン（余弦）を返す（ラジアン）
+/// Built-in function: cos
+/// (cos x) - Returns the cosine of x (radian)
 fn builtin_cos(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("cos: requires exactly 1 argument"))
@@ -177,8 +177,8 @@ fn builtin_cos(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: tan
-/// (tan x) - x のタンジェント（正接）を返す（ラジアン）
+/// Built-in function: tan
+/// (tan x) Returns the tangent of -x (radian)
 fn builtin_tan(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("tan: requires exactly 1 argument"))
@@ -194,8 +194,8 @@ fn builtin_tan(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: asin
-/// (asin x) - x のアークサイン（逆正弦）を返す（ラジアン）
+/// Built-in functions: asin
+/// (asin x) - Returns the arcsine (inverse sine) of x (radian)
 fn builtin_asin(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("asin: requires exactly 1 argument"))
@@ -211,8 +211,8 @@ fn builtin_asin(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: acos
-/// (acos x) - x のアークコサイン（逆余弦）を返す（ラジアン）
+/// Built-in function: acos
+/// (acos x) - Returns the arc cosine of x (inverse cosine) (radian)
 fn builtin_acos(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("acos: requires exactly 1 argument"))
@@ -228,10 +228,10 @@ fn builtin_acos(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: atan
-/// (atan x) または (atan y x) - アークタンジェント（逆正接）を返す（ラジアン）
-/// 1引数の場合: atan(x)
-/// 2引数の場合: atan2(y, x)
+/// Built-in function: atan
+/// (atan x) or (atan y x) - returns arc tangent (inverse tangent) (radian)
+/// For one argument: atan (x)
+/// For two arguments: atan2 (y, x)
 fn builtin_atan(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() == 1 {
     match args[0] {
@@ -260,8 +260,8 @@ fn builtin_atan(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: exp
-/// (exp x) - e の x 乗を返す
+/// Built-in functions: exp
+/// (exp x) Returns the x power of -e
 fn builtin_exp(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("exp: requires exactly 1 argument"))
@@ -277,8 +277,8 @@ fn builtin_exp(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: log
-/// (log x) - x の自然対数を返す
+/// Built-in functions: log
+/// (log x) - Returns the natural logarithm of x
 fn builtin_log(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("log: requires exactly 1 argument"))
@@ -295,11 +295,11 @@ fn builtin_log(args : Array[Value]) -> Result[Value, EvalError] {
 }
 
 // =============================================================================
-// 複素数関連の組み込み関数
+// Built-in functions related to complex numbers
 // =============================================================================
 
-/// 組み込み関数: make-rectangular
-/// (make-rectangular real imag) - 実部と虚部から複素数を作成
+/// Built-in function: make-rectangular
+/// (make-rectangular real imag) - create complex numbers from real and imaginary parts
 fn builtin_make_rectangular(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 2 {
     return Err(EvalError::ArityError("make-rectangular: requires exactly 2 arguments"))
@@ -315,8 +315,8 @@ fn builtin_make_rectangular(args : Array[Value]) -> Result[Value, EvalError] {
   Ok(Value::Number(normalize_complex(real, imag)))
 }
 
-/// 組み込み関数: make-polar
-/// (make-polar magnitude angle) - 極形式から複素数を作成
+/// Built-in function: make-polar
+/// (make-polar magnitude angle) - create complex numbers from polar form
 fn builtin_make_polar(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 2 {
     return Err(EvalError::ArityError("make-polar: requires exactly 2 arguments"))
@@ -334,8 +334,8 @@ fn builtin_make_polar(args : Array[Value]) -> Result[Value, EvalError] {
   Ok(Value::Number(normalize_complex(real, imag)))
 }
 
-/// 組み込み関数: real-part
-/// (real-part z) - 複素数の実部を取得
+/// Built-in functions: real-part
+/// (real-part z) - get the real part of a complex number
 fn builtin_real_part(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("real-part: requires exactly 1 argument"))
@@ -347,21 +347,21 @@ fn builtin_real_part(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: imag-part
-/// (imag-part z) - 複素数の虚部を取得
+/// Built-in functions: imag-part
+/// (imag-part z) - get the imaginary part of a complex number
 fn builtin_imag_part(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("imag-part: requires exactly 1 argument"))
   }
   match args[0] {
     Value::Number(Number::Complex(_, i)) => Ok(Value::Number(Number::Real(i)))
-    Value::Number(_) => Ok(Value::Number(Number::Real(0.0))) // 実数の虚部は0
+    Value::Number(_) => Ok(Value::Number(Number::Real(0.0))) // The imaginary part of the real number is 0
     _ => Err(EvalError::TypeError("imag-part: argument must be a number"))
   }
 }
 
-/// 組み込み関数: magnitude
-/// (magnitude z) - 複素数の絶対値を取得
+/// Built-in function: magnitude
+/// (magnitude z) - get the absolute value of a complex number
 fn builtin_magnitude(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("magnitude: requires exactly 1 argument"))
@@ -379,8 +379,8 @@ fn builtin_magnitude(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: angle
-/// (angle z) - 複素数の偏角を取得
+/// Built-in functions: angle
+/// (angle z) - get the deflection angle of a complex number
 fn builtin_angle(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("angle: requires exactly 1 argument"))
@@ -390,7 +390,7 @@ fn builtin_angle(args : Array[Value]) -> Result[Value, EvalError] {
       Ok(Value::Number(Number::Real(@math.atan2(i, r))))
     }
     Value::Number(n) => {
-      // 実数の偏角は 0 または π
+      // The deflection angle of the real number is 0 or π
       let v = number_to_double(n)
       if v >= 0.0 {
         Ok(Value::Number(Number::Real(0.0)))
@@ -402,24 +402,24 @@ fn builtin_angle(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: complex?
-/// (complex? obj) - obj が複素数かどうかを判定（すべての数は複素数）
+/// Built-in functions: complex?
+/// (complex? obj) - Determines whether obj is a complex number (all numbers are complex numbers)
 fn builtin_complex_p(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("complex?: requires exactly 1 argument"))
   }
   match args[0] {
-    Value::Number(_) => Ok(Value::Bool(true)) // すべての数は複素数のサブセット
+    Value::Number(_) => Ok(Value::Bool(true)) // All numbers are a subset of complex numbers
     _ => Ok(Value::Bool(false))
   }
 }
 
 // =============================================================================
-// 有理数関連の組み込み関数
+// Rational Number-Related Built-In Functions
 // =============================================================================
 
-/// 組み込み関数: numerator
-/// (numerator q) - 有理数の分子を取得
+/// Built-in function: numerator
+/// (numerator q) - get the numerator of a rational number
 fn builtin_numerator(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("numerator: requires exactly 1 argument"))
@@ -431,8 +431,8 @@ fn builtin_numerator(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: denominator
-/// (denominator q) - 有理数の分母を取得
+/// built-in function: denominator
+/// (denominator q) - get denominator of rational numbers
 fn builtin_denominator(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("denominator: requires exactly 1 argument"))
@@ -444,8 +444,8 @@ fn builtin_denominator(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// 組み込み関数: rational?
-/// (rational? obj) - obj が有理数かどうかを判定
+/// Built-in functions: rational?
+/// (rational? obj) - Determine if obj is a rational number
 fn builtin_rational_p(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("rational?: requires exactly 1 argument"))

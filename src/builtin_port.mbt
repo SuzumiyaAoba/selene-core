@@ -1,12 +1,12 @@
-/// ポート操作の組み込み関数
+/// Built-in functions for port operations
 ///
-/// R5RS のポート関連関数を実装する。
+/// Implement the port-related functions of R5RS.
 
 // =============================================================================
-// ポート述語
+// Port predicate
 // =============================================================================
 
-/// input-port? - 入力ポートかどうか
+/// input-port? - Whether it is an input port
 fn builtin_input_port_p(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("input-port?: requires exactly 1 argument"))
@@ -17,7 +17,7 @@ fn builtin_input_port_p(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// output-port? - 出力ポートかどうか
+/// output-port? - Whether it is an output port
 fn builtin_output_port_p(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("output-port?: requires exactly 1 argument"))
@@ -28,7 +28,7 @@ fn builtin_output_port_p(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// port? - ポートかどうか
+/// port? - Whether or not it is a port
 fn builtin_port_p(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("port?: requires exactly 1 argument"))
@@ -40,10 +40,10 @@ fn builtin_port_p(args : Array[Value]) -> Result[Value, EvalError] {
 }
 
 // =============================================================================
-// ファイルポート操作
+// File port operations
 // =============================================================================
 
-/// open-input-file - 入力ファイルを開く
+/// open-input-file - Open the input file
 fn builtin_open_input_file(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("open-input-file: requires exactly 1 argument"))
@@ -71,7 +71,7 @@ fn builtin_open_input_file(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// open-output-file - 出力ファイルを開く
+/// open-output-file - Open the output file
 fn builtin_open_output_file(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("open-output-file: requires exactly 1 argument"))
@@ -99,7 +99,7 @@ fn builtin_open_output_file(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// close-input-port - 入力ポートを閉じる
+/// close-input-port - Close the input port
 fn builtin_close_input_port(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(
@@ -112,7 +112,7 @@ fn builtin_close_input_port(args : Array[Value]) -> Result[Value, EvalError] {
         return Err(EvalError::TypeError("close-input-port: not an input port"))
       }
       if not(port.open.val) {
-        return Ok(Value::Nil) // すでに閉じている
+        return Ok(Value::Nil) // Already closed
       }
       let _ = close_port(port.id)
       port.open.val = false
@@ -122,7 +122,7 @@ fn builtin_close_input_port(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// close-output-port - 出力ポートを閉じる
+/// close-output-port - Close the output port
 fn builtin_close_output_port(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(
@@ -135,7 +135,7 @@ fn builtin_close_output_port(args : Array[Value]) -> Result[Value, EvalError] {
         return Err(EvalError::TypeError("close-output-port: not an output port"))
       }
       if not(port.open.val) {
-        return Ok(Value::Nil) // すでに閉じている
+        return Ok(Value::Nil) // Already closed
       }
       let _ = close_port(port.id)
       port.open.val = false
@@ -146,16 +146,16 @@ fn builtin_close_output_port(args : Array[Value]) -> Result[Value, EvalError] {
 }
 
 // =============================================================================
-// 入力操作
+// Input operation
 // =============================================================================
 
-/// read-char - ポートから1文字読み取る
+/// read-char - read a character from the port
 fn builtin_read_char(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() > 1 {
     return Err(EvalError::ArityError("read-char: requires 0 or 1 argument"))
   }
   if args.length() == 0 {
-    // 標準入力から読み取る（未実装）
+    // Read from standard input (not implemented)
     return Err(EvalError::TypeError("read-char: standard input not supported"))
   }
   match args[0] {
@@ -168,7 +168,7 @@ fn builtin_read_char(args : Array[Value]) -> Result[Value, EvalError] {
       }
       let char_code = read_char_from_port(port.id)
       if char_code < 0 {
-        // EOF - eof-objectを返す（ここではNilで代用）
+        // Returns EoF-eof-object (substituted for Nil in this case)
         Ok(Value::Symbol("#<eof>"))
       } else {
         Ok(Value::Char(char_code.unsafe_to_char()))
@@ -178,13 +178,13 @@ fn builtin_read_char(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// peek-char - ポートから1文字先読み（消費しない）
+/// peek-char - read one character ahead of the port (do not consume)
 fn builtin_peek_char(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() > 1 {
     return Err(EvalError::ArityError("peek-char: requires 0 or 1 argument"))
   }
   if args.length() == 0 {
-    // 標準入力から読み取る（未実装）
+    // Read from standard input (not implemented)
     return Err(EvalError::TypeError("peek-char: standard input not supported"))
   }
   match args[0] {
@@ -207,7 +207,7 @@ fn builtin_peek_char(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
-/// eof-object? - EOFオブジェクトかどうか
+/// eof-object? -Is it an EoF object?
 fn builtin_eof_object_p(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 1 {
     return Err(EvalError::ArityError("eof-object?: requires exactly 1 argument"))
@@ -219,10 +219,10 @@ fn builtin_eof_object_p(args : Array[Value]) -> Result[Value, EvalError] {
 }
 
 // =============================================================================
-// 出力操作
+// Output operation
 // =============================================================================
 
-/// write-char - ポートに1文字書き込む
+/// write-char - write one character to the port
 fn builtin_write_char_port(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() < 1 || args.length() > 2 {
     return Err(EvalError::ArityError("write-char: requires 1 or 2 arguments"))
@@ -232,7 +232,7 @@ fn builtin_write_char_port(args : Array[Value]) -> Result[Value, EvalError] {
     _ => return Err(EvalError::TypeError("write-char: expected char"))
   }
   if args.length() == 1 {
-    // 標準出力に書き込む
+    // Write to stdout
     println(char_val.to_string())
     return Ok(Value::Nil)
   }

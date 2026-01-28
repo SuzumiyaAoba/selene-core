@@ -1,11 +1,11 @@
-/// 識別子/整数/括弧/コメントに対応した最小レキサ。
+/// A minimal lexer that supports identifiers/integers/parentheses/comments.
 
-/// 空白文字かどうかを判定する。
+/// Determine whether it is a blank character.
 fn is_whitespace(ch : Char) -> Bool {
   ch == ' ' || ch == '\t' || ch == '\n' || ch == '\r'
 }
 
-/// 数字文字を 0-9 に変換する（不正なら -1）。
+/// Convert numeric characters to 0-9 (-1 if invalid).
 fn digit_value(ch : Char) -> Int {
   match ch {
     '0' => 0
@@ -22,17 +22,17 @@ fn digit_value(ch : Char) -> Int {
   }
 }
 
-/// 数字かどうかを判定する。
+/// Determine whether it is a number.
 fn is_digit(ch : Char) -> Bool {
   digit_value(ch) >= 0
 }
 
-/// 英字かどうかを判定する。
+/// Determine whether it is an alphabetic character.
 fn is_letter(ch : Char) -> Bool {
   (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z')
 }
 
-/// 記号文字（識別子に使える記号）かどうかを判定する。
+/// Determine whether it is a symbol character (a symbol that can be used as an identifier).
 fn is_symbol(ch : Char) -> Bool {
   match ch {
     '!' | '$' | '%' | '&' | '*' | '/' | ':' | '<' | '=' | '>' | '?' | '^' | '_' | '~' | '+' | '-' => true
@@ -40,17 +40,17 @@ fn is_symbol(ch : Char) -> Bool {
   }
 }
 
-/// 識別子の先頭として許される文字かどうかを判定する。
+/// Determines whether the character is allowed as the first character of an identifier.
 fn is_ident_initial(ch : Char) -> Bool {
   is_letter(ch) || is_symbol(ch)
 }
 
-/// 識別子の2文字目以降として許される文字かどうかを判定する。
+/// Determine whether the second character and subsequent characters in the identifier are allowed.
 fn is_ident_subsequent(ch : Char) -> Bool {
   is_ident_initial(ch) || is_digit(ch)
 }
 
-/// 文字列をトークン列へ分割する。
+/// Split a string into a string of tokens.
 pub fn tokenize(input : String) -> Array[Token] {
   let chars : Array[Char] = input.iter().collect()
   let len = chars.length()
@@ -79,7 +79,7 @@ pub fn tokenize(input : String) -> Array[Token] {
       i = i + 1
       continue
     }
-    // クォート系トークン
+    // Quote token
     if ch == '\'' {
       tokens.push(Token::Quote)
       i = i + 1
@@ -115,11 +115,11 @@ pub fn tokenize(input : String) -> Array[Token] {
             continue
           }
           '\\' => {
-            // 文字リテラル #\x
+            // character literal #\x
             i = i + 1
             if i < len {
               let char_value = chars[i]
-              // 特殊文字名のチェック
+              // Check for special character names
               if is_letter(char_value) {
                 let builder = StringBuilder::new()
                 let _ = while i < len && is_letter(chars[i]) {
@@ -133,12 +133,12 @@ pub fn tokenize(input : String) -> Array[Token] {
                   "tab" => '\t'
                   "return" => '\r'
                   _ => {
-                    // 単一文字として扱う（最初の文字のみ）
+                    // Treat as a single character (first character only)
                     let name_chars : Array[Char] = char_name.iter().collect()
                     if name_chars.length() == 1 {
                       name_chars[0]
                     } else {
-                      panic()  // 未対応の文字名
+                      panic()  // Unsupported character name
                     }
                   }
                 }
@@ -150,17 +150,17 @@ pub fn tokenize(input : String) -> Array[Token] {
                 continue
               }
             } else {
-              panic()  // #\ の後に何もない
+              panic()  // Nothing after #\
             }
           }
-          _ => panic()  // 未対応の # リテラル
+          _ => panic()  // Unsupported # literal
         }
       } else {
-        panic()  // # の後に何もない
+        panic()  // nothing after #
       }
     }
     if ch == '"' {
-      // 文字列リテラル
+      // string literal
       i = i + 1
       let builder = StringBuilder::new()
       let _ = while i < len {
@@ -170,7 +170,7 @@ pub fn tokenize(input : String) -> Array[Token] {
           tokens.push(Token::String(builder.to_string()))
           break
         } else if str_ch == '\\' {
-          // エスケープシーケンス
+          // escape sequence
           i = i + 1
           if i < len {
             match chars[i] {
@@ -186,7 +186,7 @@ pub fn tokenize(input : String) -> Array[Token] {
             }
             i = i + 1
           } else {
-            panic()  // エスケープの後に何もない
+            panic()  // nothing after escape
           }
         } else {
           builder.write_char(str_ch)
@@ -195,15 +195,15 @@ pub fn tokenize(input : String) -> Array[Token] {
       } else { () }
       continue
     }
-    // ドットの処理（improper list または ellipsis）
+    // Dot handling (improper list or ellipsis)
     if ch == '.' {
-      // ...（ellipsis）かチェック
+      // ...(ellipsis) check
       if i + 2 < len && chars[i + 1] == '.' && chars[i + 2] == '.' {
         tokens.push(Token::Identifier("..."))
         i = i + 3
         continue
       } else {
-        // 単一のドット（improper list）
+        // single dot (improper list)
         tokens.push(Token::Dot)
         i = i + 1
         continue

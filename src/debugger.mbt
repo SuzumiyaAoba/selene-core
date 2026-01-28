@@ -1,82 +1,82 @@
-/// デバッガ
+/// debugger
 ///
-/// VM のデバッグ機能を提供する:
-/// - ブレークポイントの設定/解除
-/// - ステップ実行
-/// - 状態検査（スタック、変数、コールスタック）
-/// - コード表示
+/// Provides VM debugging capabilities:
+/// - Set/clear breakpoints
+/// - Step execution
+/// - State inspection (stack, variables, call stack)
+/// - Code display
 
-/// ブレークポイント
+/// breakpoint
 pub(all) struct Breakpoint {
-  /// ブレークポイントID
+  /// breakpoint id
   id : Int
-  /// チャンクインデックス（-1 はメインチャンク）
+  /// Chunk index (-1 is main chunk)
   chunk_idx : Int
-  /// 命令アドレス
+  /// instruction address
   address : Int
-  /// 有効かどうか
+  /// Is it valid?
   mut enabled : Bool
-  /// ヒット回数
+  /// Number of hits
   mut hit_count : Int
 }
 
-/// デバッグイベント
+/// debug event
 pub(all) enum DebugEvent {
-  /// ブレークポイントにヒット
-  BreakpointHit(Int)  // ブレークポイントID
-  /// ステップ完了
+  /// hit breakpoint
+  BreakpointHit(Int)  // breakpoint id
+  /// Step completed
   StepComplete
-  /// 実行完了
+  /// Execution completed
   ExecutionComplete(Value)
-  /// エラー発生
+  /// Error occurred
   Error(VMError)
 }
 
-/// デバッガ状態
+/// debugger state
 pub(all) struct Debugger {
-  /// VM 状態への参照
+  /// Reference to VM state
   vm : VMState
-  /// ブレークポイントリスト
+  /// breakpoint list
   breakpoints : Array[Breakpoint]
-  /// 次のブレークポイントID
+  /// next breakpoint id
   mut next_bp_id : Int
-  /// ステップモード
+  /// step mode
   mut step_mode : StepMode
-  /// ステップ時の開始コールスタック深さ
+  /// Starting call stack depth when stepping
   mut step_start_depth : Int
-  /// デバッグが有効かどうか
+  /// Whether debugging is enabled
   mut enabled : Bool
-  /// 実行履歴（最近の命令）
+  /// Execution history (recent instructions)
   execution_history : Array[ExecutionRecord]
-  /// 履歴の最大長
+  /// Maximum length of history
   history_max_length : Int
 }
 
-/// ステップモード
+/// step mode
 pub(all) enum StepMode {
-  /// ステップなし（通常実行）
+  /// No step (normal execution)
   None
-  /// 1命令ステップ
+  /// 1 instruction step
   StepInto
-  /// 関数呼び出しをスキップ
+  /// Skip function call
   StepOver
-  /// 現在の関数から出るまで実行
+  /// Run until exit from current function
   StepOut
 }
 
-/// 実行記録
+/// Execution record
 pub(all) struct ExecutionRecord {
-  /// チャンクインデックス
+  /// chunk index
   chunk_idx : Int
-  /// 命令アドレス
+  /// instruction address
   address : Int
-  /// 実行された命令
+  /// instruction executed
   opcode : String
-  /// スタックの深さ
+  /// stack depth
   stack_depth : Int
 }
 
-/// 新しいデバッガを作成
+/// create new debugger
 pub fn new_debugger(vm : VMState) -> Debugger {
   {
     vm,
@@ -90,7 +90,7 @@ pub fn new_debugger(vm : VMState) -> Debugger {
   }
 }
 
-/// ブレークポイントを追加
+/// Add breakpoint
 pub fn add_breakpoint(
   debugger : Debugger,
   chunk_idx : Int,
@@ -108,12 +108,12 @@ pub fn add_breakpoint(
   bp.id
 }
 
-/// メインチャンクにブレークポイントを追加
+/// Add breakpoint to main chunk
 pub fn add_breakpoint_main(debugger : Debugger, address : Int) -> Int {
   add_breakpoint(debugger, -1, address)
 }
 
-/// ブレークポイントを削除
+/// remove breakpoint
 pub fn remove_breakpoint(debugger : Debugger, bp_id : Int) -> Bool {
   let new_bps : Array[Breakpoint] = []
   let mut found = false
@@ -131,7 +131,7 @@ pub fn remove_breakpoint(debugger : Debugger, bp_id : Int) -> Bool {
   found
 }
 
-/// ブレークポイントを有効化
+/// Enable breakpoint
 pub fn enable_breakpoint(debugger : Debugger, bp_id : Int) -> Bool {
   for bp in debugger.breakpoints {
     if bp.id == bp_id {
@@ -142,7 +142,7 @@ pub fn enable_breakpoint(debugger : Debugger, bp_id : Int) -> Bool {
   false
 }
 
-/// ブレークポイントを無効化
+/// Disable breakpoint
 pub fn disable_breakpoint(debugger : Debugger, bp_id : Int) -> Bool {
   for bp in debugger.breakpoints {
     if bp.id == bp_id {
@@ -153,17 +153,17 @@ pub fn disable_breakpoint(debugger : Debugger, bp_id : Int) -> Bool {
   false
 }
 
-/// 全てのブレークポイントをクリア
+/// clear all breakpoints
 pub fn clear_breakpoints(debugger : Debugger) -> Unit {
   debugger.breakpoints.clear()
 }
 
-/// ブレークポイント一覧を取得
+/// Get breakpoint list
 pub fn list_breakpoints(debugger : Debugger) -> Array[Breakpoint] {
   debugger.breakpoints
 }
 
-/// 現在の位置にブレークポイントがあるかチェック
+/// Check if there is a breakpoint at the current position
 fn check_breakpoint(debugger : Debugger) -> Int? {
   let chunk_idx = debugger.vm.current_chunk
   let address = debugger.vm.ip
@@ -177,7 +177,7 @@ fn check_breakpoint(debugger : Debugger) -> Int? {
   None
 }
 
-/// 現在のコードチャンクを取得
+/// Get current code chunk
 fn debugger_get_current_chunk(debugger : Debugger) -> CodeChunk {
   if debugger.vm.current_chunk < 0 {
     debugger.vm.compiled_module.main
@@ -186,7 +186,7 @@ fn debugger_get_current_chunk(debugger : Debugger) -> CodeChunk {
   }
 }
 
-/// 1命令ステップ実行
+/// 1 instruction step execution
 pub fn debug_step(debugger : Debugger) -> Result[DebugEvent, VMError] {
   if not(debugger.enabled) {
     return Err(VMError::RuntimeError("Debugger is disabled"))
@@ -197,7 +197,7 @@ pub fn debug_step(debugger : Debugger) -> Result[DebugEvent, VMError] {
     return Ok(DebugEvent::ExecutionComplete(Value::Nil))
   }
 
-  // 実行前の状態を記録
+  // Record the state before execution
   let record : ExecutionRecord = {
     chunk_idx: debugger.vm.current_chunk,
     address: debugger.vm.ip,
@@ -205,10 +205,10 @@ pub fn debug_step(debugger : Debugger) -> Result[DebugEvent, VMError] {
     stack_depth: debugger.vm.stack.length(),
   }
 
-  // 履歴に追加
+  // Add to history
   debugger.execution_history.push(record)
   if debugger.execution_history.length() > debugger.history_max_length {
-    // 古い履歴を削除
+    // Delete old history
     let new_history : Array[ExecutionRecord] = []
     let mut i = 1
     while i < debugger.execution_history.length() {
@@ -221,7 +221,7 @@ pub fn debug_step(debugger : Debugger) -> Result[DebugEvent, VMError] {
     }
   }
 
-  // 1命令実行
+  // 1 instruction execution
   match vm_step(debugger.vm) {
     Ok(true) => Ok(DebugEvent::StepComplete)
     Ok(false) => {
@@ -235,7 +235,7 @@ pub fn debug_step(debugger : Debugger) -> Result[DebugEvent, VMError] {
   }
 }
 
-/// 次のブレークポイントまで実行
+/// Run to next breakpoint
 pub fn debug_continue(debugger : Debugger) -> Result[DebugEvent, VMError] {
   if not(debugger.enabled) {
     return Err(VMError::RuntimeError("Debugger is disabled"))
@@ -244,13 +244,13 @@ pub fn debug_continue(debugger : Debugger) -> Result[DebugEvent, VMError] {
   debugger.step_mode = StepMode::None
 
   while true {
-    // ブレークポイントチェック
+    // breakpoint check
     match check_breakpoint(debugger) {
       Some(bp_id) => return Ok(DebugEvent::BreakpointHit(bp_id))
       None => ()
     }
 
-    // 1命令実行
+    // 1 instruction execution
     match debug_step(debugger) {
       Ok(DebugEvent::StepComplete) => continue
       Ok(event) => return Ok(event)
@@ -261,13 +261,13 @@ pub fn debug_continue(debugger : Debugger) -> Result[DebugEvent, VMError] {
   Ok(DebugEvent::ExecutionComplete(Value::Nil))
 }
 
-/// step into: 1命令実行（関数呼び出しも入る）
+/// step into: Execute one instruction (also includes function calls)
 pub fn debug_step_into(debugger : Debugger) -> Result[DebugEvent, VMError] {
   debugger.step_mode = StepMode::StepInto
   debug_step(debugger)
 }
 
-/// step over: 関数呼び出しをスキップして次の命令へ
+/// step over: Skip function call and go to next instruction
 pub fn debug_step_over(debugger : Debugger) -> Result[DebugEvent, VMError] {
   if not(debugger.enabled) {
     return Err(VMError::RuntimeError("Debugger is disabled"))
@@ -277,14 +277,14 @@ pub fn debug_step_over(debugger : Debugger) -> Result[DebugEvent, VMError] {
   debugger.step_mode = StepMode::StepOver
   debugger.step_start_depth = start_depth
 
-  // 最初の1命令を実行
+  // execute the first instruction
   match debug_step(debugger) {
     Ok(DebugEvent::StepComplete) => ()
     Ok(event) => return Ok(event)
     Err(e) => return Err(e)
   }
 
-  // コールスタックの深さが開始時以下になるまで実行
+  // Run until the call stack depth is less than or equal to the start time
   while debugger.vm.call_stack.length() > start_depth {
     match debug_step(debugger) {
       Ok(DebugEvent::StepComplete) => continue
@@ -297,7 +297,7 @@ pub fn debug_step_over(debugger : Debugger) -> Result[DebugEvent, VMError] {
   Ok(DebugEvent::StepComplete)
 }
 
-/// step out: 現在の関数から出るまで実行
+/// step out: run until exiting the current function
 pub fn debug_step_out(debugger : Debugger) -> Result[DebugEvent, VMError] {
   if not(debugger.enabled) {
     return Err(VMError::RuntimeError("Debugger is disabled"))
@@ -307,7 +307,7 @@ pub fn debug_step_out(debugger : Debugger) -> Result[DebugEvent, VMError] {
   debugger.step_mode = StepMode::StepOut
   debugger.step_start_depth = start_depth
 
-  // コールスタックの深さが開始時より小さくなるまで実行
+  // Run until call stack depth is less than when started
   while debugger.vm.call_stack.length() >= start_depth {
     match debug_step(debugger) {
       Ok(DebugEvent::StepComplete) => continue
@@ -320,7 +320,7 @@ pub fn debug_step_out(debugger : Debugger) -> Result[DebugEvent, VMError] {
   Ok(DebugEvent::StepComplete)
 }
 
-/// 最後まで実行
+/// run to the end
 pub fn debug_run(debugger : Debugger) -> Result[Value, VMError] {
   if not(debugger.enabled) {
     return Err(VMError::RuntimeError("Debugger is disabled"))
@@ -332,7 +332,7 @@ pub fn debug_run(debugger : Debugger) -> Result[Value, VMError] {
     match debug_step(debugger) {
       Ok(DebugEvent::StepComplete) => continue
       Ok(DebugEvent::ExecutionComplete(v)) => return Ok(v)
-      Ok(DebugEvent::BreakpointHit(_)) => continue  // ブレークポイントを無視
+      Ok(DebugEvent::BreakpointHit(_)) => continue  // ignore breakpoint
       Ok(DebugEvent::Error(e)) => return Err(e)
       Err(e) => return Err(e)
     }
@@ -341,7 +341,7 @@ pub fn debug_run(debugger : Debugger) -> Result[Value, VMError] {
   Ok(Value::Nil)
 }
 
-/// 現在のスタック状態を取得
+/// Get current stack state
 pub fn debug_get_stack(debugger : Debugger) -> Array[Value] {
   let result : Array[Value] = []
   for v in debugger.vm.stack {
@@ -350,7 +350,7 @@ pub fn debug_get_stack(debugger : Debugger) -> Array[Value] {
   result
 }
 
-/// スタックの文字列表現を取得
+/// Get string representation of stack
 pub fn debug_stack_to_string(debugger : Debugger) -> String {
   let stack = debugger.vm.stack
   if stack.length() == 0 {
@@ -366,7 +366,7 @@ pub fn debug_stack_to_string(debugger : Debugger) -> String {
   result
 }
 
-/// コールスタックを取得
+/// get call stack
 pub fn debug_get_call_stack(debugger : Debugger) -> Array[VMCallFrame] {
   let result : Array[VMCallFrame] = []
   for f in debugger.vm.call_stack {
@@ -375,7 +375,7 @@ pub fn debug_get_call_stack(debugger : Debugger) -> Array[VMCallFrame] {
   result
 }
 
-/// コールスタックの文字列表現を取得
+/// Get a string representation of the call stack
 pub fn debug_call_stack_to_string(debugger : Debugger) -> String {
   let call_stack = debugger.vm.call_stack
   if call_stack.length() == 0 {
@@ -403,7 +403,7 @@ pub fn debug_call_stack_to_string(debugger : Debugger) -> String {
   result
 }
 
-/// 現在の位置情報を取得
+/// Get current location information
 pub fn debug_get_location(debugger : Debugger) -> String {
   let chunk_idx = debugger.vm.current_chunk
   let ip = debugger.vm.ip
@@ -421,7 +421,7 @@ pub fn debug_get_location(debugger : Debugger) -> String {
   chunk_name + ":" + ip.to_string()
 }
 
-/// 現在の命令を取得
+/// get current instruction
 pub fn debug_get_current_instruction(debugger : Debugger) -> String? {
   let chunk = debugger_get_current_chunk(debugger)
   let ip = debugger.vm.ip
@@ -433,7 +433,7 @@ pub fn debug_get_current_instruction(debugger : Debugger) -> String? {
   Some(chunk.code[ip].to_string())
 }
 
-/// 周辺のコードを表示
+/// Show surrounding codes
 pub fn debug_disassemble(
   debugger : Debugger,
   context_lines : Int
@@ -459,7 +459,7 @@ pub fn debug_disassemble(
   result
 }
 
-/// ローカル変数を表示
+/// show local variables
 pub fn debug_locals_to_string(debugger : Debugger) -> String {
   if debugger.vm.call_stack.length() == 0 {
     return "Locals: (no active frame)"
@@ -483,12 +483,12 @@ pub fn debug_locals_to_string(debugger : Debugger) -> String {
   result
 }
 
-/// グローバル変数を表示
+/// Show global variables
 pub fn debug_globals_to_string(debugger : Debugger) -> String {
   let mut result = "Globals:\n"
   let mut count = 0
   debugger.vm.globals.each(fn(name, value) {
-    // ネイティブ関数は省略
+    // Native functions omitted
     match value {
       Value::Procedure(Procedure::Native(_)) => ()
       _ => {
@@ -503,7 +503,7 @@ pub fn debug_globals_to_string(debugger : Debugger) -> String {
   result
 }
 
-/// 実行履歴を表示
+/// Show execution history
 pub fn debug_history_to_string(debugger : Debugger, count : Int) -> String {
   let history = debugger.execution_history
   if history.length() == 0 {
@@ -524,11 +524,11 @@ pub fn debug_history_to_string(debugger : Debugger, count : Int) -> String {
   result
 }
 
-/// デバッグ状態の全体サマリーを表示
+/// Show overall summary of debug status
 pub fn debug_summary(debugger : Debugger) -> String {
   let mut result = "=== Debug Summary ===\n\n"
 
-  // 位置情報
+  // Location information
   result = result + "Location: " + debug_get_location(debugger) + "\n"
   match debug_get_current_instruction(debugger) {
     Some(instr) => result = result + "Current: " + instr + "\n"
@@ -536,22 +536,22 @@ pub fn debug_summary(debugger : Debugger) -> String {
   }
   result = result + "\n"
 
-  // コード
+  // Code
   result = result + debug_disassemble(debugger, 3) + "\n"
 
-  // スタック
+  // stack
   result = result + debug_stack_to_string(debugger) + "\n"
 
-  // ローカル変数
+  // local variable
   result = result + debug_locals_to_string(debugger) + "\n"
 
-  // コールスタック
+  // call stack
   result = result + debug_call_stack_to_string(debugger)
 
   result
 }
 
-/// Value を表示用の文字列に変換
+/// Convert Value to string for display
 fn debug_value_to_string(value : Value) -> String {
   match value {
     Value::Nil => "()"
@@ -580,7 +580,7 @@ fn debug_value_to_string(value : Value) -> String {
   }
 }
 
-/// 文字列を指定幅で左パディング
+/// Left padding a string to a specified width
 fn pad_start(s : String, width : Int, pad_char : Char) -> String {
   let len = s.length()
   if len >= width {
