@@ -17,8 +17,6 @@ Guile の `r5rs_pitfall.test` を `src/tests/r5rs_pitfall_test.mbt` に移植し
   - `string->symbol` が未実装
 - `enable_named_let = false`
   - named `let` が未実装
-- `enable_append = false`
-  - `append` が VM 側で未実装
 
 ## 参考
 

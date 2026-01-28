@@ -206,6 +206,7 @@ fn vm_exec_primop(
     PrimOpKind::Not => vm_exec_not(args)
     PrimOpKind::List => vm_exec_list(args)
     PrimOpKind::Length => vm_exec_length(args)
+    PrimOpKind::Append => vm_exec_append(args)
     PrimOpKind::Eq => vm_exec_eq_p(args)
     PrimOpKind::Eqv => vm_exec_eqv_p(args)
     PrimOpKind::Equal => vm_exec_equal_p(args)
@@ -515,6 +516,56 @@ fn vm_exec_length(args : Array[Value]) -> Result[Value, VMError] {
     }
   }
   Ok(Value::Number(Number::Int(count)))
+}
+
+/// append
+fn vm_exec_append(args : Array[Value]) -> Result[Value, VMError] {
+  if args.length() == 0 {
+    return Ok(Value::Nil)
+  }
+  if args.length() == 1 {
+    return Ok(args[0])
+  }
+
+  let lists : Array[Value] = []
+  let mut i = 0
+  let len = args.length() - 1
+  let _ = while i < len {
+    lists.push(args[i])
+    i = i + 1
+  } else {
+    ()
+  }
+
+  let mut result = args[args.length() - 1]
+
+  let mut j = lists.length()
+  let _ = while j > 0 {
+    j = j - 1
+    result = match vm_append_two_lists(lists[j], result) {
+      Ok(v) => v
+      Err(e) => return Err(e)
+    }
+  } else {
+    ()
+  }
+
+  Ok(result)
+}
+
+fn vm_append_two_lists(list1 : Value, list2 : Value) -> Result[Value, VMError] {
+  match list1 {
+    Value::Nil => Ok(list2)
+    Value::Pair(car, cdr) => {
+      let rest = match vm_append_two_lists(cdr, list2) {
+        Ok(v) => v
+        Err(e) => return Err(e)
+      }
+      gc_track_pair()
+      Ok(Value::Pair(car, rest))
+    }
+    _ => Err(VMError::TypeError("append: arguments must be lists"))
+  }
 }
 
 /// Value identity check (simplified version)
