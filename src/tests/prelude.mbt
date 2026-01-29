@@ -70,7 +70,7 @@ pub using @compiler {
   dump_chunk,
   compile_and_dump_default,
 }
-pub using @repl { new_repl_context, repl_eval, repl_eval_expr }
+pub using @repl { type VMReplContext, new_repl_context, repl_eval, repl_eval_expr }
 pub using @debug {
   type DebugEvent,
   type SerializeError,

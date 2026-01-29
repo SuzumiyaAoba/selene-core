@@ -206,6 +206,7 @@ fn vm_exec_primop(
     PrimOpKind::Not => vm_exec_not(args)
     PrimOpKind::List => vm_exec_list(args)
     PrimOpKind::Length => vm_exec_length(args)
+    PrimOpKind::Append => vm_exec_append(args)
     PrimOpKind::Eq => vm_exec_eq_p(args)
     PrimOpKind::Eqv => vm_exec_eqv_p(args)
     PrimOpKind::Equal => vm_exec_equal_p(args)
@@ -217,6 +218,8 @@ fn vm_exec_primop(
     PrimOpKind::SymbolP => vm_exec_symbol_p(args)
     PrimOpKind::StringP => vm_exec_string_p(args)
     PrimOpKind::ProcedureP => vm_exec_procedure_p(args)
+    PrimOpKind::SymbolToString => vm_exec_symbol_to_string(args)
+    PrimOpKind::StringToSymbol => vm_exec_string_to_symbol(args)
     _ => Err(VMError::RuntimeError("unimplemented primitive: " + kind.to_string()))
   }
 }
@@ -517,6 +520,56 @@ fn vm_exec_length(args : Array[Value]) -> Result[Value, VMError] {
   Ok(Value::Number(Number::Int(count)))
 }
 
+/// append
+fn vm_exec_append(args : Array[Value]) -> Result[Value, VMError] {
+  if args.length() == 0 {
+    return Ok(Value::Nil)
+  }
+  if args.length() == 1 {
+    return Ok(args[0])
+  }
+
+  let lists : Array[Value] = []
+  let mut i = 0
+  let len = args.length() - 1
+  let _ = while i < len {
+    lists.push(args[i])
+    i = i + 1
+  } else {
+    ()
+  }
+
+  let mut result = args[args.length() - 1]
+
+  let mut j = lists.length()
+  let _ = while j > 0 {
+    j = j - 1
+    result = match vm_append_two_lists(lists[j], result) {
+      Ok(v) => v
+      Err(e) => return Err(e)
+    }
+  } else {
+    ()
+  }
+
+  Ok(result)
+}
+
+fn vm_append_two_lists(list1 : Value, list2 : Value) -> Result[Value, VMError] {
+  match list1 {
+    Value::Nil => Ok(list2)
+    Value::Pair(car, cdr) => {
+      let rest = match vm_append_two_lists(cdr, list2) {
+        Ok(v) => v
+        Err(e) => return Err(e)
+      }
+      gc_track_pair()
+      Ok(Value::Pair(car, rest))
+    }
+    _ => Err(VMError::TypeError("append: arguments must be lists"))
+  }
+}
+
 /// Value identity check (simplified version)
 fn vm_values_eq(a : Value, b : Value) -> Bool {
   match (a, b) {
@@ -628,6 +681,28 @@ fn vm_exec_symbol_p(args : Array[Value]) -> Result[Value, VMError] {
   match args[0] {
     Value::Symbol(_) => Ok(Value::Bool(true))
     _ => Ok(Value::Bool(false))
+  }
+}
+
+/// symbol->string
+fn vm_exec_symbol_to_string(args : Array[Value]) -> Result[Value, VMError] {
+  if args.length() != 1 {
+    return Err(VMError::ArityError("symbol->string requires 1 argument"))
+  }
+  match args[0] {
+    Value::Symbol(name) => Ok(Value::String(name))
+    _ => Err(VMError::TypeError("symbol->string requires a symbol"))
+  }
+}
+
+/// string->symbol
+fn vm_exec_string_to_symbol(args : Array[Value]) -> Result[Value, VMError] {
+  if args.length() != 1 {
+    return Err(VMError::ArityError("string->symbol requires 1 argument"))
+  }
+  match args[0] {
+    Value::String(name) => Ok(Value::Symbol(name))
+    _ => Err(VMError::TypeError("string->symbol requires a string"))
   }
 }
 
