@@ -561,6 +561,22 @@ fn compile_lambda(args : SExpr, env : CompileEnv) -> Result[IRExpr, CompileError
       let boxed_locals : Array[String] = []
       // TODO: Parse local variables (processed separately in Let/Letrec)
 
+      // Determine which free variables require boxing
+      let boxed_free_vars : Array[Int] = []
+      let mut j = 0
+      while j < free_vars.length() {
+        let free_var = free_vars[j]
+        // Check if this free variable is set! anywhere in the lambda body
+        // This is important for shared mutable state across closures
+        for sv in set_vars {
+          if sv == free_var.name {
+            boxed_free_vars.push(j)
+            break
+          }
+        }
+        j = j + 1
+      }
+
       Ok(IRExpr::Lambda({
         params,
         arity: params.length(),
@@ -568,6 +584,7 @@ fn compile_lambda(args : SExpr, env : CompileEnv) -> Result[IRExpr, CompileError
         free_vars,
         boxed_params,
         boxed_locals,
+        boxed_free_vars,
       }))
     }
     _ => Err(CompileError::SyntaxError("lambda: invalid syntax"))

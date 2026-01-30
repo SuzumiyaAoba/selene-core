@@ -179,18 +179,33 @@ fn codegen_lambda(ctx : CodegenContext, info : LambdaInfo) -> Unit {
   // Identify captured variables that are boxed in parent scope
   // These require BoxGet when referencing because the box itself is captured.
   let captured_boxed_indices : Array[Int] = []
+
+  // First, include free_vars that were marked as boxed during compilation
+  for boxed_idx in info.boxed_free_vars {
+    captured_boxed_indices.push(boxed_idx)
+  }
+
+  // Second, check if any free_vars are in parent's boxed_locals
   let mut cap_i = 0
   while cap_i < info.free_vars.length() {
     let var_ref = info.free_vars[cap_i]
-    let mut is_boxed = false
-    for name in ctx.boxed_locals {
-      if name == var_ref.name {
-        is_boxed = true
+    let mut found = false
+    // Check if already in captured_boxed_indices
+    for idx in captured_boxed_indices {
+      if idx == cap_i {
+        found = true
         break
       }
     }
-    if is_boxed {
-      captured_boxed_indices.push(cap_i)
+    if !found {
+      // Check parent scope's boxed_locals
+      for name in ctx.boxed_locals {
+        if name == var_ref.name {
+          captured_boxed_indices.push(cap_i)
+          found = true
+          break
+        }
+      }
     }
     cap_i = cap_i + 1
   }
@@ -514,6 +529,86 @@ fn codegen_collect_all_set_vars(expr : IRExpr, set_vars : Array[String]) -> Unit
   }
 }
 
+/// Collect free variable names in lambda expressions
+fn codegen_collect_free_var_names(expr : IRExpr, free_var_names : Array[String]) -> Unit {
+  match expr {
+    IRExpr::Lambda(info) => {
+      // Collect free variable names from this lambda
+      for var_ref in info.free_vars {
+        let mut found = false
+        for name in free_var_names {
+          if name == var_ref.name {
+            found = true
+            break
+          }
+        }
+        if !found {
+          free_var_names.push(var_ref.name)
+        }
+      }
+      // Continue recursively for nested lambdas
+      codegen_collect_free_var_names(info.body, free_var_names)
+    }
+    IRExpr::Const(_) => ()
+    IRExpr::Var(_) => ()
+    IRExpr::GlobalVar(_) => ()
+    IRExpr::GlobalSet(_, value) => codegen_collect_free_var_names(value, free_var_names)
+    IRExpr::If(cond, then_branch, else_branch) => {
+      codegen_collect_free_var_names(cond, free_var_names)
+      codegen_collect_free_var_names(then_branch, free_var_names)
+      codegen_collect_free_var_names(else_branch, free_var_names)
+    }
+    IRExpr::Begin(exprs) => {
+      for e in exprs {
+        codegen_collect_free_var_names(e, free_var_names)
+      }
+    }
+    IRExpr::App(func, args) => {
+      codegen_collect_free_var_names(func, free_var_names)
+      for arg in args {
+        codegen_collect_free_var_names(arg, free_var_names)
+      }
+    }
+    IRExpr::TailApp(func, args) => {
+      codegen_collect_free_var_names(func, free_var_names)
+      for arg in args {
+        codegen_collect_free_var_names(arg, free_var_names)
+      }
+    }
+    IRExpr::Let(bindings, body) => {
+      for binding in bindings {
+        codegen_collect_free_var_names(binding.init, free_var_names)
+      }
+      codegen_collect_free_var_names(body, free_var_names)
+    }
+    IRExpr::Letrec(bindings, body) => {
+      for binding in bindings {
+        codegen_collect_free_var_names(binding.init, free_var_names)
+      }
+      codegen_collect_free_var_names(body, free_var_names)
+    }
+    IRExpr::Set(_, value) => codegen_collect_free_var_names(value, free_var_names)
+    IRExpr::PrimOp(_, args) => {
+      for arg in args {
+        codegen_collect_free_var_names(arg, free_var_names)
+      }
+    }
+    IRExpr::CallCC(proc) => codegen_collect_free_var_names(proc, free_var_names)
+    IRExpr::Quote(_) => ()
+    IRExpr::Delay(body) => codegen_collect_free_var_names(body, free_var_names)
+    IRExpr::And(exprs) => {
+      for e in exprs {
+        codegen_collect_free_var_names(e, free_var_names)
+      }
+    }
+    IRExpr::Or(exprs) => {
+      for e in exprs {
+        codegen_collect_free_var_names(e, free_var_names)
+      }
+    }
+  }
+}
+
 /// Generate code for let expressions
 fn codegen_let(
   ctx : CodegenContext,
@@ -592,6 +687,13 @@ fn codegen_letrec(
 
   // Collect variables set! in body and init expressions
   let set_vars = codegen_collect_set_vars(body)
+
+  // Also collect variables that are free_vars in any lambda within init expressions
+  let captured_free_vars : Array[String] = []
+  for binding in bindings {
+    codegen_collect_free_var_names(binding.init, captured_free_vars)
+  }
+
   for binding in bindings {
     let init_set_vars = codegen_collect_set_vars(binding.init)
     for v in init_set_vars {
@@ -609,13 +711,26 @@ fn codegen_letrec(
   }
 
   // Identify bindings that need to be boxed
+  // A binding needs boxing if:
+  // 1. It is set! anywhere, OR
+  // 2. It is captured as a free variable in any lambda (and thus might be set!)
   let needs_boxing : Array[Bool] = []
   for binding in bindings {
     let mut need = false
+    // Check if set! anywhere
     for v in set_vars {
       if v == binding.name {
         need = true
         break
+      }
+    }
+    // Check if captured as free variable (safety: box it just in case)
+    if !need {
+      for fv in captured_free_vars {
+        if fv == binding.name {
+          need = true
+          break
+        }
       }
     }
     needs_boxing.push(need)

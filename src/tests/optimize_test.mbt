@@ -381,6 +381,7 @@ test "optimize: inline expansion - simple lambda" {
       free_vars: [],
       boxed_params: [],
       boxed_locals: [],
+      boxed_free_vars: [],
     }),
     [IRExpr::Const(IRConst::Int(5))]
   )
@@ -413,6 +414,7 @@ test "optimize: inline expansion - multiple args" {
       free_vars: [],
       boxed_params: [],
       boxed_locals: [],
+      boxed_free_vars: [],
     }),
     [IRExpr::Const(IRConst::Int(3)), IRExpr::Const(IRConst::Int(4))]
   )
@@ -438,6 +440,7 @@ test "optimize: inline expansion - tail call" {
       free_vars: [],
       boxed_params: [],
       boxed_locals: [],
+      boxed_free_vars: [],
     }),
     [IRExpr::Const(IRConst::Int(42))]
   )
