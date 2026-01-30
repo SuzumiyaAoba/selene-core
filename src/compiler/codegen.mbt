@@ -94,27 +94,30 @@ fn codegen_const(ctx : CodegenContext, c : IRConst) -> Unit {
 fn codegen_var(ctx : CodegenContext, var_ref : VarRef) -> Unit {
   ctx.builder.emit(Opcode::LoadLocal(var_ref.depth, var_ref.index))
 
-  // Check if variable is boxed (applies to both depth=0 and depth>0)
-  let is_boxed = {
-    let mut found = false
-    for idx in ctx.boxed_params {
-      if idx == var_ref.index {
-        found = true
-        break
-      }
-    }
-    if !found {
-      for name in ctx.boxed_locals {
-        if name == var_ref.name {
+  // If boxed with depth=0, use BoxGet to retrieve the value
+  // Note: For depth>0 (free variables), boxing is handled by the captured value itself
+  if var_ref.depth == 0 {
+    let is_boxed = {
+      let mut found = false
+      for idx in ctx.boxed_params {
+        if idx == var_ref.index {
           found = true
           break
         }
       }
+      if !found {
+        for name in ctx.boxed_locals {
+          if name == var_ref.name {
+            found = true
+            break
+          }
+        }
+      }
+      found
     }
-    found
-  }
-  if is_boxed {
-    ctx.builder.emit(Opcode::BoxGet)
+    if is_boxed {
+      ctx.builder.emit(Opcode::BoxGet)
+    }
   }
 }
 
@@ -663,8 +666,8 @@ fn codegen_letrec(
 /// Generate code for set! expression
 /// Note: The optimizer has adjusted the index of VarRef
 fn codegen_set(ctx : CodegenContext, var_ref : VarRef, value : IRExpr) -> Unit {
-  // Check if variable is boxed (applies to both depth=0 and depth>0)
-  let is_boxed = {
+  // Determine processing when boxed with depth=0
+  let is_boxed = if var_ref.depth == 0 {
     let mut found = false
     for idx in ctx.boxed_params {
       if idx == var_ref.index {
@@ -681,10 +684,15 @@ fn codegen_set(ctx : CodegenContext, var_ref : VarRef, value : IRExpr) -> Unit {
       }
     }
     found
+  } else {
+    // For free variables (depth > 0), assume they're either boxes or unboxed
+    // Need to trust the captured value's type
+    // For now, do not apply boxing
+    false
   }
 
   if is_boxed {
-    // If boxed: use BoxSet
+    // If boxed
     ctx.builder.emit(Opcode::LoadLocal(var_ref.depth, var_ref.index))  // load box
     codegen_expr(ctx, value)  // evaluate new value
     ctx.builder.emit(Opcode::BoxSet)  // update box
@@ -692,7 +700,7 @@ fn codegen_set(ctx : CodegenContext, var_ref : VarRef, value : IRExpr) -> Unit {
     let void_idx = ctx.builder.add_const(BCValue::Nil)
     ctx.builder.emit(Opcode::Push(void_idx))
   } else {
-    // If not boxed: regular assignment
+    // If not boxed
     codegen_expr(ctx, value)
     ctx.builder.emit(Opcode::Dup)  // set! returns the assigned value
     ctx.builder.emit(Opcode::StoreLocal(var_ref.depth, var_ref.index))
