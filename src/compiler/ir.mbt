@@ -248,6 +248,8 @@ pub(all) struct LambdaInfo {
   boxed_params : Array[Int]
   /// Local variable names that require boxing
   boxed_locals : Array[String]
+  /// Indices of free_vars that require boxing
+  boxed_free_vars : Array[Int]
 } derive(Show)
 
 /// intermediate representation expression

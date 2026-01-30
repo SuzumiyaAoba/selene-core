@@ -295,6 +295,7 @@ fn optimize_lambda(info : LambdaInfo) -> IRExpr {
     free_vars: adjusted_free_vars,
     boxed_params: info.boxed_params,
     boxed_locals: info.boxed_locals,
+    boxed_free_vars: info.boxed_free_vars,
   })
 }
 
