@@ -60,6 +60,16 @@ fn is_global(env : CompileEnv, name : String) -> Bool {
   env.globals.contains(name)
 }
 
+/// Check if a name is shadowed by a local variable in the current scope
+fn is_shadowed(env : CompileEnv, name : String) -> Bool {
+  for local in env.locals {
+    if local == name {
+      return true
+    }
+  }
+  false
+}
+
 /// Convert built-in function names to primitive operations
 fn name_to_primop(name : String) -> PrimOpKind? {
   match name {
@@ -423,8 +433,18 @@ pub fn compile(
     // variable reference
     SExpr::Symbol(name) => compile_var_ref(name, env)
 
-    // quote
-    SExpr::Quote(inner) => Ok(IRExpr::Quote(sexpr_to_ir_const(inner)))
+    // quote (check for shadowing)
+    SExpr::Quote(inner) => {
+      if is_shadowed(env, "quote") {
+        // quote is shadowed, treat as function application: (quote inner)
+        let quote_symbol = SExpr::Symbol("quote")
+        let args = SExpr::Pair(inner, SExpr::Nil)
+        compile_pair(quote_symbol, args, env, tail)
+      } else {
+        // quote is not shadowed, use the built-in quote
+        Ok(IRExpr::Quote(sexpr_to_ir_const(inner)))
+      }
+    }
 
     // Vector (self-evaluation)
     SExpr::Vector(items) => {
@@ -470,26 +490,31 @@ fn compile_pair(
   tail : Bool
 ) -> Result[IRExpr, CompileError] {
   match car {
-    // special format
-    SExpr::Symbol("if") => compile_if(cdr, env, tail)
-    SExpr::Symbol("lambda") => compile_lambda(cdr, env)
-    SExpr::Symbol("begin") => compile_begin(cdr, env, tail)
-    SExpr::Symbol("and") => compile_and(cdr, env, tail)
-    SExpr::Symbol("or") => compile_or(cdr, env, tail)
-    SExpr::Symbol("let") => compile_let(cdr, env, tail)
-    SExpr::Symbol("let*") => compile_let_star(cdr, env, tail)
-    SExpr::Symbol("letrec") => compile_letrec(cdr, env, tail)
-    SExpr::Symbol("set!") => compile_set(cdr, env)
-    SExpr::Symbol("quote") => compile_quote(cdr)
-    SExpr::Symbol("delay") => compile_delay(cdr, env)
-    SExpr::Symbol("call/cc") | SExpr::Symbol("call-with-current-continuation") =>
-      compile_call_cc(cdr, env, tail)
-    SExpr::Symbol("define") =>
-      Err(CompileError::SyntaxError("define not allowed in expression context"))
-    SExpr::Symbol("define-syntax") =>
-      Err(CompileError::SyntaxError("define-syntax not allowed in expression context"))
+    // special format (but check for shadowing first)
+    SExpr::Symbol(name) if !is_shadowed(env, name) => {
+      match name {
+        "if" => compile_if(cdr, env, tail)
+        "lambda" => compile_lambda(cdr, env)
+        "begin" => compile_begin(cdr, env, tail)
+        "and" => compile_and(cdr, env, tail)
+        "or" => compile_or(cdr, env, tail)
+        "let" => compile_let(cdr, env, tail)
+        "let*" => compile_let_star(cdr, env, tail)
+        "letrec" => compile_letrec(cdr, env, tail)
+        "set!" => compile_set(cdr, env)
+        "quote" => compile_quote(cdr)
+        "delay" => compile_delay(cdr, env)
+        "call/cc" | "call-with-current-continuation" =>
+          compile_call_cc(cdr, env, tail)
+        "define" =>
+          Err(CompileError::SyntaxError("define not allowed in expression context"))
+        "define-syntax" =>
+          Err(CompileError::SyntaxError("define-syntax not allowed in expression context"))
+        _ => compile_application(car, cdr, env, tail)
+      }
+    }
 
-    // function application
+    // function application (includes shadowed special forms)
     _ => compile_application(car, cdr, env, tail)
   }
 }

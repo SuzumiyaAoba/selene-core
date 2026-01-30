@@ -21,7 +21,7 @@ test "r5rs pitfalls (guile r5rs_pitfall)" {
   let enable_callcc = false
   let enable_macros = false
   let enable_rest_params = false
-  let enable_keyword_shadowing = false
+  let enable_keyword_shadowing = true
   let enable_string_to_symbol = true
   let enable_named_let = true
   let enable_append = true
