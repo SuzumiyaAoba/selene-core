@@ -12,6 +12,8 @@ struct CodegenContext {
   boxed_params : Array[Int]
   /// Name of local variable being boxed (depth=0)
   boxed_locals : Array[String]
+  /// Local variable offset for nested let/letrec (tracks allocated locals)
+  mut local_offset : Int
 }
 
 /// Create new context
@@ -21,6 +23,7 @@ fn new_context(debug_name : String?) -> CodegenContext {
     chunks: [],
     boxed_params: [],
     boxed_locals: [],
+    local_offset: 0,
   }
 }
 
@@ -35,6 +38,7 @@ fn new_context_with_boxing(
     chunks: [],
     boxed_params,
     boxed_locals,
+    local_offset: 0,
   }
 }
 
@@ -641,6 +645,9 @@ fn codegen_let(
   // Reserve local variable slot
   ctx.builder.emit(Opcode::AllocateLocals(num_bindings))
 
+  // Save current offset and update for new bindings
+  let saved_offset = ctx.local_offset
+
   // Evaluate the initial value of each binding and store it in a local variable
   let mut i = 0
   while i < num_bindings {
@@ -651,12 +658,18 @@ fn codegen_let(
       // Add to boxed_locals
       ctx.boxed_locals.push(bindings[i].name)
     }
-    ctx.builder.emit(Opcode::InitLocal(0, i))
+    ctx.builder.emit(Opcode::InitLocal(0, saved_offset + i))
     i = i + 1
   }
 
+  // Update local_offset for nested scopes
+  ctx.local_offset = saved_offset + num_bindings
+
   // Evaluate the main unit
   codegen_expr(ctx, body)
+
+  // Restore local_offset
+  ctx.local_offset = saved_offset
 
   // Delete from boxed_locals as it goes out of scope
   for binding in bindings {
@@ -739,6 +752,9 @@ fn codegen_letrec(
   // First, reserve an uninitialized slot
   ctx.builder.emit(Opcode::AllocateLocals(num_bindings))
 
+  // Save current offset and update for new bindings
+  let saved_offset = ctx.local_offset
+
   // Add variables that need to be boxed to boxed_locals (to use BoxGet when referencing)
   let mut i = 0
   while i < num_bindings {
@@ -748,6 +764,9 @@ fn codegen_letrec(
     i = i + 1
   }
 
+  // Update local_offset for init expressions (they can reference each other in letrec)
+  ctx.local_offset = saved_offset + num_bindings
+
   // Initialize each binding
   i = 0
   while i < num_bindings {
@@ -756,12 +775,15 @@ fn codegen_letrec(
       // When boxing is required
       ctx.builder.emit(Opcode::MakeBox)
     }
-    ctx.builder.emit(Opcode::InitLocal(0, i))
+    ctx.builder.emit(Opcode::InitLocal(0, saved_offset + i))
     i = i + 1
   }
 
   // Evaluate the main unit
   codegen_expr(ctx, body)
+
+  // Restore local_offset
+  ctx.local_offset = saved_offset
 
   // Delete from boxed_locals as it goes out of scope
   for binding in bindings {
