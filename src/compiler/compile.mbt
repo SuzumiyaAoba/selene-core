@@ -498,6 +498,8 @@ fn compile_pair(
         "begin" => compile_begin(cdr, env, tail)
         "and" => compile_and(cdr, env, tail)
         "or" => compile_or(cdr, env, tail)
+        "cond" => compile_cond(cdr, env, tail)
+        "case" => compile_case(cdr, env, tail)
         "let" => compile_let(cdr, env, tail)
         "let*" => compile_let_star(cdr, env, tail)
         "letrec" => compile_letrec(cdr, env, tail)
@@ -657,23 +659,130 @@ fn compile_body(
   if exprs.length() == 0 {
     return Err(CompileError::SyntaxError("empty body"))
   }
+
+  // Check for internal defines at the beginning of the body
+  let defines : Array[(String, SExpr)] = []  // (name, init_expr)
+  let mut body_start = 0
+
+  let mut i = 0
+  let _ = while i < exprs.length() {
+    match exprs[i] {
+      SExpr::Pair(SExpr::Symbol("define"), def_rest) => {
+        // Parse the define
+        match parse_internal_define(def_rest) {
+          Ok((name, init)) => {
+            defines.push((name, init))
+            body_start = i + 1
+            i = i + 1
+          }
+          Err(e) => return Err(e)
+        }
+      }
+      _ => break ()  // Stop at first non-define
+    }
+  } else {
+    ()
+  }
+
+  // If there are internal defines, convert to letrec
+  if defines.length() > 0 {
+    // Ensure there is at least one expression after defines
+    if body_start >= exprs.length() {
+      return Err(CompileError::SyntaxError("body must have at least one expression after defines"))
+    }
+
+    // Build letrec bindings
+    let bindings : Array[LetBinding] = []
+    let names : Array[String] = []
+    for def in defines {
+      let name = def.0
+      let init_expr = def.1
+      names.push(name)
+      // Create new env with all define names for compiling init expressions
+      let new_env = extend_compile_env_same_frame(env, names.copy())
+      let init_ir = match compile(init_expr, new_env, false) {
+        Ok(ir) => ir
+        Err(e) => return Err(e)
+      }
+      bindings.push({ name, init: init_ir })
+    }
+
+    // Create new env with all define names for compiling body
+    let new_env = extend_compile_env_same_frame(env, names)
+
+    // Build body from remaining expressions
+    let body_exprs : Array[SExpr] = []
+    let mut j = body_start
+    let _ = while j < exprs.length() {
+      body_exprs.push(exprs[j])
+      j = j + 1
+    } else {
+      ()
+    }
+
+    let body_ir = if body_exprs.length() == 1 {
+      match compile(body_exprs[0], new_env, tail) {
+        Ok(ir) => ir
+        Err(e) => return Err(e)
+      }
+    } else {
+      // Multiple expressions - compile as begin
+      let ir_list : Array[IRExpr] = []
+      let mut k = 0
+      let _ = while k < body_exprs.length() {
+        let is_tail = tail && k == body_exprs.length() - 1
+        let ir = match compile(body_exprs[k], new_env, is_tail) {
+          Ok(ir) => ir
+          Err(e) => return Err(e)
+        }
+        ir_list.push(ir)
+        k = k + 1
+      } else {
+        ()
+      }
+      IRExpr::Begin(ir_list)
+    }
+
+    return Ok(IRExpr::Letrec(bindings, body_ir))
+  }
+
+  // No internal defines - original behavior
   if exprs.length() == 1 {
     return compile(exprs[0], env, tail)
   }
   // Treat multiple expressions as begin
   let ir_exprs : Array[IRExpr] = []
   let len = exprs.length()
-  let mut i = 0
-  while i < len {
-    let is_tail = tail && i == len - 1
-    let ir = match compile(exprs[i], env, is_tail) {
+  let mut idx = 0
+  while idx < len {
+    let is_tail = tail && idx == len - 1
+    let ir = match compile(exprs[idx], env, is_tail) {
       Ok(ir) => ir
       Err(e) => return Err(e)
     }
     ir_exprs.push(ir)
-    i = i + 1
+    idx = idx + 1
   }
   Ok(IRExpr::Begin(ir_exprs))
+}
+
+/// Parse an internal define: (define name expr) or (define (name args...) body...)
+fn parse_internal_define(args : SExpr) -> Result[(String, SExpr), CompileError] {
+  match args {
+    // (define name expr)
+    SExpr::Pair(SExpr::Symbol(name), SExpr::Pair(init_expr, SExpr::Nil)) =>
+      Ok((name, init_expr))
+    // (define (name args...) body...)
+    SExpr::Pair(SExpr::Pair(SExpr::Symbol(name), params), body) => {
+      // Convert to (define name (lambda (args...) body...))
+      let lambda_expr = SExpr::Pair(
+        SExpr::Symbol("lambda"),
+        SExpr::Pair(params, body),
+      )
+      Ok((name, lambda_expr))
+    }
+    _ => Err(CompileError::SyntaxError("invalid internal define syntax"))
+  }
 }
 
 /// Compile the begin expression
@@ -747,6 +856,321 @@ fn compile_or(
     ir_exprs.push(ir)
   }
   Ok(IRExpr::Or(ir_exprs))
+}
+
+/// Compile the cond expression
+/// (cond (test expr ...) ... [(else expr ...)])
+fn compile_cond(
+  args : SExpr,
+  env : CompileEnv,
+  tail : Bool
+) -> Result[IRExpr, CompileError] {
+  // Parse clauses: Array of (test_expr, body_exprs_list)
+  let clause_tests : Array[SExpr] = []
+  let clause_bodies : Array[Array[SExpr]] = []
+  let mut current = args
+  let _ = while true {
+    match current {
+      SExpr::Nil => break ()
+      SExpr::Pair(clause, rest) => {
+        match clause {
+          SExpr::Pair(test_expr, body_exprs) => {
+            let expr_list : Array[SExpr] = []
+            let mut expr_current = body_exprs
+            let _ = while true {
+              match expr_current {
+                SExpr::Nil => break ()
+                SExpr::Pair(e, r) => {
+                  expr_list.push(e)
+                  expr_current = r
+                }
+                _ => return Err(CompileError::SyntaxError("cond: invalid clause"))
+              }
+            } else {
+              ()
+            }
+            clause_tests.push(test_expr)
+            clause_bodies.push(expr_list)
+            current = rest
+          }
+          _ => return Err(CompileError::SyntaxError("cond: invalid clause"))
+        }
+      }
+      _ => return Err(CompileError::SyntaxError("cond: invalid syntax"))
+    }
+  } else {
+    ()
+  }
+
+  if clause_tests.length() == 0 {
+    // Empty cond returns unspecified (nil)
+    return Ok(IRExpr::Const(IRConst::Nil))
+  }
+
+  // Build nested if from the end
+  compile_cond_clauses(clause_tests, clause_bodies, 0, env, tail)
+}
+
+/// Compile cond clauses recursively
+fn compile_cond_clauses(
+  tests : Array[SExpr],
+  bodies : Array[Array[SExpr]],
+  index : Int,
+  env : CompileEnv,
+  tail : Bool
+) -> Result[IRExpr, CompileError] {
+  if index >= tests.length() {
+    // No more clauses, return unspecified (nil)
+    return Ok(IRExpr::Const(IRConst::Nil))
+  }
+
+  let test_sexpr = tests[index]
+  let exprs = bodies[index]
+
+  // Check for else clause
+  match test_sexpr {
+    SExpr::Symbol("else") => {
+      // else must be last clause
+      if index != tests.length() - 1 {
+        return Err(CompileError::SyntaxError("cond: else clause must be last"))
+      }
+      if exprs.length() == 0 {
+        return Ok(IRExpr::Const(IRConst::Nil))
+      }
+      // Compile body as begin
+      compile_body_exprs(exprs, env, tail)
+    }
+    _ => {
+      // Regular clause
+      let test_ir = match compile(test_sexpr, env, false) {
+        Ok(ir) => ir
+        Err(e) => return Err(e)
+      }
+
+      let then_ir = if exprs.length() == 0 {
+        // (cond (test) ...) - return test value if true
+        // This requires special handling, for now just return nil
+        IRExpr::Const(IRConst::Nil)
+      } else {
+        match compile_body_exprs(exprs, env, tail) {
+          Ok(ir) => ir
+          Err(e) => return Err(e)
+        }
+      }
+
+      let else_ir = match compile_cond_clauses(tests, bodies, index + 1, env, tail) {
+        Ok(ir) => ir
+        Err(e) => return Err(e)
+      }
+
+      Ok(IRExpr::If(test_ir, then_ir, else_ir))
+    }
+  }
+}
+
+/// Compile a list of expressions as a body (returns last value)
+fn compile_body_exprs(
+  exprs : Array[SExpr],
+  env : CompileEnv,
+  tail : Bool
+) -> Result[IRExpr, CompileError] {
+  if exprs.length() == 0 {
+    return Ok(IRExpr::Const(IRConst::Nil))
+  }
+  if exprs.length() == 1 {
+    return compile(exprs[0], env, tail)
+  }
+  // Multiple expressions: compile as begin
+  let ir_exprs : Array[IRExpr] = []
+  let mut i = 0
+  let _ = while i < exprs.length() {
+    let is_last = i == exprs.length() - 1
+    let ir = match compile(exprs[i], env, if is_last { tail } else { false }) {
+      Ok(ir) => ir
+      Err(e) => return Err(e)
+    }
+    ir_exprs.push(ir)
+    i = i + 1
+  } else {
+    ()
+  }
+  Ok(IRExpr::Begin(ir_exprs))
+}
+
+/// Compile the case expression
+/// (case key ((datum ...) expr ...) ... [(else expr ...)])
+fn compile_case(
+  args : SExpr,
+  env : CompileEnv,
+  tail : Bool
+) -> Result[IRExpr, CompileError] {
+  // Parse: (case key clause ...)
+  match args {
+    SExpr::Pair(key_expr, clauses) => {
+      // Compile key expression
+      let key_ir = match compile(key_expr, env, false) {
+        Ok(ir) => ir
+        Err(e) => return Err(e)
+      }
+
+      // Parse clauses
+      let clause_datums : Array[Array[SExpr]] = []  // each clause has list of datums
+      let clause_bodies : Array[Array[SExpr]] = []
+      let mut has_else = false
+      let mut current = clauses
+      let _ = while true {
+        match current {
+          SExpr::Nil => break ()
+          SExpr::Pair(clause, rest) => {
+            match clause {
+              SExpr::Pair(datums_or_else, body_exprs) => {
+                // Parse body expressions
+                let body_list : Array[SExpr] = []
+                let mut body_current = body_exprs
+                let _ = while true {
+                  match body_current {
+                    SExpr::Nil => break ()
+                    SExpr::Pair(e, r) => {
+                      body_list.push(e)
+                      body_current = r
+                    }
+                    _ => return Err(CompileError::SyntaxError("case: invalid clause body"))
+                  }
+                } else {
+                  ()
+                }
+
+                // Check for else clause
+                match datums_or_else {
+                  SExpr::Symbol("else") => {
+                    has_else = true
+                    clause_datums.push([])  // empty datums for else
+                    clause_bodies.push(body_list)
+                    current = rest
+                  }
+                  _ => {
+                    // Parse datum list
+                    let datum_list : Array[SExpr] = []
+                    let mut datum_current = datums_or_else
+                    let _ = while true {
+                      match datum_current {
+                        SExpr::Nil => break ()
+                        SExpr::Pair(d, r) => {
+                          datum_list.push(d)
+                          datum_current = r
+                        }
+                        _ => return Err(CompileError::SyntaxError("case: invalid datum list"))
+                      }
+                    } else {
+                      ()
+                    }
+                    clause_datums.push(datum_list)
+                    clause_bodies.push(body_list)
+                    current = rest
+                  }
+                }
+              }
+              _ => return Err(CompileError::SyntaxError("case: invalid clause"))
+            }
+          }
+          _ => return Err(CompileError::SyntaxError("case: invalid syntax"))
+        }
+      } else {
+        ()
+      }
+
+      // Verify else is last if present
+      if has_else && clause_datums.length() > 0 {
+        let last_idx = clause_datums.length() - 1
+        if clause_datums[last_idx].length() != 0 {
+          return Err(CompileError::SyntaxError("case: else clause must be last"))
+        }
+      }
+
+      // Build: (let ((tmp key)) (cond ...))
+      // Use a unique temp variable name
+      let temp_name = "$case-key"
+      let temp_binding : LetBinding = { name: temp_name, init: key_ir }
+
+      // Build cond clauses from case clauses
+      let cond_ir = compile_case_to_cond(
+        temp_name, clause_datums, clause_bodies, 0, env, tail
+      )
+      match cond_ir {
+        Ok(body) => {
+          Ok(IRExpr::Let([temp_binding], body))
+        }
+        Err(e) => Err(e)
+      }
+    }
+    _ => Err(CompileError::SyntaxError("case: invalid syntax"))
+  }
+}
+
+/// Convert case clauses to nested if expressions
+fn compile_case_to_cond(
+  temp_name : String,
+  datums : Array[Array[SExpr]],
+  bodies : Array[Array[SExpr]],
+  index : Int,
+  env : CompileEnv,
+  tail : Bool
+) -> Result[IRExpr, CompileError] {
+  if index >= datums.length() {
+    // No more clauses
+    return Ok(IRExpr::Const(IRConst::Nil))
+  }
+
+  let datum_list = datums[index]
+  let body_exprs = bodies[index]
+
+  // Check for else clause (empty datum list at the end)
+  if datum_list.length() == 0 {
+    // else clause - just compile the body
+    return compile_body_exprs(body_exprs, env, tail)
+  }
+
+  // Build test: (or (eqv? tmp datum1) (eqv? tmp datum2) ...)
+  let temp_var_ref : VarRef = { name: temp_name, depth: 0, index: 0 }
+  let temp_var = IRExpr::Var(temp_var_ref)
+
+  // Build eqv? comparisons for each datum
+  let eqv_tests : Array[IRExpr] = []
+  for datum in datum_list {
+    let datum_ir = match compile_quote_inner(datum) {
+      Ok(ir) => ir
+      Err(e) => return Err(e)
+    }
+    // (eqv? tmp datum)
+    let eqv_test = IRExpr::PrimOp(PrimOpKind::Eqv, [temp_var, datum_ir])
+    eqv_tests.push(eqv_test)
+  }
+
+  // Combine tests with or
+  let test_ir = if eqv_tests.length() == 1 {
+    eqv_tests[0]
+  } else {
+    IRExpr::Or(eqv_tests)
+  }
+
+  // Compile then branch (body expressions)
+  let then_ir = match compile_body_exprs(body_exprs, env, tail) {
+    Ok(ir) => ir
+    Err(e) => return Err(e)
+  }
+
+  // Compile else branch (remaining clauses)
+  let else_ir = match compile_case_to_cond(temp_name, datums, bodies, index + 1, env, tail) {
+    Ok(ir) => ir
+    Err(e) => return Err(e)
+  }
+
+  Ok(IRExpr::If(test_ir, then_ir, else_ir))
+}
+
+/// Compile a quoted expression to IR (for case datums)
+fn compile_quote_inner(expr : SExpr) -> Result[IRExpr, CompileError] {
+  Ok(IRExpr::Const(sexpr_to_ir_const(expr)))
 }
 
 /// Compile the let expression
