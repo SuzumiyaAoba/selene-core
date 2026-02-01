@@ -323,18 +323,42 @@ fn adjust_lambda_var_refs(
           depth: 0,
           index: free_var_index,
         })
-      } else if var_ref.depth == 0 && var_ref.index < params.length() {
-        // Parameters for this scope (only if not already tuned)
-        // Add num_captures to index
-        // Note: Check index < params.length() to avoid duplicate adjustments in multiple passes.
-        IRExpr::Var({
-          name: var_ref.name,
-          depth: 0,
-          index: var_ref.index + free_vars.length(),
-        })
       } else if var_ref.depth == 0 {
-        // Already adjusted parameters (index >= params.length())
-        expr
+        // Check if this is a parameter (by checking if name is in params)
+        let mut is_param = false
+        for p in params {
+          if p == var_ref.name {
+            is_param = true
+            break
+          }
+        }
+        if is_param {
+          // Parameter: check if already adjusted (index >= params.length())
+          if var_ref.index < params.length() {
+            // Not yet adjusted: add num_captures to index
+            IRExpr::Var({
+              name: var_ref.name,
+              depth: 0,
+              index: var_ref.index + free_vars.length(),
+            })
+          } else {
+            // Already adjusted
+            expr
+          }
+        } else {
+          // Let binding: check if already adjusted (index >= free_vars.length() + params.length())
+          if var_ref.index < free_vars.length() + params.length() {
+            // Not yet adjusted: add num_captures to index
+            IRExpr::Var({
+              name: var_ref.name,
+              depth: 0,
+              index: var_ref.index + free_vars.length(),
+            })
+          } else {
+            // Already adjusted
+            expr
+          }
+        }
       } else {
         // Variables in further outer scope (for nested lambdas)
         // Keep as is (processed by nested lambda)
@@ -406,8 +430,29 @@ fn adjust_lambda_var_refs(
         // free variable
         { name: var_ref.name, depth: 0, index: free_var_index }
       } else if var_ref.depth == 0 {
-        // variables of this scope
-        { name: var_ref.name, depth: 0, index: var_ref.index + free_vars.length() }
+        // Check if this is a parameter
+        let mut is_param = false
+        for p in params {
+          if p == var_ref.name {
+            is_param = true
+            break
+          }
+        }
+        if is_param {
+          // Parameter: check if already adjusted
+          if var_ref.index < params.length() {
+            { name: var_ref.name, depth: 0, index: var_ref.index + free_vars.length() }
+          } else {
+            var_ref
+          }
+        } else {
+          // Let binding: check if already adjusted
+          if var_ref.index < free_vars.length() + params.length() {
+            { name: var_ref.name, depth: 0, index: var_ref.index + free_vars.length() }
+          } else {
+            var_ref
+          }
+        }
       } else {
         // variables in further outer scopes
         var_ref

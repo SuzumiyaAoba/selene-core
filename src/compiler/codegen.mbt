@@ -14,6 +14,10 @@ struct CodegenContext {
   boxed_locals : Array[String]
   /// Local variable offset for nested let/letrec (tracks allocated locals)
   mut local_offset : Int
+  /// Parameter names of this lambda (for nested lambda capture index calculation)
+  lambda_params : Array[String]
+  /// Free vars of this lambda (for nested lambda capture index calculation)
+  lambda_free_vars : Array[VarRef]
 }
 
 /// Create new context
@@ -24,6 +28,8 @@ fn new_context(debug_name : String?) -> CodegenContext {
     boxed_params: [],
     boxed_locals: [],
     local_offset: 0,
+    lambda_params: [],
+    lambda_free_vars: [],
   }
 }
 
@@ -31,7 +37,9 @@ fn new_context(debug_name : String?) -> CodegenContext {
 fn new_context_with_boxing(
   debug_name : String?,
   boxed_params : Array[Int],
-  boxed_locals : Array[String]
+  boxed_locals : Array[String],
+  lambda_params : Array[String],
+  lambda_free_vars : Array[VarRef]
 ) -> CodegenContext {
   {
     builder: new_builder(debug_name),
@@ -39,6 +47,8 @@ fn new_context_with_boxing(
     boxed_params,
     boxed_locals,
     local_offset: 0,
+    lambda_params,
+    lambda_free_vars,
   }
 }
 
@@ -112,6 +122,37 @@ fn codegen_var(ctx : CodegenContext, var_ref : VarRef) -> Unit {
       if !found {
         for name in ctx.boxed_locals {
           if name == var_ref.name {
+            found = true
+            break
+          }
+        }
+      }
+      found
+    }
+    if is_boxed {
+      ctx.builder.emit(Opcode::BoxGet)
+    }
+  }
+}
+
+/// Generate code for local variable references with explicit depth and index
+/// Used when capturing variables for nested lambdas with corrected indices
+fn codegen_var_with_index(ctx : CodegenContext, name : String, depth : Int, index : Int) -> Unit {
+  ctx.builder.emit(Opcode::LoadLocal(depth, index))
+
+  // If boxed with depth=0, use BoxGet to retrieve the value
+  if depth == 0 {
+    let is_boxed = {
+      let mut found = false
+      for idx in ctx.boxed_params {
+        if idx == index {
+          found = true
+          break
+        }
+      }
+      if !found {
+        for n in ctx.boxed_locals {
+          if n == name {
             found = true
             break
           }
@@ -225,12 +266,33 @@ fn codegen_lambda(ctx : CodegenContext, info : LambdaInfo) -> Unit {
     adjusted_boxed_params.push(info.free_vars.length() + boxed_param_idx)
   }
 
+  // Build boxed_locals for the new context:
+  // Include both lambda's own boxed_locals and names of captured boxed variables
+  let func_boxed_locals = info.boxed_locals.copy()
+  for idx in captured_boxed_indices {
+    let var_name = info.free_vars[idx].name
+    let mut found = false
+    for name in func_boxed_locals {
+      if name == var_name {
+        found = true
+        break
+      }
+    }
+    if not(found) {
+      func_boxed_locals.push(var_name)
+    }
+  }
+
   // Compile function body in new context (include boxing and capturing information)
-  let func_ctx = new_context_with_boxing(None, adjusted_boxed_params, info.boxed_locals.copy())
+  // Also pass lambda params and free_vars for nested lambda capture index calculation
+  let func_ctx = new_context_with_boxing(None, adjusted_boxed_params, func_boxed_locals, info.params, info.free_vars)
   func_ctx.builder.arity = info.arity
   // Number of local variables: number of captures + number of parameters
   func_ctx.builder.num_locals = info.free_vars.length() + info.params.length()
   func_ctx.builder.num_free_vars = info.free_vars.length()
+  // IMPORTANT: Set local_offset to account for captures + parameters
+  // Let bindings inside the lambda body should start after these slots
+  func_ctx.local_offset = info.free_vars.length() + info.params.length()
 
   // Box parameters that require boxing when starting Lambda
   // Note: The captured box is already boxed, so skip it
@@ -270,6 +332,42 @@ fn codegen_lambda(ctx : CodegenContext, info : LambdaInfo) -> Unit {
   // MakeClosure pops and reverses, so here we push in order.
   // Important: Boxed variables capture the box itself (do not call BoxGet)
   for var_ref in info.free_vars {
+    // Calculate the correct index for depth=0 vars
+    // After optimization, depth=0 means the var is in the enclosing lambda's scope
+    // But the index might be compile-time param index, not runtime index
+    let actual_depth = var_ref.depth
+    let actual_index = if var_ref.depth == 0 {
+      // Check if this var is a parameter of the enclosing lambda (ctx)
+      let mut param_index = -1
+      for i in 0..<ctx.lambda_params.length() {
+        if ctx.lambda_params[i] == var_ref.name {
+          param_index = i
+          break
+        }
+      }
+      if param_index >= 0 {
+        // It's a parameter: runtime index = num_captures + param_index
+        ctx.builder.num_free_vars + param_index
+      } else {
+        // It's a capture: find index in ctx.lambda_free_vars by name
+        let mut capture_index = -1
+        for i in 0..<ctx.lambda_free_vars.length() {
+          if ctx.lambda_free_vars[i].name == var_ref.name {
+            capture_index = i
+            break
+          }
+        }
+        if capture_index >= 0 {
+          capture_index
+        } else {
+          // Fallback to original index (for let bindings etc.)
+          var_ref.index
+        }
+      }
+    } else {
+      var_ref.index
+    }
+
     // Determine if this variable is boxed
     let is_boxed = {
       let mut found = false
@@ -283,10 +381,11 @@ fn codegen_lambda(ctx : CodegenContext, info : LambdaInfo) -> Unit {
     }
     if is_boxed {
       // If boxed: push the box itself (do not call BoxGet)
-      ctx.builder.emit(Opcode::LoadLocal(var_ref.depth, var_ref.index))
+      ctx.builder.emit(Opcode::LoadLocal(actual_depth, actual_index))
     } else {
       // If unboxed: regular variable reference
-      codegen_expr(ctx, IRExpr::Var(var_ref))
+      // Use the corrected index
+      codegen_var_with_index(ctx, var_ref.name, actual_depth, actual_index)
     }
   }
 
@@ -629,14 +728,32 @@ fn codegen_let(
   // Collect variables set! in body
   let set_vars = codegen_collect_set_vars(body)
 
+  // Also collect variables that are free_vars in any lambda within body
+  // These need to be boxed if they might be set! inside those lambdas
+  let captured_free_vars : Array[String] = []
+  codegen_collect_free_var_names(body, captured_free_vars)
+
   // Identify bindings that need to be boxed
+  // A binding needs boxing if:
+  // 1. It is set! anywhere (including inside nested lambdas), OR
+  // 2. It is captured as a free variable in any lambda (and thus might be set!)
   let needs_boxing : Array[Bool] = []
   for binding in bindings {
     let mut need = false
+    // Check if set! anywhere
     for v in set_vars {
       if v == binding.name {
         need = true
         break
+      }
+    }
+    // Check if captured as free variable (safety: box it just in case)
+    if not(need) {
+      for fv in captured_free_vars {
+        if fv == binding.name {
+          need = true
+          break
+        }
       }
     }
     needs_boxing.push(need)

@@ -18,7 +18,7 @@ fn assert_should_be(ctx : VMReplContext, id : String, expected : String, expr : 
 
 test "r5rs pitfalls (guile r5rs_pitfall)" {
   let ctx = new_repl_context()
-  let enable_callcc = false  // Temporarily disabled - BoxGet error with call/cc + set!
+  let enable_callcc = true
   let enable_macros = false
   let enable_rest_params = false
   let enable_keyword_shadowing = true

@@ -1622,11 +1622,23 @@ fn collect_free_vars(body : IRExpr, bound : Array[String]) -> Array[VarRef] {
           visit(expr)
         }
       }
-      IRExpr::Lambda(_info) => {
-        // Do not visit bodies of nested lambdas
-        // The free_vars of that lambda has already been calculated, so
-        // Does not affect outer lambda
-        ()
+      IRExpr::Lambda(info) => {
+        // For nested lambdas, check their free_vars
+        // If a nested lambda has a free var with depth > 1, it means
+        // that variable comes from beyond this lambda's scope
+        // and we need to capture it too (at depth - 1)
+        for var_ref in info.free_vars {
+          if var_ref.depth > 1 && !seen.contains(var_ref.name) {
+            // The nested lambda references a variable from 2+ levels up
+            // So the current lambda needs to capture it at depth - 1
+            free_vars.push({
+              name: var_ref.name,
+              depth: var_ref.depth - 1,
+              index: var_ref.index,
+            })
+            seen.set(var_ref.name, ())
+          }
+        }
       }
       IRExpr::App(func, args) => {
         visit(func)

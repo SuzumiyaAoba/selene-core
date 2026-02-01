@@ -841,3 +841,36 @@ test "vm repl: problematic pattern" {
     Err(e) => println("Error in problematic pattern: " + e)
   }
 }
+
+/// Test: 2 variables in outer let with call/cc
+test "vm repl: outer let 2 vars with call/cc" {
+  let ctx = new_repl_context()
+  ctx.globals.set("call/cc", Value::Procedure(Procedure::Native("call/cc")))
+  ctx.compiler_globals.set("call/cc", ())
+
+  // Minimal: 2 outer variables with set! and call/cc
+  let code = "(let ((x 0) (y 0)) (call/cc (lambda (escape) (set! x (+ x 1)) (escape (+ x y)))))"
+  let result = repl_eval(ctx, code)
+  match result {
+    Ok(Value::Number(Number::Int(n))) => {
+      assert_eq(n, 1)
+    }
+    Ok(v) => fail("Unexpected result: " + v.to_string())
+    Err(e) => fail("Error in 2 vars outer let: " + e)
+  }
+}
+
+/// Test: 2 vars with nil (like yin-yang)
+test "vm repl: outer let with nil and let*" {
+  let ctx = new_repl_context()
+  ctx.globals.set("call/cc", Value::Procedure(Procedure::Native("call/cc")))
+  ctx.compiler_globals.set("call/cc", ())
+
+  // Like yin-yang: (x '()) (y 0) with let* inside
+  let code = "(let ((x '()) (y 0)) (call/cc (lambda (escape) (let* ((a (+ y 1))) (escape (cons a x))))))"
+  let result = repl_eval(ctx, code)
+  match result {
+    Ok(_) => ()
+    Err(e) => fail("Error: " + e)
+  }
+}
