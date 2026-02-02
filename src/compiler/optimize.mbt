@@ -291,6 +291,7 @@ fn optimize_lambda(info : LambdaInfo) -> IRExpr {
   IRExpr::Lambda({
     params: info.params,
     arity: info.arity,
+    rest_param: info.rest_param,
     body: optimize_expr(adjusted_body),
     free_vars: adjusted_free_vars,
     boxed_params: info.boxed_params,
@@ -1849,6 +1850,7 @@ fn adjust_var_indices_inner(
       IRExpr::Lambda({
         params: info.params,
         arity: info.arity,
+        rest_param: info.rest_param,
         body: info.body,
         free_vars: new_free_vars,
         boxed_params: info.boxed_params,

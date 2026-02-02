@@ -187,7 +187,7 @@ pub fn eval(expr : SExpr, env : Env) -> Result[Value, EvalError] {
               match lookup(env, name) {
                 Some(Value::Syntax(syntax_rules)) => {
                   // Macro call: expand and evaluate
-                  let expanded = match expand_macro(syntax_rules, expr) {
+                  let expanded = match expand_macro_eval(syntax_rules, expr) {
                     Ok(e) => e
                     Err(e) => return Err(e)
                   }

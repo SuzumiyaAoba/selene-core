@@ -874,3 +874,516 @@ test "vm repl: outer let with nil and let*" {
     Err(e) => fail("Error: " + e)
   }
 }
+
+/// =============================================
+/// Rest Parameters (Variadic Lambda) Tests
+/// =============================================
+
+/// Test: (lambda args body) - all arguments as rest
+test "vm repl: rest params - all args as list" {
+  let ctx = new_repl_context()
+
+  // (define list-all (lambda args args))
+  let _ = repl_eval(ctx, "(define list-all (lambda args args))")
+
+  // (list-all 1 2 3) => (1 2 3)
+  let result = repl_eval(ctx, "(list-all 1 2 3)")
+  match result {
+    Ok(Value::Pair(a, rest)) => {
+      match (a, rest) {
+        (Value::Number(Number::Int(1)), Value::Pair(b, rest2)) => {
+          match (b, rest2) {
+            (Value::Number(Number::Int(2)), Value::Pair(c, rest3)) => {
+              match (c, rest3) {
+                (Value::Number(Number::Int(3)), Value::Nil) => ()
+                _ => fail("Expected (1 2 3)")
+              }
+            }
+            _ => fail("Expected (1 2 3)")
+          }
+        }
+        _ => fail("Expected (1 2 3)")
+      }
+    }
+    _ => fail("Expected list (1 2 3)")
+  }
+}
+
+/// Test: (lambda args body) - zero arguments
+test "vm repl: rest params - zero args" {
+  let ctx = new_repl_context()
+
+  // (define list-all (lambda args args))
+  let _ = repl_eval(ctx, "(define list-all (lambda args args))")
+
+  // (list-all) => ()
+  let result = repl_eval(ctx, "(list-all)")
+  match result {
+    Ok(Value::Nil) => ()
+    _ => fail("Expected empty list")
+  }
+}
+
+/// Test: (lambda (a b . rest) body) - dotted rest parameter
+test "vm repl: rest params - required + rest" {
+  let ctx = new_repl_context()
+
+  // (define my-list (lambda (first . rest) (cons first rest)))
+  let _ = repl_eval(ctx, "(define my-list (lambda (first . rest) (cons first rest)))")
+
+  // (my-list 1 2 3 4) => (1 2 3 4)
+  let result = repl_eval(ctx, "(my-list 1 2 3 4)")
+  match result {
+    Ok(Value::Pair(a, _)) => {
+      match a {
+        Value::Number(Number::Int(1)) => ()
+        _ => fail("Expected first element to be 1")
+      }
+    }
+    _ => fail("Expected list starting with 1")
+  }
+}
+
+/// Test: dotted rest with minimum args
+test "vm repl: rest params - dotted minimum args" {
+  let ctx = new_repl_context()
+
+  // (define my-list (lambda (first . rest) (cons first rest)))
+  let _ = repl_eval(ctx, "(define my-list (lambda (first . rest) (cons first rest)))")
+
+  // (my-list 42) => (42)
+  let result = repl_eval(ctx, "(my-list 42)")
+  match result {
+    Ok(Value::Pair(a, rest)) => {
+      match (a, rest) {
+        (Value::Number(Number::Int(42)), Value::Nil) => ()
+        _ => fail("Expected (42)")
+      }
+    }
+    _ => fail("Expected list (42)")
+  }
+}
+
+/// Test: rest params with multiple required params
+test "vm repl: rest params - two required + rest" {
+  let ctx = new_repl_context()
+
+  // (define sum-rest (lambda (a b . rest) (+ a (+ b (length rest)))))
+  let _ = repl_eval(ctx, "(define sum-rest (lambda (a b . rest) (+ a (+ b (length rest)))))")
+
+  // (sum-rest 10 20 1 2 3) => 10 + 20 + 3 = 33
+  let result = repl_eval(ctx, "(sum-rest 10 20 1 2 3)")
+  match result {
+    Ok(Value::Number(Number::Int(n))) => assert_eq(n, 33)
+    _ => fail("Expected 33")
+  }
+}
+
+/// Test: rest params in anonymous lambda
+test "vm repl: rest params - anonymous lambda" {
+  let ctx = new_repl_context()
+
+  // ((lambda args (length args)) 'a 'b 'c 'd) => 4
+  let result = repl_eval(ctx, "((lambda args (length args)) 'a 'b 'c 'd)")
+  match result {
+    Ok(Value::Number(Number::Int(n))) => assert_eq(n, 4)
+    _ => fail("Expected 4")
+  }
+}
+
+/// =============================================
+/// Quasiquote Tests (VM REPL)
+/// =============================================
+
+/// Test: simple quasiquote without unquote
+test "vm repl: quasiquote - simple" {
+  let ctx = new_repl_context()
+
+  // `(a b c) => (a b c)
+  let result = repl_eval(ctx, "`(a b c)")
+  match result {
+    Ok(Value::Pair(a, rest)) => {
+      match (a, rest) {
+        (Value::Symbol("a"), Value::Pair(b, rest2)) => {
+          match (b, rest2) {
+            (Value::Symbol("b"), Value::Pair(c, rest3)) => {
+              match (c, rest3) {
+                (Value::Symbol("c"), Value::Nil) => ()
+                _ => fail("Expected (a b c)")
+              }
+            }
+            _ => fail("Expected (a b c)")
+          }
+        }
+        _ => fail("Expected (a b c)")
+      }
+    }
+    _ => fail("Expected list (a b c)")
+  }
+}
+
+/// Test: quasiquote with unquote
+test "vm repl: quasiquote - with unquote" {
+  let ctx = new_repl_context()
+
+  // (define x 42)
+  let _ = repl_eval(ctx, "(define x 42)")
+
+  // `(a ,x c) => (a 42 c)
+  let result = repl_eval(ctx, "`(a ,x c)")
+  match result {
+    Ok(Value::Pair(a, rest)) => {
+      match (a, rest) {
+        (Value::Symbol("a"), Value::Pair(b, rest2)) => {
+          match (b, rest2) {
+            (Value::Number(Number::Int(42)), Value::Pair(c, rest3)) => {
+              match (c, rest3) {
+                (Value::Symbol("c"), Value::Nil) => ()
+                _ => fail("Expected (a 42 c)")
+              }
+            }
+            _ => fail("Expected (a 42 c)")
+          }
+        }
+        _ => fail("Expected (a 42 c)")
+      }
+    }
+    Err(e) => fail("Error: " + e)
+    _ => fail("Expected list (a 42 c)")
+  }
+}
+
+/// Test: quasiquote with unquote expression
+test "vm repl: quasiquote - unquote expression" {
+  let ctx = new_repl_context()
+
+  // `(1 ,(+ 2 3) 4) => (1 5 4)
+  let result = repl_eval(ctx, "`(1 ,(+ 2 3) 4)")
+  match result {
+    Ok(Value::Pair(a, rest)) => {
+      match (a, rest) {
+        (Value::Number(Number::Int(1)), Value::Pair(b, rest2)) => {
+          match (b, rest2) {
+            (Value::Number(Number::Int(5)), Value::Pair(c, rest3)) => {
+              match (c, rest3) {
+                (Value::Number(Number::Int(4)), Value::Nil) => ()
+                _ => fail("Expected (1 5 4)")
+              }
+            }
+            _ => fail("Expected (1 5 4)")
+          }
+        }
+        _ => fail("Expected (1 5 4)")
+      }
+    }
+    Err(e) => fail("Error: " + e)
+    _ => fail("Expected list (1 5 4)")
+  }
+}
+
+/// Test: quasiquote with unquote-splicing
+test "vm repl: quasiquote - unquote-splicing" {
+  let ctx = new_repl_context()
+
+  // (define xs '(2 3))
+  let _ = repl_eval(ctx, "(define xs '(2 3))")
+
+  // `(1 ,@xs 4) => (1 2 3 4)
+  let result = repl_eval(ctx, "`(1 ,@xs 4)")
+  match result {
+    Ok(Value::Pair(a, rest)) => {
+      match (a, rest) {
+        (Value::Number(Number::Int(1)), Value::Pair(b, rest2)) => {
+          match (b, rest2) {
+            (Value::Number(Number::Int(2)), Value::Pair(c, rest3)) => {
+              match (c, rest3) {
+                (Value::Number(Number::Int(3)), Value::Pair(d, rest4)) => {
+                  match (d, rest4) {
+                    (Value::Number(Number::Int(4)), Value::Nil) => ()
+                    _ => fail("Expected (1 2 3 4)")
+                  }
+                }
+                _ => fail("Expected (1 2 3 4)")
+              }
+            }
+            _ => fail("Expected (1 2 3 4)")
+          }
+        }
+        _ => fail("Expected (1 2 3 4)")
+      }
+    }
+    Err(e) => fail("Error: " + e)
+    _ => fail("Expected list (1 2 3 4)")
+  }
+}
+
+/// Test: quasiquote with empty unquote-splicing
+test "vm repl: quasiquote - empty unquote-splicing" {
+  let ctx = new_repl_context()
+
+  // (define xs '())
+  let _ = repl_eval(ctx, "(define xs '())")
+
+  // `(1 ,@xs 4) => (1 4)
+  let result = repl_eval(ctx, "`(1 ,@xs 4)")
+  match result {
+    Ok(Value::Pair(a, rest)) => {
+      match (a, rest) {
+        (Value::Number(Number::Int(1)), Value::Pair(b, rest2)) => {
+          match (b, rest2) {
+            (Value::Number(Number::Int(4)), Value::Nil) => ()
+            _ => fail("Expected (1 4)")
+          }
+        }
+        _ => fail("Expected (1 4)")
+      }
+    }
+    Err(e) => fail("Error: " + e)
+    _ => fail("Expected list (1 4)")
+  }
+}
+
+/// Test: quasiquote symbol
+test "vm repl: quasiquote - symbol" {
+  let ctx = new_repl_context()
+
+  // `x => x (symbol)
+  let result = repl_eval(ctx, "`x")
+  match result {
+    Ok(Value::Symbol("x")) => ()
+    Err(e) => fail("Error: " + e)
+    _ => fail("Expected symbol x")
+  }
+}
+
+/// Test: quasiquote number
+test "vm repl: quasiquote - number" {
+  let ctx = new_repl_context()
+
+  // `42 => 42
+  let result = repl_eval(ctx, "`42")
+  match result {
+    Ok(Value::Number(Number::Int(42))) => ()
+    Err(e) => fail("Error: " + e)
+    _ => fail("Expected 42")
+  }
+}
+
+/// =============================================
+/// Letrec Tests (VM REPL)
+/// =============================================
+
+/// Test: simple letrec (no recursion)
+test "vm repl: letrec - simple" {
+  let ctx = new_repl_context()
+
+  // (letrec ((x 1) (y 2)) (+ x y))
+  // => 3
+  let result = repl_eval(ctx, "(letrec ((x 1) (y 2)) (+ x y))")
+  match result {
+    Ok(Value::Number(Number::Int(n))) => assert_eq(n, 3)
+    Err(e) => fail("Error: " + e)
+    _ => fail("Expected 3")
+  }
+}
+
+/// Test: letrec with non-recursive lambda
+test "vm repl: letrec - non-recursive lambda" {
+  let ctx = new_repl_context()
+
+  // (letrec ((f (lambda (x) (+ x 1)))) (f 5))
+  // => 6
+  let result = repl_eval(ctx, "(letrec ((f (lambda (x) (+ x 1)))) (f 5))")
+  match result {
+    Ok(Value::Number(Number::Int(n))) => assert_eq(n, 6)
+    Err(e) => fail("Error: " + e)
+    _ => fail("Expected 6")
+  }
+}
+
+/// Test: letrec with recursive lambda - simplified
+test "vm repl: letrec - recursive simple" {
+  let ctx = new_repl_context()
+
+  // Simple test: (letrec ((f (lambda () f))) (procedure? f))
+  // Just check that we can reference f inside f without infinite loop
+  let result = repl_eval(ctx, "(letrec ((f (lambda () f))) (procedure? f))")
+  match result {
+    Ok(Value::Bool(b)) => assert_eq(b, true)
+    Err(e) => fail("Error: " + e)
+    _ => fail("Expected #t")
+  }
+}
+
+/// Test: letrec with immediate termination
+test "vm repl: letrec - immediate termination" {
+  let ctx = new_repl_context()
+
+  // (letrec ((loop (lambda (i) (if (= i 0) 42 (loop (- i 1)))))) (loop 0))
+  // Should return 42 immediately without recursion
+  let result = repl_eval(ctx, "(letrec ((loop (lambda (i) (if (= i 0) 42 (loop (- i 1)))))) (loop 0))")
+  match result {
+    Ok(Value::Number(Number::Int(n))) => assert_eq(n, 42)
+    Err(e) => fail("Error: " + e)
+    _ => fail("Expected 42")
+  }
+}
+
+/// Test: letrec with one recursion
+test "vm repl: letrec - one recursion" {
+  let ctx = new_repl_context()
+
+  // (letrec ((loop (lambda (i) (if (= i 0) 42 (loop (- i 1)))))) (loop 1))
+  // Should recurse once: loop(1) -> loop(0) -> 42
+  let result = repl_eval(ctx, "(letrec ((loop (lambda (i) (if (= i 0) 42 (loop (- i 1)))))) (loop 1))")
+  match result {
+    Ok(Value::Number(Number::Int(n))) => assert_eq(n, 42)
+    Err(e) => fail("Error: " + e)
+    _ => fail("Expected 42")
+  }
+}
+
+/// Test: letrec with multiple recursions
+test "vm repl: letrec - five recursions" {
+  let ctx = new_repl_context()
+
+  // (letrec ((loop (lambda (i) (if (= i 0) 42 (loop (- i 1)))))) (loop 5))
+  // Should recurse 5 times
+  let result = repl_eval(ctx, "(letrec ((loop (lambda (i) (if (= i 0) 42 (loop (- i 1)))))) (loop 5))")
+  match result {
+    Ok(Value::Number(Number::Int(n))) => assert_eq(n, 42)
+    Err(e) => fail("Error: " + e)
+    _ => fail("Expected 42")
+  }
+}
+
+/// Test: letrec with recursive function
+test "vm repl: letrec - recursive counter" {
+  let ctx = new_repl_context()
+
+  // (letrec ((loop (lambda (i) (if (= i 5) i (loop (+ i 1)))))) (loop 0))
+  // => 5
+  let result = repl_eval(ctx, "(letrec ((loop (lambda (i) (if (= i 5) i (loop (+ i 1)))))) (loop 0))")
+  match result {
+    Ok(Value::Number(Number::Int(n))) => assert_eq(n, 5)
+    Err(e) => fail("Error: " + e)
+    _ => fail("Expected 5")
+  }
+}
+
+/// =============================================
+/// Do Loop Tests (VM REPL)
+/// =============================================
+
+/// Test: simple do loop - count from 0 to 5
+test "vm repl: do loop - simple counter" {
+  let ctx = new_repl_context()
+
+  // (do ((i 0 (+ i 1)))
+  //     ((= i 5) i))
+  // => 5
+  let result = repl_eval(ctx, "(do ((i 0 (+ i 1))) ((= i 5) i))")
+  match result {
+    Ok(Value::Number(Number::Int(n))) => assert_eq(n, 5)
+    Err(e) => fail("Error: " + e)
+    _ => fail("Expected 5")
+  }
+}
+
+/// Test: letrec with single param (this works)
+test "vm repl: letrec - single param countdown" {
+  let ctx = new_repl_context()
+  let result = repl_eval(ctx, "(letrec ((loop (lambda (n) (if (= n 0) 42 (loop (- n 1)))))) (loop 3))")
+  match result {
+    Ok(Value::Number(Number::Int(n))) => assert_eq(n, 42)
+    Err(e) => fail("Error: " + e)
+    _ => fail("Expected 42")
+  }
+}
+
+/// Test: letrec with two params
+test "vm repl: letrec - two params" {
+  let ctx = new_repl_context()
+  let result = repl_eval(ctx, "(letrec ((loop (lambda (n x) (if (= n 0) x (loop (- n 1) x))))) (loop 3 42))")
+  match result {
+    Ok(Value::Number(Number::Int(n))) => assert_eq(n, 42)
+    Err(e) => fail("Error: " + e)
+    _ => fail("Expected 42")
+  }
+}
+
+/// =============================================
+/// Do Loop Tests (VM REPL) - Additional
+/// =============================================
+
+/// Test: do loop with body
+test "vm repl: do loop - with body" {
+  let ctx = new_repl_context()
+  let _ = repl_eval(ctx, "(define x 0)")
+  let result = repl_eval(ctx, "(do ((i 0 (+ i 1))) ((= i 3) x) (set! x (+ x 10)))")
+  match result {
+    Ok(Value::Number(Number::Int(n))) => assert_eq(n, 30)
+    Err(e) => fail("Error: " + e)
+    _ => fail("Expected 30")
+  }
+}
+
+/// Test: do loop building list in reverse
+test "vm repl: do loop - build list" {
+  let ctx = new_repl_context()
+  let result = repl_eval(ctx, "(do ((i 0 (+ i 1)) (lst '() (cons i lst))) ((= i 3) lst))")
+  match result {
+    Ok(Value::Pair(a, rest)) => {
+      match (a, rest) {
+        (Value::Number(Number::Int(2)), Value::Pair(b, rest2)) => {
+          match (b, rest2) {
+            (Value::Number(Number::Int(1)), Value::Pair(c, rest3)) => {
+              match (c, rest3) {
+                (Value::Number(Number::Int(0)), Value::Nil) => ()
+                _ => fail("Expected (2 1 0)")
+              }
+            }
+            _ => fail("Expected (2 1 0)")
+          }
+        }
+        _ => fail("Expected (2 1 0)")
+      }
+    }
+    Err(e) => fail("Error: " + e)
+    _ => fail("Expected list (2 1 0)")
+  }
+}
+
+/// Test: do loop - no step (variable doesn't change)
+test "vm repl: do loop - no step" {
+  let ctx = new_repl_context()
+  let _ = repl_eval(ctx, "(define counter 0)")
+  let result = repl_eval(ctx, "(do ((x 10)) ((= counter 3) x) (set! counter (+ counter 1)))")
+  match result {
+    Ok(Value::Number(Number::Int(n))) => assert_eq(n, 10)
+    Err(e) => fail("Error: " + e)
+    _ => fail("Expected 10")
+  }
+}
+
+/// Test: do loop - factorial
+test "vm repl: do loop - factorial" {
+  let ctx = new_repl_context()
+  let result = repl_eval(ctx, "(do ((n 5 (- n 1)) (result 1 (* result n))) ((= n 0) result))")
+  match result {
+    Ok(Value::Number(Number::Int(n))) => assert_eq(n, 120)
+    Err(e) => fail("Error: " + e)
+    _ => fail("Expected 120")
+  }
+}
+
+/// Test: do loop - empty result expression returns nil
+test "vm repl: do loop - empty result" {
+  let ctx = new_repl_context()
+  let result = repl_eval(ctx, "(do ((i 0 (+ i 1))) ((= i 3)))")
+  match result {
+    Ok(Value::Nil) => ()
+    Err(e) => fail("Error: " + e)
+    _ => fail("Expected nil")
+  }
+}

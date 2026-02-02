@@ -890,9 +890,43 @@ fn vm_call_function(
   match func {
     Value::Procedure(Procedure::VMClosure(closure)) => {
       let target_chunk = vm.compiled_module.chunks[closure.chunk_idx]
-      if target_chunk.arity >= 0 && args.length() != target_chunk.arity {
-        return Err(VMError::ArityError("closure arity mismatch"))
+
+      // Arity check
+      if target_chunk.has_rest_param {
+        // Variadic: need at least 'arity' arguments
+        if target_chunk.arity >= 0 && args.length() < target_chunk.arity {
+          return Err(VMError::ArityError("closure arity mismatch (too few arguments)"))
+        }
+      } else {
+        // Fixed arity: need exactly 'arity' arguments
+        if target_chunk.arity >= 0 && args.length() != target_chunk.arity {
+          return Err(VMError::ArityError("closure arity mismatch"))
+        }
       }
+
+      // Prepare actual args (collect rest into list if variadic)
+      let actual_args : Array[Value] = []
+      if target_chunk.has_rest_param {
+        // Push required args
+        let mut i = 0
+        while i < target_chunk.arity {
+          actual_args.push(args[i])
+          i = i + 1
+        }
+        // Collect remaining args into a list
+        let mut rest_list : Value = Value::Nil
+        let mut j = args.length() - 1
+        while j >= target_chunk.arity {
+          rest_list = Value::Pair(args[j], rest_list)
+          j = j - 1
+        }
+        actual_args.push(rest_list)
+      } else {
+        for arg in args {
+          actual_args.push(arg)
+        }
+      }
+
       if is_tail && vm.call_stack.length() > 0 {
         let frame = vm.call_stack[vm.call_stack.length() - 1]
         while vm.stack.length() > frame.base_ptr {
@@ -903,7 +937,7 @@ fn vm_call_function(
           vm_push(vm, capture)
         }
         // push argument
-        for arg in args {
+        for arg in actual_args {
           vm_push(vm, arg)
         }
         vm.current_chunk = closure.chunk_idx
@@ -913,7 +947,7 @@ fn vm_call_function(
           return_chunk: vm.current_chunk,
           return_ip: vm.ip,
           base_ptr: vm.stack.length(),
-          num_locals: closure.captures.length() + args.length(),
+          num_locals: closure.captures.length() + actual_args.length(),
         }
         vm.call_stack.push(frame)
         // push capture value
@@ -921,7 +955,7 @@ fn vm_call_function(
           vm_push(vm, capture)
         }
         // push argument
-        for arg in args {
+        for arg in actual_args {
           vm_push(vm, arg)
         }
         vm.current_chunk = closure.chunk_idx

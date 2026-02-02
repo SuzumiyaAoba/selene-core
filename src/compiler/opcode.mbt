@@ -107,8 +107,10 @@ pub(all) struct CodeChunk {
   constants : Array[BCValue]
   /// global name table
   names : Array[String]
-  /// Number of parameters (-1 is top level)
+  /// Number of required parameters (-1 is top level)
   arity : Int
+  /// Whether function has rest parameter
+  has_rest_param : Bool
   /// number of free variables
   num_free_vars : Int
   /// Number of local variables
@@ -132,6 +134,7 @@ pub fn new_code_chunk() -> CodeChunk {
     constants: [],
     names: [],
     arity: -1,
+    has_rest_param: false,
     num_free_vars: 0,
     num_locals: 0,
     debug_name: None,
@@ -150,8 +153,10 @@ pub(all) struct CodeChunkBuilder {
   names : Array[String]
   /// Map for checking duplicate names
   name_map : @hashmap.T[String, Int]
-  /// Number of parameters
+  /// Number of required parameters
   mut arity : Int
+  /// Whether function has rest parameter
+  mut has_rest_param : Bool
   /// number of free variables
   mut num_free_vars : Int
   /// Number of local variables
@@ -169,6 +174,7 @@ pub fn new_builder(debug_name : String?) -> CodeChunkBuilder {
     names: [],
     name_map: @hashmap.new(),
     arity: -1,
+    has_rest_param: false,
     num_free_vars: 0,
     num_locals: 0,
     debug_name,
@@ -239,6 +245,7 @@ pub fn build(self : CodeChunkBuilder) -> CodeChunk {
     constants: self.constants,
     names: self.names,
     arity: self.arity,
+    has_rest_param: self.has_rest_param,
     num_free_vars: self.num_free_vars,
     num_locals: self.num_locals,
     debug_name: self.debug_name,
