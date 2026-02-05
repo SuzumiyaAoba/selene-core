@@ -291,6 +291,7 @@ fn optimize_lambda(info : LambdaInfo) -> IRExpr {
   IRExpr::Lambda({
     params: info.params,
     arity: info.arity,
+    rest_param: info.rest_param,
     body: optimize_expr(adjusted_body),
     free_vars: adjusted_free_vars,
     boxed_params: info.boxed_params,
@@ -323,18 +324,42 @@ fn adjust_lambda_var_refs(
           depth: 0,
           index: free_var_index,
         })
-      } else if var_ref.depth == 0 && var_ref.index < params.length() {
-        // Parameters for this scope (only if not already tuned)
-        // Add num_captures to index
-        // Note: Check index < params.length() to avoid duplicate adjustments in multiple passes.
-        IRExpr::Var({
-          name: var_ref.name,
-          depth: 0,
-          index: var_ref.index + free_vars.length(),
-        })
       } else if var_ref.depth == 0 {
-        // Already adjusted parameters (index >= params.length())
-        expr
+        // Check if this is a parameter (by checking if name is in params)
+        let mut is_param = false
+        for p in params {
+          if p == var_ref.name {
+            is_param = true
+            break
+          }
+        }
+        if is_param {
+          // Parameter: check if already adjusted (index >= params.length())
+          if var_ref.index < params.length() {
+            // Not yet adjusted: add num_captures to index
+            IRExpr::Var({
+              name: var_ref.name,
+              depth: 0,
+              index: var_ref.index + free_vars.length(),
+            })
+          } else {
+            // Already adjusted
+            expr
+          }
+        } else {
+          // Let binding: check if already adjusted (index >= free_vars.length() + params.length())
+          if var_ref.index < free_vars.length() + params.length() {
+            // Not yet adjusted: add num_captures to index
+            IRExpr::Var({
+              name: var_ref.name,
+              depth: 0,
+              index: var_ref.index + free_vars.length(),
+            })
+          } else {
+            // Already adjusted
+            expr
+          }
+        }
       } else {
         // Variables in further outer scope (for nested lambdas)
         // Keep as is (processed by nested lambda)
@@ -406,8 +431,29 @@ fn adjust_lambda_var_refs(
         // free variable
         { name: var_ref.name, depth: 0, index: free_var_index }
       } else if var_ref.depth == 0 {
-        // variables of this scope
-        { name: var_ref.name, depth: 0, index: var_ref.index + free_vars.length() }
+        // Check if this is a parameter
+        let mut is_param = false
+        for p in params {
+          if p == var_ref.name {
+            is_param = true
+            break
+          }
+        }
+        if is_param {
+          // Parameter: check if already adjusted
+          if var_ref.index < params.length() {
+            { name: var_ref.name, depth: 0, index: var_ref.index + free_vars.length() }
+          } else {
+            var_ref
+          }
+        } else {
+          // Let binding: check if already adjusted
+          if var_ref.index < free_vars.length() + params.length() {
+            { name: var_ref.name, depth: 0, index: var_ref.index + free_vars.length() }
+          } else {
+            var_ref
+          }
+        }
       } else {
         // variables in further outer scopes
         var_ref
@@ -465,7 +511,9 @@ fn optimize_let(bindings : Array[LetBinding], body : IRExpr) -> IRExpr {
   let used_vars = collect_used_vars(opt_body)
   let live_bindings : Array[LetBinding] = []
   let side_effect_exprs : Array[IRExpr] = []
+  let removed_indices : Array[Int] = []
 
+  let mut idx = 0
   for binding in opt_bindings {
     if used_vars.contains(binding.name) {
       // Retain if variable is used
@@ -473,18 +521,45 @@ fn optimize_let(bindings : Array[LetBinding], body : IRExpr) -> IRExpr {
     } else if has_side_effect(binding.init) {
       // Execute only the expression if there are side effects
       side_effect_exprs.push(binding.init)
+      removed_indices.push(idx)
+    } else {
+      // Remove if not used and have no side effects
+      removed_indices.push(idx)
     }
-    // Remove if not used and have no side effects
+    idx = idx + 1
   }
 
   // If all bindings are removed
   if live_bindings.length() == 0 {
     if side_effect_exprs.length() == 0 {
-      return opt_body
+      // Adjust body's VarRef indices before returning
+      return adjust_var_indices_after_removal(opt_body, removed_indices)
     }
     // Wrapping expressions with side effects in begin
-    side_effect_exprs.push(opt_body)
+    let adjusted_body = adjust_var_indices_after_removal(opt_body, removed_indices)
+    side_effect_exprs.push(adjusted_body)
     return IRExpr::Begin(side_effect_exprs)
+  }
+
+  // Adjust VarRef indices in live_bindings and body if any bindings were removed
+  if removed_indices.length() > 0 {
+    let adjusted_bindings : Array[LetBinding] = []
+    for binding in live_bindings {
+      adjusted_bindings.push({
+        name: binding.name,
+        init: adjust_var_indices_after_removal(binding.init, removed_indices),
+      })
+    }
+    let adjusted_body = adjust_var_indices_after_removal(opt_body, removed_indices)
+
+    // If you have a removed expression with side effects
+    if side_effect_exprs.length() > 0 {
+      // Execute side effects before body of let
+      side_effect_exprs.push(adjusted_body)
+      return IRExpr::Let(adjusted_bindings, IRExpr::Begin(side_effect_exprs))
+    }
+
+    return IRExpr::Let(adjusted_bindings, adjusted_body)
   }
 
   // If you have a removed expression with side effects
@@ -528,21 +603,47 @@ fn optimize_letrec(bindings : Array[LetBinding], body : IRExpr) -> IRExpr {
 
   let live_bindings : Array[LetBinding] = []
   let side_effect_exprs : Array[IRExpr] = []
+  let removed_indices : Array[Int] = []
 
+  let mut idx = 0
   for binding in opt_bindings {
     if reachable.contains(binding.name) {
       live_bindings.push(binding)
     } else if has_side_effect(binding.init) {
       side_effect_exprs.push(binding.init)
+      removed_indices.push(idx)
+    } else {
+      removed_indices.push(idx)
     }
+    idx = idx + 1
   }
 
   if live_bindings.length() == 0 {
     if side_effect_exprs.length() == 0 {
-      return opt_body
+      return adjust_var_indices_after_removal(opt_body, removed_indices)
     }
-    side_effect_exprs.push(opt_body)
+    let adjusted_body = adjust_var_indices_after_removal(opt_body, removed_indices)
+    side_effect_exprs.push(adjusted_body)
     return IRExpr::Begin(side_effect_exprs)
+  }
+
+  // Adjust VarRef indices if any bindings were removed
+  if removed_indices.length() > 0 {
+    let adjusted_bindings : Array[LetBinding] = []
+    for binding in live_bindings {
+      adjusted_bindings.push({
+        name: binding.name,
+        init: adjust_var_indices_after_removal(binding.init, removed_indices),
+      })
+    }
+    let adjusted_body = adjust_var_indices_after_removal(opt_body, removed_indices)
+
+    if side_effect_exprs.length() > 0 {
+      side_effect_exprs.push(adjusted_body)
+      return IRExpr::Letrec(adjusted_bindings, IRExpr::Begin(side_effect_exprs))
+    }
+
+    return IRExpr::Letrec(adjusted_bindings, adjusted_body)
   }
 
   if side_effect_exprs.length() > 0 {
@@ -1641,4 +1742,196 @@ fn primop_equal(a : PrimOpKind, b : PrimOpKind) -> Bool {
   // Enum equality may be automatically supported in MoonBit
   // Conservatively stringify and compare
   a.to_string() == b.to_string()
+}
+
+/// Adjust VarRef indices after removing bindings from a let
+/// removed_indices: the original indices of bindings that were removed (sorted)
+/// This function adjusts depth=0 VarRef indices to account for removed bindings
+fn adjust_var_indices_after_removal(
+  expr : IRExpr,
+  removed_indices : Array[Int]
+) -> IRExpr {
+  if removed_indices.length() == 0 {
+    return expr
+  }
+  adjust_var_indices_inner(expr, removed_indices, 0)
+}
+
+/// Inner function for adjusting VarRef indices
+/// current_depth: the current depth level (0 = same frame as the let)
+fn adjust_var_indices_inner(
+  expr : IRExpr,
+  removed_indices : Array[Int],
+  current_depth : Int
+) -> IRExpr {
+  match expr {
+    IRExpr::Const(_) => expr
+    IRExpr::Quote(_) => expr
+    IRExpr::GlobalVar(_) => expr
+
+    IRExpr::Var(var_ref) => {
+      if var_ref.depth == current_depth {
+        // Calculate how many removed indices are less than this var's index
+        let mut adjustment = 0
+        for ri in removed_indices {
+          if ri < var_ref.index {
+            adjustment = adjustment + 1
+          }
+        }
+        if adjustment > 0 {
+          IRExpr::Var({ name: var_ref.name, depth: var_ref.depth, index: var_ref.index - adjustment })
+        } else {
+          expr
+        }
+      } else {
+        expr
+      }
+    }
+
+    IRExpr::Set(var_ref, value) => {
+      let new_value = adjust_var_indices_inner(value, removed_indices, current_depth)
+      if var_ref.depth == current_depth {
+        let mut adjustment = 0
+        for ri in removed_indices {
+          if ri < var_ref.index {
+            adjustment = adjustment + 1
+          }
+        }
+        if adjustment > 0 {
+          IRExpr::Set({ name: var_ref.name, depth: var_ref.depth, index: var_ref.index - adjustment }, new_value)
+        } else {
+          IRExpr::Set(var_ref, new_value)
+        }
+      } else {
+        IRExpr::Set(var_ref, new_value)
+      }
+    }
+
+    IRExpr::GlobalSet(name, value) =>
+      IRExpr::GlobalSet(name, adjust_var_indices_inner(value, removed_indices, current_depth))
+
+    IRExpr::If(cond, then_branch, else_branch) =>
+      IRExpr::If(
+        adjust_var_indices_inner(cond, removed_indices, current_depth),
+        adjust_var_indices_inner(then_branch, removed_indices, current_depth),
+        adjust_var_indices_inner(else_branch, removed_indices, current_depth),
+      )
+
+    IRExpr::Begin(exprs) => {
+      let new_exprs : Array[IRExpr] = []
+      for e in exprs {
+        new_exprs.push(adjust_var_indices_inner(e, removed_indices, current_depth))
+      }
+      IRExpr::Begin(new_exprs)
+    }
+
+    IRExpr::Lambda(info) => {
+      // Lambda creates a new frame, so depth increases by 1 for variables inside
+      // But free_vars reference the outer scope at the original depth
+      let new_free_vars : Array[VarRef] = []
+      for fv in info.free_vars {
+        if fv.depth == current_depth {
+          let mut adjustment = 0
+          for ri in removed_indices {
+            if ri < fv.index {
+              adjustment = adjustment + 1
+            }
+          }
+          if adjustment > 0 {
+            new_free_vars.push({ name: fv.name, depth: fv.depth, index: fv.index - adjustment })
+          } else {
+            new_free_vars.push(fv)
+          }
+        } else {
+          new_free_vars.push(fv)
+        }
+      }
+      // Body is in a new frame, so we don't adjust it (depth would be relative to lambda's frame)
+      IRExpr::Lambda({
+        params: info.params,
+        arity: info.arity,
+        rest_param: info.rest_param,
+        body: info.body,
+        free_vars: new_free_vars,
+        boxed_params: info.boxed_params,
+        boxed_locals: info.boxed_locals,
+        boxed_free_vars: info.boxed_free_vars,
+      })
+    }
+
+    IRExpr::App(func, args) => {
+      let new_args : Array[IRExpr] = []
+      for arg in args {
+        new_args.push(adjust_var_indices_inner(arg, removed_indices, current_depth))
+      }
+      IRExpr::App(adjust_var_indices_inner(func, removed_indices, current_depth), new_args)
+    }
+
+    IRExpr::TailApp(func, args) => {
+      let new_args : Array[IRExpr] = []
+      for arg in args {
+        new_args.push(adjust_var_indices_inner(arg, removed_indices, current_depth))
+      }
+      IRExpr::TailApp(adjust_var_indices_inner(func, removed_indices, current_depth), new_args)
+    }
+
+    IRExpr::Let(bindings, body) => {
+      // Let in same frame: adjust both bindings and body at the same depth
+      let new_bindings : Array[LetBinding] = []
+      for binding in bindings {
+        new_bindings.push({
+          name: binding.name,
+          init: adjust_var_indices_inner(binding.init, removed_indices, current_depth),
+        })
+      }
+      IRExpr::Let(
+        new_bindings,
+        adjust_var_indices_inner(body, removed_indices, current_depth),
+      )
+    }
+
+    IRExpr::Letrec(bindings, body) => {
+      let new_bindings : Array[LetBinding] = []
+      for binding in bindings {
+        new_bindings.push({
+          name: binding.name,
+          init: adjust_var_indices_inner(binding.init, removed_indices, current_depth),
+        })
+      }
+      IRExpr::Letrec(
+        new_bindings,
+        adjust_var_indices_inner(body, removed_indices, current_depth),
+      )
+    }
+
+    IRExpr::PrimOp(kind, args) => {
+      let new_args : Array[IRExpr] = []
+      for arg in args {
+        new_args.push(adjust_var_indices_inner(arg, removed_indices, current_depth))
+      }
+      IRExpr::PrimOp(kind, new_args)
+    }
+
+    IRExpr::CallCC(proc) =>
+      IRExpr::CallCC(adjust_var_indices_inner(proc, removed_indices, current_depth))
+
+    IRExpr::Delay(body) =>
+      IRExpr::Delay(adjust_var_indices_inner(body, removed_indices, current_depth))
+
+    IRExpr::And(exprs) => {
+      let new_exprs : Array[IRExpr] = []
+      for e in exprs {
+        new_exprs.push(adjust_var_indices_inner(e, removed_indices, current_depth))
+      }
+      IRExpr::And(new_exprs)
+    }
+
+    IRExpr::Or(exprs) => {
+      let new_exprs : Array[IRExpr] = []
+      for e in exprs {
+        new_exprs.push(adjust_var_indices_inner(e, removed_indices, current_depth))
+      }
+      IRExpr::Or(new_exprs)
+    }
+  }
 }

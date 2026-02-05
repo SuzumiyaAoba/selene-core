@@ -60,6 +60,16 @@ fn is_global(env : CompileEnv, name : String) -> Bool {
   env.globals.contains(name)
 }
 
+/// Check if a name is shadowed by a local variable in the current scope
+fn is_shadowed(env : CompileEnv, name : String) -> Bool {
+  for local in env.locals {
+    if local == name {
+      return true
+    }
+  }
+  false
+}
+
 /// Convert built-in function names to primitive operations
 fn name_to_primop(name : String) -> PrimOpKind? {
   match name {
@@ -423,8 +433,18 @@ pub fn compile(
     // variable reference
     SExpr::Symbol(name) => compile_var_ref(name, env)
 
-    // quote
-    SExpr::Quote(inner) => Ok(IRExpr::Quote(sexpr_to_ir_const(inner)))
+    // quote (check for shadowing)
+    SExpr::Quote(inner) => {
+      if is_shadowed(env, "quote") {
+        // quote is shadowed, treat as function application: (quote inner)
+        let quote_symbol = SExpr::Symbol("quote")
+        let args = SExpr::Pair(inner, SExpr::Nil)
+        compile_pair(quote_symbol, args, env, tail)
+      } else {
+        // quote is not shadowed, use the built-in quote
+        Ok(IRExpr::Quote(sexpr_to_ir_const(inner)))
+      }
+    }
 
     // Vector (self-evaluation)
     SExpr::Vector(items) => {
@@ -439,8 +459,7 @@ pub fn compile(
     SExpr::Pair(car, cdr) => compile_pair(car, cdr, env, tail)
 
     // quasiquote
-    SExpr::Quasiquote(_) =>
-      Err(CompileError::Unsupported("quasiquote in compiler"))
+    SExpr::Quasiquote(inner) => compile_quasiquote(inner, env, 0)
     SExpr::Unquote(_) =>
       Err(CompileError::SyntaxError("unquote outside quasiquote"))
     SExpr::UnquoteSplicing(_) =>
@@ -470,26 +489,35 @@ fn compile_pair(
   tail : Bool
 ) -> Result[IRExpr, CompileError] {
   match car {
-    // special format
-    SExpr::Symbol("if") => compile_if(cdr, env, tail)
-    SExpr::Symbol("lambda") => compile_lambda(cdr, env)
-    SExpr::Symbol("begin") => compile_begin(cdr, env, tail)
-    SExpr::Symbol("and") => compile_and(cdr, env, tail)
-    SExpr::Symbol("or") => compile_or(cdr, env, tail)
-    SExpr::Symbol("let") => compile_let(cdr, env, tail)
-    SExpr::Symbol("let*") => compile_let_star(cdr, env, tail)
-    SExpr::Symbol("letrec") => compile_letrec(cdr, env, tail)
-    SExpr::Symbol("set!") => compile_set(cdr, env)
-    SExpr::Symbol("quote") => compile_quote(cdr)
-    SExpr::Symbol("delay") => compile_delay(cdr, env)
-    SExpr::Symbol("call/cc") | SExpr::Symbol("call-with-current-continuation") =>
-      compile_call_cc(cdr, env, tail)
-    SExpr::Symbol("define") =>
-      Err(CompileError::SyntaxError("define not allowed in expression context"))
-    SExpr::Symbol("define-syntax") =>
-      Err(CompileError::SyntaxError("define-syntax not allowed in expression context"))
+    // special format (but check for shadowing first)
+    SExpr::Symbol(name) if !is_shadowed(env, name) => {
+      match name {
+        "if" => compile_if(cdr, env, tail)
+        "lambda" => compile_lambda(cdr, env)
+        "begin" => compile_begin(cdr, env, tail)
+        "and" => compile_and(cdr, env, tail)
+        "or" => compile_or(cdr, env, tail)
+        "cond" => compile_cond(cdr, env, tail)
+        "case" => compile_case(cdr, env, tail)
+        "let" => compile_let(cdr, env, tail)
+        "let*" => compile_let_star(cdr, env, tail)
+        "letrec" => compile_letrec(cdr, env, tail)
+        "do" => compile_do(cdr, env, tail)
+        "set!" => compile_set(cdr, env)
+        "quote" => compile_quote(cdr)
+        "quasiquote" => compile_quasiquote_form(cdr, env)
+        "delay" => compile_delay(cdr, env)
+        "call/cc" | "call-with-current-continuation" =>
+          compile_call_cc(cdr, env, tail)
+        "define" =>
+          Err(CompileError::SyntaxError("define not allowed in expression context"))
+        "define-syntax" =>
+          Err(CompileError::SyntaxError("define-syntax not allowed in expression context"))
+        _ => compile_application(car, cdr, env, tail)
+      }
+    }
 
-    // function application
+    // function application (includes shadowed special forms)
     _ => compile_application(car, cdr, env, tail)
   }
 }
@@ -530,27 +558,35 @@ fn compile_lambda(args : SExpr, env : CompileEnv) -> Result[IRExpr, CompileError
   match args {
     SExpr::Pair(params_expr, body_rest) => {
       // extract parameters
-      let params = match extract_params(params_expr) {
+      let params_result = match extract_params(params_expr) {
         Ok(p) => p
         Err(e) => return Err(e)
       }
+
+      // Build full parameter list including rest param for environment
+      let all_params = params_result.params.copy()
+      match params_result.rest_param {
+        Some(rest_name) => all_params.push(rest_name)
+        None => ()
+      }
+
       // Compile the body in the new environment
-      let new_env = extend_compile_env(env, params.copy())
+      let new_env = extend_compile_env(env, all_params.copy())
       // Compile body as begin (tail position)
       let body_ir = match compile_body(body_rest, new_env, true) {
         Ok(ir) => ir
         Err(e) => return Err(e)
       }
       // Collect free variables (depth remains the same)
-      let free_vars = collect_free_vars(body_ir, params)
+      let free_vars = collect_free_vars(body_ir, all_params)
 
       // Set! Collect variables to be set!
       let set_vars = collect_set_vars(body_ir)
       // Determine which parameters require boxing
       let boxed_params : Array[Int] = []
       let mut i = 0
-      while i < params.length() {
-        if needs_boxing(params[i], free_vars, set_vars) {
+      while i < all_params.length() {
+        if needs_boxing(all_params[i], free_vars, set_vars) {
           boxed_params.push(i)
         }
         i = i + 1
@@ -578,8 +614,9 @@ fn compile_lambda(args : SExpr, env : CompileEnv) -> Result[IRExpr, CompileError
       }
 
       Ok(IRExpr::Lambda({
-        params,
-        arity: params.length(),
+        params: all_params,
+        arity: params_result.params.length(),
+        rest_param: params_result.rest_param,
         body: body_ir,
         free_vars,
         boxed_params,
@@ -591,24 +628,44 @@ fn compile_lambda(args : SExpr, env : CompileEnv) -> Result[IRExpr, CompileError
   }
 }
 
+/// Result of parameter extraction
+struct ParamsResult {
+  /// Required parameter names
+  params : Array[String]
+  /// Rest parameter name (if any)
+  rest_param : String?
+}
+
 /// Extract parameter list
-fn extract_params(params : SExpr) -> Result[Array[String], CompileError] {
-  let names : Array[String] = []
-  let mut current = params
-  while true {
-    match current {
-      SExpr::Nil => return Ok(names)
-      SExpr::Pair(SExpr::Symbol(name), rest) => {
-        names.push(name)
-        current = rest
+/// Supports:
+///   (lambda (a b c) ...) - fixed arity
+///   (lambda args ...) - all args collected into list
+///   (lambda (a b . rest) ...) - required args + rest list
+fn extract_params(params_expr : SExpr) -> Result[ParamsResult, CompileError] {
+  match params_expr {
+    // (lambda args ...) - single symbol, all args collected
+    SExpr::Symbol(name) =>
+      Ok({ params: [], rest_param: Some(name) })
+    // (lambda () ...) or (lambda (a b ...) ...)
+    _ => {
+      let names : Array[String] = []
+      let mut current = params_expr
+      while true {
+        match current {
+          SExpr::Nil => return Ok({ params: names, rest_param: None })
+          SExpr::Pair(SExpr::Symbol(name), rest) => {
+            names.push(name)
+            current = rest
+          }
+          // Improper list: (a b . rest)
+          SExpr::Symbol(rest_name) =>
+            return Ok({ params: names, rest_param: Some(rest_name) })
+          _ => return Err(CompileError::SyntaxError("lambda: invalid parameter"))
+        }
       }
-      SExpr::Symbol(_) =>
-        // Doesn't support varargs yet
-        return Err(CompileError::Unsupported("rest parameter"))
-      _ => return Err(CompileError::SyntaxError("lambda: invalid parameter"))
+      Ok({ params: names, rest_param: None })
     }
   }
-  Ok(names)
 }
 
 /// Compile the body (list of expressions)
@@ -632,23 +689,130 @@ fn compile_body(
   if exprs.length() == 0 {
     return Err(CompileError::SyntaxError("empty body"))
   }
+
+  // Check for internal defines at the beginning of the body
+  let defines : Array[(String, SExpr)] = []  // (name, init_expr)
+  let mut body_start = 0
+
+  let mut i = 0
+  let _ = while i < exprs.length() {
+    match exprs[i] {
+      SExpr::Pair(SExpr::Symbol("define"), def_rest) => {
+        // Parse the define
+        match parse_internal_define(def_rest) {
+          Ok((name, init)) => {
+            defines.push((name, init))
+            body_start = i + 1
+            i = i + 1
+          }
+          Err(e) => return Err(e)
+        }
+      }
+      _ => break ()  // Stop at first non-define
+    }
+  } else {
+    ()
+  }
+
+  // If there are internal defines, convert to letrec
+  if defines.length() > 0 {
+    // Ensure there is at least one expression after defines
+    if body_start >= exprs.length() {
+      return Err(CompileError::SyntaxError("body must have at least one expression after defines"))
+    }
+
+    // Build letrec bindings
+    let bindings : Array[LetBinding] = []
+    let names : Array[String] = []
+    for def in defines {
+      let name = def.0
+      let init_expr = def.1
+      names.push(name)
+      // Create new env with all define names for compiling init expressions
+      let new_env = extend_compile_env_same_frame(env, names.copy())
+      let init_ir = match compile(init_expr, new_env, false) {
+        Ok(ir) => ir
+        Err(e) => return Err(e)
+      }
+      bindings.push({ name, init: init_ir })
+    }
+
+    // Create new env with all define names for compiling body
+    let new_env = extend_compile_env_same_frame(env, names)
+
+    // Build body from remaining expressions
+    let body_exprs : Array[SExpr] = []
+    let mut j = body_start
+    let _ = while j < exprs.length() {
+      body_exprs.push(exprs[j])
+      j = j + 1
+    } else {
+      ()
+    }
+
+    let body_ir = if body_exprs.length() == 1 {
+      match compile(body_exprs[0], new_env, tail) {
+        Ok(ir) => ir
+        Err(e) => return Err(e)
+      }
+    } else {
+      // Multiple expressions - compile as begin
+      let ir_list : Array[IRExpr] = []
+      let mut k = 0
+      let _ = while k < body_exprs.length() {
+        let is_tail = tail && k == body_exprs.length() - 1
+        let ir = match compile(body_exprs[k], new_env, is_tail) {
+          Ok(ir) => ir
+          Err(e) => return Err(e)
+        }
+        ir_list.push(ir)
+        k = k + 1
+      } else {
+        ()
+      }
+      IRExpr::Begin(ir_list)
+    }
+
+    return Ok(IRExpr::Letrec(bindings, body_ir))
+  }
+
+  // No internal defines - original behavior
   if exprs.length() == 1 {
     return compile(exprs[0], env, tail)
   }
   // Treat multiple expressions as begin
   let ir_exprs : Array[IRExpr] = []
   let len = exprs.length()
-  let mut i = 0
-  while i < len {
-    let is_tail = tail && i == len - 1
-    let ir = match compile(exprs[i], env, is_tail) {
+  let mut idx = 0
+  while idx < len {
+    let is_tail = tail && idx == len - 1
+    let ir = match compile(exprs[idx], env, is_tail) {
       Ok(ir) => ir
       Err(e) => return Err(e)
     }
     ir_exprs.push(ir)
-    i = i + 1
+    idx = idx + 1
   }
   Ok(IRExpr::Begin(ir_exprs))
+}
+
+/// Parse an internal define: (define name expr) or (define (name args...) body...)
+fn parse_internal_define(args : SExpr) -> Result[(String, SExpr), CompileError] {
+  match args {
+    // (define name expr)
+    SExpr::Pair(SExpr::Symbol(name), SExpr::Pair(init_expr, SExpr::Nil)) =>
+      Ok((name, init_expr))
+    // (define (name args...) body...)
+    SExpr::Pair(SExpr::Pair(SExpr::Symbol(name), params), body) => {
+      // Convert to (define name (lambda (args...) body...))
+      let lambda_expr = SExpr::Pair(
+        SExpr::Symbol("lambda"),
+        SExpr::Pair(params, body),
+      )
+      Ok((name, lambda_expr))
+    }
+    _ => Err(CompileError::SyntaxError("invalid internal define syntax"))
+  }
 }
 
 /// Compile the begin expression
@@ -722,6 +886,321 @@ fn compile_or(
     ir_exprs.push(ir)
   }
   Ok(IRExpr::Or(ir_exprs))
+}
+
+/// Compile the cond expression
+/// (cond (test expr ...) ... [(else expr ...)])
+fn compile_cond(
+  args : SExpr,
+  env : CompileEnv,
+  tail : Bool
+) -> Result[IRExpr, CompileError] {
+  // Parse clauses: Array of (test_expr, body_exprs_list)
+  let clause_tests : Array[SExpr] = []
+  let clause_bodies : Array[Array[SExpr]] = []
+  let mut current = args
+  let _ = while true {
+    match current {
+      SExpr::Nil => break ()
+      SExpr::Pair(clause, rest) => {
+        match clause {
+          SExpr::Pair(test_expr, body_exprs) => {
+            let expr_list : Array[SExpr] = []
+            let mut expr_current = body_exprs
+            let _ = while true {
+              match expr_current {
+                SExpr::Nil => break ()
+                SExpr::Pair(e, r) => {
+                  expr_list.push(e)
+                  expr_current = r
+                }
+                _ => return Err(CompileError::SyntaxError("cond: invalid clause"))
+              }
+            } else {
+              ()
+            }
+            clause_tests.push(test_expr)
+            clause_bodies.push(expr_list)
+            current = rest
+          }
+          _ => return Err(CompileError::SyntaxError("cond: invalid clause"))
+        }
+      }
+      _ => return Err(CompileError::SyntaxError("cond: invalid syntax"))
+    }
+  } else {
+    ()
+  }
+
+  if clause_tests.length() == 0 {
+    // Empty cond returns unspecified (nil)
+    return Ok(IRExpr::Const(IRConst::Nil))
+  }
+
+  // Build nested if from the end
+  compile_cond_clauses(clause_tests, clause_bodies, 0, env, tail)
+}
+
+/// Compile cond clauses recursively
+fn compile_cond_clauses(
+  tests : Array[SExpr],
+  bodies : Array[Array[SExpr]],
+  index : Int,
+  env : CompileEnv,
+  tail : Bool
+) -> Result[IRExpr, CompileError] {
+  if index >= tests.length() {
+    // No more clauses, return unspecified (nil)
+    return Ok(IRExpr::Const(IRConst::Nil))
+  }
+
+  let test_sexpr = tests[index]
+  let exprs = bodies[index]
+
+  // Check for else clause
+  match test_sexpr {
+    SExpr::Symbol("else") => {
+      // else must be last clause
+      if index != tests.length() - 1 {
+        return Err(CompileError::SyntaxError("cond: else clause must be last"))
+      }
+      if exprs.length() == 0 {
+        return Ok(IRExpr::Const(IRConst::Nil))
+      }
+      // Compile body as begin
+      compile_body_exprs(exprs, env, tail)
+    }
+    _ => {
+      // Regular clause
+      let test_ir = match compile(test_sexpr, env, false) {
+        Ok(ir) => ir
+        Err(e) => return Err(e)
+      }
+
+      let then_ir = if exprs.length() == 0 {
+        // (cond (test) ...) - return test value if true
+        // This requires special handling, for now just return nil
+        IRExpr::Const(IRConst::Nil)
+      } else {
+        match compile_body_exprs(exprs, env, tail) {
+          Ok(ir) => ir
+          Err(e) => return Err(e)
+        }
+      }
+
+      let else_ir = match compile_cond_clauses(tests, bodies, index + 1, env, tail) {
+        Ok(ir) => ir
+        Err(e) => return Err(e)
+      }
+
+      Ok(IRExpr::If(test_ir, then_ir, else_ir))
+    }
+  }
+}
+
+/// Compile a list of expressions as a body (returns last value)
+fn compile_body_exprs(
+  exprs : Array[SExpr],
+  env : CompileEnv,
+  tail : Bool
+) -> Result[IRExpr, CompileError] {
+  if exprs.length() == 0 {
+    return Ok(IRExpr::Const(IRConst::Nil))
+  }
+  if exprs.length() == 1 {
+    return compile(exprs[0], env, tail)
+  }
+  // Multiple expressions: compile as begin
+  let ir_exprs : Array[IRExpr] = []
+  let mut i = 0
+  let _ = while i < exprs.length() {
+    let is_last = i == exprs.length() - 1
+    let ir = match compile(exprs[i], env, if is_last { tail } else { false }) {
+      Ok(ir) => ir
+      Err(e) => return Err(e)
+    }
+    ir_exprs.push(ir)
+    i = i + 1
+  } else {
+    ()
+  }
+  Ok(IRExpr::Begin(ir_exprs))
+}
+
+/// Compile the case expression
+/// (case key ((datum ...) expr ...) ... [(else expr ...)])
+fn compile_case(
+  args : SExpr,
+  env : CompileEnv,
+  tail : Bool
+) -> Result[IRExpr, CompileError] {
+  // Parse: (case key clause ...)
+  match args {
+    SExpr::Pair(key_expr, clauses) => {
+      // Compile key expression
+      let key_ir = match compile(key_expr, env, false) {
+        Ok(ir) => ir
+        Err(e) => return Err(e)
+      }
+
+      // Parse clauses
+      let clause_datums : Array[Array[SExpr]] = []  // each clause has list of datums
+      let clause_bodies : Array[Array[SExpr]] = []
+      let mut has_else = false
+      let mut current = clauses
+      let _ = while true {
+        match current {
+          SExpr::Nil => break ()
+          SExpr::Pair(clause, rest) => {
+            match clause {
+              SExpr::Pair(datums_or_else, body_exprs) => {
+                // Parse body expressions
+                let body_list : Array[SExpr] = []
+                let mut body_current = body_exprs
+                let _ = while true {
+                  match body_current {
+                    SExpr::Nil => break ()
+                    SExpr::Pair(e, r) => {
+                      body_list.push(e)
+                      body_current = r
+                    }
+                    _ => return Err(CompileError::SyntaxError("case: invalid clause body"))
+                  }
+                } else {
+                  ()
+                }
+
+                // Check for else clause
+                match datums_or_else {
+                  SExpr::Symbol("else") => {
+                    has_else = true
+                    clause_datums.push([])  // empty datums for else
+                    clause_bodies.push(body_list)
+                    current = rest
+                  }
+                  _ => {
+                    // Parse datum list
+                    let datum_list : Array[SExpr] = []
+                    let mut datum_current = datums_or_else
+                    let _ = while true {
+                      match datum_current {
+                        SExpr::Nil => break ()
+                        SExpr::Pair(d, r) => {
+                          datum_list.push(d)
+                          datum_current = r
+                        }
+                        _ => return Err(CompileError::SyntaxError("case: invalid datum list"))
+                      }
+                    } else {
+                      ()
+                    }
+                    clause_datums.push(datum_list)
+                    clause_bodies.push(body_list)
+                    current = rest
+                  }
+                }
+              }
+              _ => return Err(CompileError::SyntaxError("case: invalid clause"))
+            }
+          }
+          _ => return Err(CompileError::SyntaxError("case: invalid syntax"))
+        }
+      } else {
+        ()
+      }
+
+      // Verify else is last if present
+      if has_else && clause_datums.length() > 0 {
+        let last_idx = clause_datums.length() - 1
+        if clause_datums[last_idx].length() != 0 {
+          return Err(CompileError::SyntaxError("case: else clause must be last"))
+        }
+      }
+
+      // Build: (let ((tmp key)) (cond ...))
+      // Use a unique temp variable name
+      let temp_name = "$case-key"
+      let temp_binding : LetBinding = { name: temp_name, init: key_ir }
+
+      // Build cond clauses from case clauses
+      let cond_ir = compile_case_to_cond(
+        temp_name, clause_datums, clause_bodies, 0, env, tail
+      )
+      match cond_ir {
+        Ok(body) => {
+          Ok(IRExpr::Let([temp_binding], body))
+        }
+        Err(e) => Err(e)
+      }
+    }
+    _ => Err(CompileError::SyntaxError("case: invalid syntax"))
+  }
+}
+
+/// Convert case clauses to nested if expressions
+fn compile_case_to_cond(
+  temp_name : String,
+  datums : Array[Array[SExpr]],
+  bodies : Array[Array[SExpr]],
+  index : Int,
+  env : CompileEnv,
+  tail : Bool
+) -> Result[IRExpr, CompileError] {
+  if index >= datums.length() {
+    // No more clauses
+    return Ok(IRExpr::Const(IRConst::Nil))
+  }
+
+  let datum_list = datums[index]
+  let body_exprs = bodies[index]
+
+  // Check for else clause (empty datum list at the end)
+  if datum_list.length() == 0 {
+    // else clause - just compile the body
+    return compile_body_exprs(body_exprs, env, tail)
+  }
+
+  // Build test: (or (eqv? tmp datum1) (eqv? tmp datum2) ...)
+  let temp_var_ref : VarRef = { name: temp_name, depth: 0, index: 0 }
+  let temp_var = IRExpr::Var(temp_var_ref)
+
+  // Build eqv? comparisons for each datum
+  let eqv_tests : Array[IRExpr] = []
+  for datum in datum_list {
+    let datum_ir = match compile_quote_inner(datum) {
+      Ok(ir) => ir
+      Err(e) => return Err(e)
+    }
+    // (eqv? tmp datum)
+    let eqv_test = IRExpr::PrimOp(PrimOpKind::Eqv, [temp_var, datum_ir])
+    eqv_tests.push(eqv_test)
+  }
+
+  // Combine tests with or
+  let test_ir = if eqv_tests.length() == 1 {
+    eqv_tests[0]
+  } else {
+    IRExpr::Or(eqv_tests)
+  }
+
+  // Compile then branch (body expressions)
+  let then_ir = match compile_body_exprs(body_exprs, env, tail) {
+    Ok(ir) => ir
+    Err(e) => return Err(e)
+  }
+
+  // Compile else branch (remaining clauses)
+  let else_ir = match compile_case_to_cond(temp_name, datums, bodies, index + 1, env, tail) {
+    Ok(ir) => ir
+    Err(e) => return Err(e)
+  }
+
+  Ok(IRExpr::If(test_ir, then_ir, else_ir))
+}
+
+/// Compile a quoted expression to IR (for case datums)
+fn compile_quote_inner(expr : SExpr) -> Result[IRExpr, CompileError] {
+  Ok(IRExpr::Const(sexpr_to_ir_const(expr)))
 }
 
 /// Compile the let expression
@@ -950,6 +1429,146 @@ fn compile_letrec(
   }
 }
 
+/// Compile do loop by transforming to letrec
+/// (do ((var init step) ...) (test expr ...) body ...)
+/// Transforms to:
+/// (letrec ((loop (lambda (var ...)
+///                  (if test
+///                      (begin expr ...)
+///                      (begin body ... (loop step ...))))))
+///   (loop init ...))
+fn compile_do(
+  args : SExpr,
+  env : CompileEnv,
+  tail : Bool
+) -> Result[IRExpr, CompileError] {
+  match args {
+    SExpr::Pair(bindings_expr, SExpr::Pair(test_clause, body)) => {
+      // Parse bindings: ((var init step) ...)
+      let vars : Array[SExpr] = []
+      let inits : Array[SExpr] = []
+      let steps : Array[SExpr] = []
+
+      let mut current = bindings_expr
+      while true {
+        match current {
+          SExpr::Nil => break
+          SExpr::Pair(binding, rest) => {
+            match binding {
+              // (var init step)
+              SExpr::Pair(SExpr::Symbol(v), SExpr::Pair(init, SExpr::Pair(step, SExpr::Nil))) => {
+                vars.push(SExpr::Symbol(v))
+                inits.push(init)
+                steps.push(step)
+                current = rest
+              }
+              // (var init) - step defaults to var
+              SExpr::Pair(SExpr::Symbol(v), SExpr::Pair(init, SExpr::Nil)) => {
+                vars.push(SExpr::Symbol(v))
+                inits.push(init)
+                steps.push(SExpr::Symbol(v))
+                current = rest
+              }
+              _ => return Err(CompileError::SyntaxError("do: invalid binding"))
+            }
+          }
+          _ => return Err(CompileError::SyntaxError("do: invalid bindings"))
+        }
+      }
+
+      // Parse test clause: (test expr ...)
+      let test_expr : SExpr = match test_clause {
+        SExpr::Pair(t, _) => t
+        _ => return Err(CompileError::SyntaxError("do: invalid test clause"))
+      }
+      let result_exprs : SExpr = match test_clause {
+        SExpr::Pair(_, results) => results
+        _ => return Err(CompileError::SyntaxError("do: invalid test clause"))
+      }
+
+      // Generate a unique loop name
+      let loop_sym = SExpr::Symbol("__do_loop__")
+
+      // Build (loop step ...) call
+      let loop_call = build_list_from_array(append_exprs([loop_sym], steps))
+
+      // Build the else branch: (begin body ... (loop step ...))
+      let else_branch = if body == SExpr::Nil {
+        loop_call
+      } else {
+        // (begin body ... (loop step ...))
+        let body_list = sexpr_to_array(body)
+        let begin_body = append_exprs(append_exprs([SExpr::Symbol("begin")], body_list), [loop_call])
+        build_list_from_array(begin_body)
+      }
+
+      // Build the then branch: (begin result_exprs ...)
+      let then_branch = if result_exprs == SExpr::Nil {
+        SExpr::Nil
+      } else {
+        let result_list = sexpr_to_array(result_exprs)
+        if result_list.length() == 1 {
+          result_list[0]
+        } else {
+          build_list_from_array(append_exprs([SExpr::Symbol("begin")], result_list))
+        }
+      }
+
+      // Build (if test then_branch else_branch)
+      let if_expr = build_list_from_array([SExpr::Symbol("if"), test_expr, then_branch, else_branch])
+
+      // Build (lambda (var ...) if_expr)
+      let params = build_list_from_array(vars)
+      let lambda_expr = build_list_from_array([SExpr::Symbol("lambda"), params, if_expr])
+
+      // Build ((loop lambda_expr))
+      let loop_binding = build_list_from_array([loop_sym, lambda_expr])
+      let bindings = build_list_from_array([loop_binding])
+
+      // Build (loop init ...)
+      let initial_call = build_list_from_array(append_exprs([loop_sym], inits))
+
+      // Build (letrec ((loop lambda_expr)) (loop init ...))
+      let letrec_expr = build_list_from_array([SExpr::Symbol("letrec"), bindings, initial_call])
+
+      // Compile the transformed expression
+      compile(letrec_expr, env, tail)
+    }
+    _ => Err(CompileError::SyntaxError("do: invalid syntax"))
+  }
+}
+
+/// Convert SExpr list to array
+fn sexpr_to_array(expr : SExpr) -> Array[SExpr] {
+  let result : Array[SExpr] = []
+  let mut current = expr
+  while true {
+    match current {
+      SExpr::Nil => break
+      SExpr::Pair(car, cdr) => {
+        result.push(car)
+        current = cdr
+      }
+      _ => {
+        result.push(current)
+        break
+      }
+    }
+  }
+  result
+}
+
+/// Build SExpr list from array
+fn build_list_from_array(arr : Array[SExpr]) -> SExpr {
+  let mut result = SExpr::Nil
+  let mut i = arr.length() - 1
+  while i >= 0 {
+    result = SExpr::Pair(arr[i], result)
+    i = i - 1
+  }
+  result
+}
+
 /// set! Compile the expression
 fn compile_set(args : SExpr, env : CompileEnv) -> Result[IRExpr, CompileError] {
   match args {
@@ -1173,11 +1792,23 @@ fn collect_free_vars(body : IRExpr, bound : Array[String]) -> Array[VarRef] {
           visit(expr)
         }
       }
-      IRExpr::Lambda(_info) => {
-        // Do not visit bodies of nested lambdas
-        // The free_vars of that lambda has already been calculated, so
-        // Does not affect outer lambda
-        ()
+      IRExpr::Lambda(info) => {
+        // For nested lambdas, check their free_vars
+        // If a nested lambda has a free var with depth > 1, it means
+        // that variable comes from beyond this lambda's scope
+        // and we need to capture it too (at depth - 1)
+        for var_ref in info.free_vars {
+          if var_ref.depth > 1 && !seen.contains(var_ref.name) {
+            // The nested lambda references a variable from 2+ levels up
+            // So the current lambda needs to capture it at depth - 1
+            free_vars.push({
+              name: var_ref.name,
+              depth: var_ref.depth - 1,
+              index: var_ref.index,
+            })
+            seen.set(var_ref.name, ())
+          }
+        }
       }
       IRExpr::App(func, args) => {
         visit(func)
@@ -1321,4 +1952,159 @@ pub fn compile_toplevel_with_globals(
 ) -> Result[IRExpr, CompileError] {
   let env = new_compile_env(globals)
   compile_toplevel_expr(expr, env)
+}
+
+/// =============================================
+/// Quasiquote Compilation
+/// =============================================
+
+/// Compile (quasiquote expr) form
+fn compile_quasiquote_form(args : SExpr, env : CompileEnv) -> Result[IRExpr, CompileError] {
+  match args {
+    SExpr::Pair(inner, SExpr::Nil) => compile_quasiquote(inner, env, 0)
+    _ => Err(CompileError::SyntaxError("quasiquote: requires exactly one argument"))
+  }
+}
+
+/// Compile quasiquote expression
+/// depth tracks nesting level (0 = top level quasiquote)
+fn compile_quasiquote(
+  expr : SExpr,
+  env : CompileEnv,
+  depth : Int
+) -> Result[IRExpr, CompileError] {
+  match expr {
+    // unquote: evaluate if depth == 0, otherwise preserve structure
+    SExpr::Unquote(inner) =>
+      if depth == 0 {
+        compile(inner, env, false)
+      } else {
+        // Nested unquote - decrease depth and preserve structure
+        match compile_quasiquote(inner, env, depth - 1) {
+          Ok(inner_compiled) =>
+            // Build (unquote inner_compiled)
+            Ok(IRExpr::PrimOp(
+              PrimOpKind::Cons,
+              [
+                IRExpr::Const(IRConst::Symbol("unquote")),
+                IRExpr::PrimOp(
+                  PrimOpKind::Cons,
+                  [inner_compiled, IRExpr::Const(IRConst::Nil)]
+                )
+              ]
+            ))
+          Err(e) => Err(e)
+        }
+      }
+
+    // unquote-splicing at top level (not in list context) is an error
+    SExpr::UnquoteSplicing(inner) =>
+      if depth == 0 {
+        Err(CompileError::SyntaxError("unquote-splicing: not in list context"))
+      } else {
+        match compile_quasiquote(inner, env, depth - 1) {
+          Ok(inner_compiled) =>
+            // Build (unquote-splicing inner_compiled)
+            Ok(IRExpr::PrimOp(
+              PrimOpKind::Cons,
+              [
+                IRExpr::Const(IRConst::Symbol("unquote-splicing")),
+                IRExpr::PrimOp(
+                  PrimOpKind::Cons,
+                  [inner_compiled, IRExpr::Const(IRConst::Nil)]
+                )
+              ]
+            ))
+          Err(e) => Err(e)
+        }
+      }
+
+    // nested quasiquote: increase depth
+    SExpr::Quasiquote(inner) =>
+      match compile_quasiquote(inner, env, depth + 1) {
+        Ok(inner_compiled) =>
+          // Build (quasiquote inner_compiled)
+          Ok(IRExpr::PrimOp(
+            PrimOpKind::Cons,
+            [
+              IRExpr::Const(IRConst::Symbol("quasiquote")),
+              IRExpr::PrimOp(
+                PrimOpKind::Cons,
+                [inner_compiled, IRExpr::Const(IRConst::Nil)]
+              )
+            ]
+          ))
+        Err(e) => Err(e)
+      }
+
+    // List: handle each element, with special handling for unquote-splicing
+    SExpr::Pair(car, cdr) => compile_quasiquote_list(car, cdr, env, depth)
+
+    // Quote: preserve as constant
+    SExpr::Quote(inner) => Ok(IRExpr::Const(sexpr_to_ir_const(expr)))
+
+    // Atoms: convert to constant
+    _ => Ok(IRExpr::Const(sexpr_to_ir_const(expr)))
+  }
+}
+
+/// Compile quasiquoted list with support for unquote-splicing
+fn compile_quasiquote_list(
+  car : SExpr,
+  cdr : SExpr,
+  env : CompileEnv,
+  depth : Int
+) -> Result[IRExpr, CompileError] {
+  match car {
+    // unquote-splicing in list context
+    SExpr::UnquoteSplicing(inner) =>
+      if depth == 0 {
+        // Evaluate inner and append with rest
+        match compile(inner, env, false) {
+          Ok(spliced) =>
+            match compile_quasiquote(cdr, env, depth) {
+              Ok(rest) =>
+                // (append spliced rest)
+                Ok(IRExpr::PrimOp(PrimOpKind::Append, [spliced, rest]))
+              Err(e) => Err(e)
+            }
+          Err(e) => Err(e)
+        }
+      } else {
+        // Preserve structure at deeper nesting
+        match compile_quasiquote(inner, env, depth - 1) {
+          Ok(inner_compiled) =>
+            match compile_quasiquote(cdr, env, depth) {
+              Ok(cdr_compiled) => {
+                // Build (cons (unquote-splicing inner_compiled) cdr_compiled)
+                let unquote_splicing_form = IRExpr::PrimOp(
+                  PrimOpKind::Cons,
+                  [
+                    IRExpr::Const(IRConst::Symbol("unquote-splicing")),
+                    IRExpr::PrimOp(
+                      PrimOpKind::Cons,
+                      [inner_compiled, IRExpr::Const(IRConst::Nil)]
+                    )
+                  ]
+                )
+                Ok(IRExpr::PrimOp(PrimOpKind::Cons, [unquote_splicing_form, cdr_compiled]))
+              }
+              Err(e) => Err(e)
+            }
+          Err(e) => Err(e)
+        }
+      }
+
+    // Normal element: cons car with cdr
+    _ =>
+      match compile_quasiquote(car, env, depth) {
+        Ok(car_compiled) =>
+          match compile_quasiquote(cdr, env, depth) {
+            Ok(cdr_compiled) =>
+              Ok(IRExpr::PrimOp(PrimOpKind::Cons, [car_compiled, cdr_compiled]))
+            Err(e) => Err(e)
+          }
+        Err(e) => Err(e)
+      }
+  }
 }

@@ -194,6 +194,7 @@ fn opcode_to_str(op : Opcode) -> String {
 fn chunk_to_str(chunk : CodeChunk) -> String {
   let mut result = ""
   result = result + "arity:" + chunk.arity.to_string() + "\n"
+  result = result + "has_rest_param:" + chunk.has_rest_param.to_string() + "\n"
   result = result + "num_free_vars:" + chunk.num_free_vars.to_string() + "\n"
   result = result + "num_locals:" + chunk.num_locals.to_string() + "\n"
   match chunk.debug_name {
@@ -679,6 +680,17 @@ fn deserialize_chunk(state : DeserializeState) -> Result[CodeChunk, SerializeErr
     Err(_) => return Err(SerializeError::InvalidFormat("Cannot parse arity: " + arity_str))
   }
 
+  // has_rest_param
+  let hrp_line = match next_line(state) {
+    Ok(line) => line
+    Err(e) => return Err(e)
+  }
+  let hrp_str = match parse_key_value(hrp_line, "has_rest_param") {
+    Ok(s) => s
+    Err(e) => return Err(e)
+  }
+  let has_rest_param = hrp_str == "true"
+
   // num_free_vars
   let nfv_line = match next_line(state) {
     Ok(line) => line
@@ -777,6 +789,7 @@ fn deserialize_chunk(state : DeserializeState) -> Result[CodeChunk, SerializeErr
     constants,
     names,
     arity,
+    has_rest_param,
     num_free_vars,
     num_locals,
     debug_name,
@@ -1270,6 +1283,7 @@ fn write_opcode(buf : BinaryBuffer, op : Opcode) -> Unit {
 /// Write CodeChunk in binary
 fn write_chunk(buf : BinaryBuffer, chunk : CodeChunk) -> Unit {
   write_int32(buf, chunk.arity)
+  write_byte(buf, if chunk.has_rest_param { 1 } else { 0 })
   write_int32(buf, chunk.num_free_vars)
   write_int32(buf, chunk.num_locals)
 
@@ -1817,6 +1831,10 @@ fn read_chunk(r : BinaryReader) -> Result[CodeChunk, SerializeError] {
     Ok(n) => n
     Err(e) => return Err(e)
   }
+  let has_rest_param = match read_byte(r) {
+    Ok(b) => b != 0
+    Err(e) => return Err(e)
+  }
   let num_free_vars = match read_int32(r) {
     Ok(n) => n
     Err(e) => return Err(e)
@@ -1890,6 +1908,7 @@ fn read_chunk(r : BinaryReader) -> Result[CodeChunk, SerializeError] {
     constants,
     names,
     arity,
+    has_rest_param,
     num_free_vars,
     num_locals,
     debug_name,

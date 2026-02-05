@@ -220,6 +220,18 @@ fn vm_exec_primop(
     PrimOpKind::ProcedureP => vm_exec_procedure_p(args)
     PrimOpKind::SymbolToString => vm_exec_symbol_to_string(args)
     PrimOpKind::StringToSymbol => vm_exec_string_to_symbol(args)
+    PrimOpKind::Caar => vm_exec_caar(args)
+    PrimOpKind::Cadr => vm_exec_cadr(args)
+    PrimOpKind::Cdar => vm_exec_cdar(args)
+    PrimOpKind::Cddr => vm_exec_cddr(args)
+    PrimOpKind::Caaar => vm_exec_caaar(args)
+    PrimOpKind::Caadr => vm_exec_caadr(args)
+    PrimOpKind::Cadar => vm_exec_cadar(args)
+    PrimOpKind::Caddr => vm_exec_caddr(args)
+    PrimOpKind::Cdaar => vm_exec_cdaar(args)
+    PrimOpKind::Cdadr => vm_exec_cdadr(args)
+    PrimOpKind::Cddar => vm_exec_cddar(args)
+    PrimOpKind::Cdddr => vm_exec_cdddr(args)
     _ => Err(VMError::RuntimeError("unimplemented primitive: " + kind.to_string()))
   }
 }
@@ -452,6 +464,138 @@ fn vm_exec_cdr(args : Array[Value]) -> Result[Value, VMError] {
   match args[0] {
     Value::Pair(_, cdr) => Ok(cdr)
     _ => Err(VMError::TypeError("cdr requires a pair"))
+  }
+}
+
+/// caar
+fn vm_exec_caar(args : Array[Value]) -> Result[Value, VMError] {
+  if args.length() != 1 {
+    return Err(VMError::ArityError("caar requires 1 argument"))
+  }
+  match args[0] {
+    Value::Pair(Value::Pair(caar, _), _) => Ok(caar)
+    _ => Err(VMError::TypeError("caar requires nested pair"))
+  }
+}
+
+/// cadr
+fn vm_exec_cadr(args : Array[Value]) -> Result[Value, VMError] {
+  if args.length() != 1 {
+    return Err(VMError::ArityError("cadr requires 1 argument"))
+  }
+  match args[0] {
+    Value::Pair(_, Value::Pair(cadr, _)) => Ok(cadr)
+    _ => Err(VMError::TypeError("cadr requires pair with cdr being pair"))
+  }
+}
+
+/// cdar
+fn vm_exec_cdar(args : Array[Value]) -> Result[Value, VMError] {
+  if args.length() != 1 {
+    return Err(VMError::ArityError("cdar requires 1 argument"))
+  }
+  match args[0] {
+    Value::Pair(Value::Pair(_, cdar), _) => Ok(cdar)
+    _ => Err(VMError::TypeError("cdar requires pair with car being pair"))
+  }
+}
+
+/// cddr
+fn vm_exec_cddr(args : Array[Value]) -> Result[Value, VMError] {
+  if args.length() != 1 {
+    return Err(VMError::ArityError("cddr requires 1 argument"))
+  }
+  match args[0] {
+    Value::Pair(_, Value::Pair(_, cddr)) => Ok(cddr)
+    _ => Err(VMError::TypeError("cddr requires pair with cdr being pair"))
+  }
+}
+
+/// caaar
+fn vm_exec_caaar(args : Array[Value]) -> Result[Value, VMError] {
+  if args.length() != 1 {
+    return Err(VMError::ArityError("caaar requires 1 argument"))
+  }
+  match args[0] {
+    Value::Pair(Value::Pair(Value::Pair(caaar, _), _), _) => Ok(caaar)
+    _ => Err(VMError::TypeError("caaar requires deeply nested pair"))
+  }
+}
+
+/// caadr
+fn vm_exec_caadr(args : Array[Value]) -> Result[Value, VMError] {
+  if args.length() != 1 {
+    return Err(VMError::ArityError("caadr requires 1 argument"))
+  }
+  match args[0] {
+    Value::Pair(_, Value::Pair(Value::Pair(caadr, _), _)) => Ok(caadr)
+    _ => Err(VMError::TypeError("caadr requires deeply nested pair"))
+  }
+}
+
+/// cadar
+fn vm_exec_cadar(args : Array[Value]) -> Result[Value, VMError] {
+  if args.length() != 1 {
+    return Err(VMError::ArityError("cadar requires 1 argument"))
+  }
+  match args[0] {
+    Value::Pair(Value::Pair(_, Value::Pair(cadar, _)), _) => Ok(cadar)
+    _ => Err(VMError::TypeError("cadar requires deeply nested pair"))
+  }
+}
+
+/// caddr
+fn vm_exec_caddr(args : Array[Value]) -> Result[Value, VMError] {
+  if args.length() != 1 {
+    return Err(VMError::ArityError("caddr requires 1 argument"))
+  }
+  match args[0] {
+    Value::Pair(_, Value::Pair(_, Value::Pair(caddr, _))) => Ok(caddr)
+    _ => Err(VMError::TypeError("caddr requires list with at least 3 elements"))
+  }
+}
+
+/// cdaar
+fn vm_exec_cdaar(args : Array[Value]) -> Result[Value, VMError] {
+  if args.length() != 1 {
+    return Err(VMError::ArityError("cdaar requires 1 argument"))
+  }
+  match args[0] {
+    Value::Pair(Value::Pair(Value::Pair(_, cdaar), _), _) => Ok(cdaar)
+    _ => Err(VMError::TypeError("cdaar requires deeply nested pair"))
+  }
+}
+
+/// cdadr
+fn vm_exec_cdadr(args : Array[Value]) -> Result[Value, VMError] {
+  if args.length() != 1 {
+    return Err(VMError::ArityError("cdadr requires 1 argument"))
+  }
+  match args[0] {
+    Value::Pair(_, Value::Pair(Value::Pair(_, cdadr), _)) => Ok(cdadr)
+    _ => Err(VMError::TypeError("cdadr requires deeply nested pair"))
+  }
+}
+
+/// cddar
+fn vm_exec_cddar(args : Array[Value]) -> Result[Value, VMError] {
+  if args.length() != 1 {
+    return Err(VMError::ArityError("cddar requires 1 argument"))
+  }
+  match args[0] {
+    Value::Pair(Value::Pair(_, Value::Pair(_, cddar)), _) => Ok(cddar)
+    _ => Err(VMError::TypeError("cddar requires deeply nested pair"))
+  }
+}
+
+/// cdddr
+fn vm_exec_cdddr(args : Array[Value]) -> Result[Value, VMError] {
+  if args.length() != 1 {
+    return Err(VMError::ArityError("cdddr requires 1 argument"))
+  }
+  match args[0] {
+    Value::Pair(_, Value::Pair(_, Value::Pair(_, cdddr))) => Ok(cdddr)
+    _ => Err(VMError::TypeError("cdddr requires list with at least 3 elements"))
   }
 }
 
@@ -746,9 +890,43 @@ fn vm_call_function(
   match func {
     Value::Procedure(Procedure::VMClosure(closure)) => {
       let target_chunk = vm.compiled_module.chunks[closure.chunk_idx]
-      if target_chunk.arity >= 0 && args.length() != target_chunk.arity {
-        return Err(VMError::ArityError("closure arity mismatch"))
+
+      // Arity check
+      if target_chunk.has_rest_param {
+        // Variadic: need at least 'arity' arguments
+        if target_chunk.arity >= 0 && args.length() < target_chunk.arity {
+          return Err(VMError::ArityError("closure arity mismatch (too few arguments)"))
+        }
+      } else {
+        // Fixed arity: need exactly 'arity' arguments
+        if target_chunk.arity >= 0 && args.length() != target_chunk.arity {
+          return Err(VMError::ArityError("closure arity mismatch"))
+        }
       }
+
+      // Prepare actual args (collect rest into list if variadic)
+      let actual_args : Array[Value] = []
+      if target_chunk.has_rest_param {
+        // Push required args
+        let mut i = 0
+        while i < target_chunk.arity {
+          actual_args.push(args[i])
+          i = i + 1
+        }
+        // Collect remaining args into a list
+        let mut rest_list : Value = Value::Nil
+        let mut j = args.length() - 1
+        while j >= target_chunk.arity {
+          rest_list = Value::Pair(args[j], rest_list)
+          j = j - 1
+        }
+        actual_args.push(rest_list)
+      } else {
+        for arg in args {
+          actual_args.push(arg)
+        }
+      }
+
       if is_tail && vm.call_stack.length() > 0 {
         let frame = vm.call_stack[vm.call_stack.length() - 1]
         while vm.stack.length() > frame.base_ptr {
@@ -759,7 +937,7 @@ fn vm_call_function(
           vm_push(vm, capture)
         }
         // push argument
-        for arg in args {
+        for arg in actual_args {
           vm_push(vm, arg)
         }
         vm.current_chunk = closure.chunk_idx
@@ -769,7 +947,7 @@ fn vm_call_function(
           return_chunk: vm.current_chunk,
           return_ip: vm.ip,
           base_ptr: vm.stack.length(),
-          num_locals: closure.captures.length() + args.length(),
+          num_locals: closure.captures.length() + actual_args.length(),
         }
         vm.call_stack.push(frame)
         // push capture value
@@ -777,7 +955,7 @@ fn vm_call_function(
           vm_push(vm, capture)
         }
         // push argument
-        for arg in args {
+        for arg in actual_args {
           vm_push(vm, arg)
         }
         vm.current_chunk = closure.chunk_idx

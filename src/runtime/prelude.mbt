@@ -27,6 +27,7 @@ using @core {
   values_eqv,
   remove_continuation,
   clear_continuations,
+  expand_macro,
 }
 using @frontend { parse }
 using @ffi { file_exists, read_file }

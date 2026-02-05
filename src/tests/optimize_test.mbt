@@ -374,6 +374,7 @@ test "optimize: inline expansion - simple lambda" {
     IRExpr::Lambda({
       params: ["x"],
       arity: 1,
+      rest_param: None,
       body: IRExpr::PrimOp(PrimOpKind::Add, [
         IRExpr::Var({ name: "x", depth: 0, index: 0 }),
         IRExpr::Const(IRConst::Int(1)),
@@ -407,6 +408,7 @@ test "optimize: inline expansion - multiple args" {
     IRExpr::Lambda({
       params: ["x", "y"],
       arity: 2,
+      rest_param: None,
       body: IRExpr::PrimOp(PrimOpKind::Add, [
         IRExpr::Var({ name: "x", depth: 0, index: 0 }),
         IRExpr::Var({ name: "y", depth: 0, index: 1 }),
@@ -436,6 +438,7 @@ test "optimize: inline expansion - tail call" {
     IRExpr::Lambda({
       params: ["x"],
       arity: 1,
+      rest_param: None,
       body: IRExpr::Var({ name: "x", depth: 0, index: 0 }),
       free_vars: [],
       boxed_params: [],

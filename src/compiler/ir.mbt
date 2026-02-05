@@ -238,8 +238,10 @@ pub(all) struct LetBinding {
 pub(all) struct LambdaInfo {
   /// Parameter name (for debugging)
   params : Array[String]
-  /// Number of parameters
+  /// Number of required parameters
   arity : Int
+  /// Rest parameter name (for variadic functions)
+  rest_param : String?
   /// function body
   body : IRExpr
   /// List of free variables (used for closure generation)
@@ -300,6 +302,10 @@ pub(all) enum CompileError {
   SyntaxError(String)
   /// Unsupported features
   Unsupported(String)
+  /// Invalid syntax (macro-related)
+  InvalidSyntax(String)
+  /// Macro expansion error
+  MacroError(String)
 } derive(Show)
 
 /// Convert IRConst to Value

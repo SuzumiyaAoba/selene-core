@@ -10,6 +10,8 @@ pub(all) struct VMReplContext {
   compiler_globals : @hashmap.T[String, Unit]
   /// accumulated chunks
   chunks : Array[CodeChunk]
+  /// Macro environment
+  macro_env : MacroEnv
 }
 
 /// Create a new REPL context
@@ -18,6 +20,7 @@ pub fn new_repl_context() -> VMReplContext {
     globals: create_initial_globals(),
     compiler_globals: initial_globals(),
     chunks: [],
+    macro_env: new_macro_env(),
   }
 }
 
@@ -29,8 +32,21 @@ pub fn repl_eval(ctx : VMReplContext, input : String) -> Result[Value, String] {
 
 /// Evaluate SExpr in REPL context
 pub fn repl_eval_expr(ctx : VMReplContext, expr : SExpr) -> Result[Value, String] {
+  // Expand macros first
+  let expanded_expr = match expand_toplevel(expr, ctx.macro_env) {
+    Ok(result) => {
+      match result.expr {
+        Some(e) => e
+        None =>
+          // define-syntax only, return Void
+          return Ok(Value::Nil)
+      }
+    }
+    Err(e) => return Err("Macro Error: " + e.to_string())
+  }
+
   // compile
-  match compile_toplevel_with_globals(expr, ctx.compiler_globals) {
+  match compile_toplevel_with_globals(expanded_expr, ctx.compiler_globals) {
     Ok(ir) => {
       // optimization
       let optimized = optimize(ir)
@@ -96,6 +112,7 @@ fn adjust_chunk_refs(chunk : CodeChunk, offset : Int) -> CodeChunk {
     constants: chunk.constants,
     names: chunk.names,
     arity: chunk.arity,
+    has_rest_param: chunk.has_rest_param,
     num_free_vars: chunk.num_free_vars,
     num_locals: chunk.num_locals,
     debug_name: chunk.debug_name,

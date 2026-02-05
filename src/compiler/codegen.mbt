@@ -12,6 +12,12 @@ struct CodegenContext {
   boxed_params : Array[Int]
   /// Name of local variable being boxed (depth=0)
   boxed_locals : Array[String]
+  /// Local variable offset for nested let/letrec (tracks allocated locals)
+  mut local_offset : Int
+  /// Parameter names of this lambda (for nested lambda capture index calculation)
+  lambda_params : Array[String]
+  /// Free vars of this lambda (for nested lambda capture index calculation)
+  lambda_free_vars : Array[VarRef]
 }
 
 /// Create new context
@@ -21,6 +27,9 @@ fn new_context(debug_name : String?) -> CodegenContext {
     chunks: [],
     boxed_params: [],
     boxed_locals: [],
+    local_offset: 0,
+    lambda_params: [],
+    lambda_free_vars: [],
   }
 }
 
@@ -28,13 +37,18 @@ fn new_context(debug_name : String?) -> CodegenContext {
 fn new_context_with_boxing(
   debug_name : String?,
   boxed_params : Array[Int],
-  boxed_locals : Array[String]
+  boxed_locals : Array[String],
+  lambda_params : Array[String],
+  lambda_free_vars : Array[VarRef]
 ) -> CodegenContext {
   {
     builder: new_builder(debug_name),
     chunks: [],
     boxed_params,
     boxed_locals,
+    local_offset: 0,
+    lambda_params,
+    lambda_free_vars,
   }
 }
 
@@ -92,7 +106,41 @@ fn codegen_const(ctx : CodegenContext, c : IRConst) -> Unit {
 /// - Free variables: depth=0, index=capture position
 /// - Parameters: depth=0, index=number of captures + parameter position
 fn codegen_var(ctx : CodegenContext, var_ref : VarRef) -> Unit {
-  ctx.builder.emit(Opcode::LoadLocal(var_ref.depth, var_ref.index))
+  // For depth=0 variables, we need to check if it's a lambda parameter
+  // and adjust the index to account for captured free variables
+  let actual_index = if var_ref.depth == 0 {
+    // Check if this is a lambda parameter
+    let mut param_index = -1
+    for i in 0..<ctx.lambda_params.length() {
+      if ctx.lambda_params[i] == var_ref.name {
+        param_index = i
+        break
+      }
+    }
+    if param_index >= 0 {
+      // It's a parameter: runtime index = num_captures + param_index
+      ctx.builder.num_free_vars + param_index
+    } else {
+      // Check if it's a captured free variable
+      let mut capture_index = -1
+      for i in 0..<ctx.lambda_free_vars.length() {
+        if ctx.lambda_free_vars[i].name == var_ref.name {
+          capture_index = i
+          break
+        }
+      }
+      if capture_index >= 0 {
+        capture_index
+      } else {
+        // It's a let-bound local or other variable
+        var_ref.index
+      }
+    }
+  } else {
+    var_ref.index
+  }
+
+  ctx.builder.emit(Opcode::LoadLocal(var_ref.depth, actual_index))
 
   // If boxed with depth=0, use BoxGet to retrieve the value
   // Note: For depth>0 (free variables), boxing is handled by the captured value itself
@@ -100,14 +148,45 @@ fn codegen_var(ctx : CodegenContext, var_ref : VarRef) -> Unit {
     let is_boxed = {
       let mut found = false
       for idx in ctx.boxed_params {
-        if idx == var_ref.index {
+        if idx == actual_index {
+          found = true
+          break
+        }
+      }
+      if not(found) {
+        for name in ctx.boxed_locals {
+          if name == var_ref.name {
+            found = true
+            break
+          }
+        }
+      }
+      found
+    }
+    if is_boxed {
+      ctx.builder.emit(Opcode::BoxGet)
+    }
+  }
+}
+
+/// Generate code for local variable references with explicit depth and index
+/// Used when capturing variables for nested lambdas with corrected indices
+fn codegen_var_with_index(ctx : CodegenContext, name : String, depth : Int, index : Int) -> Unit {
+  ctx.builder.emit(Opcode::LoadLocal(depth, index))
+
+  // If boxed with depth=0, use BoxGet to retrieve the value
+  if depth == 0 {
+    let is_boxed = {
+      let mut found = false
+      for idx in ctx.boxed_params {
+        if idx == index {
           found = true
           break
         }
       }
       if !found {
-        for name in ctx.boxed_locals {
-          if name == var_ref.name {
+        for n in ctx.boxed_locals {
+          if n == name {
             found = true
             break
           }
@@ -221,12 +300,34 @@ fn codegen_lambda(ctx : CodegenContext, info : LambdaInfo) -> Unit {
     adjusted_boxed_params.push(info.free_vars.length() + boxed_param_idx)
   }
 
+  // Build boxed_locals for the new context:
+  // Include both lambda's own boxed_locals and names of captured boxed variables
+  let func_boxed_locals = info.boxed_locals.copy()
+  for idx in captured_boxed_indices {
+    let var_name = info.free_vars[idx].name
+    let mut found = false
+    for name in func_boxed_locals {
+      if name == var_name {
+        found = true
+        break
+      }
+    }
+    if not(found) {
+      func_boxed_locals.push(var_name)
+    }
+  }
+
   // Compile function body in new context (include boxing and capturing information)
-  let func_ctx = new_context_with_boxing(None, adjusted_boxed_params, info.boxed_locals.copy())
+  // Also pass lambda params and free_vars for nested lambda capture index calculation
+  let func_ctx = new_context_with_boxing(None, adjusted_boxed_params, func_boxed_locals, info.params, info.free_vars)
   func_ctx.builder.arity = info.arity
-  // Number of local variables: number of captures + number of parameters
+  func_ctx.builder.has_rest_param = not(info.rest_param.is_empty())
+  // Number of local variables: number of captures + number of parameters (including rest param if any)
   func_ctx.builder.num_locals = info.free_vars.length() + info.params.length()
   func_ctx.builder.num_free_vars = info.free_vars.length()
+  // IMPORTANT: Set local_offset to account for captures + parameters
+  // Let bindings inside the lambda body should start after these slots
+  func_ctx.local_offset = info.free_vars.length() + info.params.length()
 
   // Box parameters that require boxing when starting Lambda
   // Note: The captured box is already boxed, so skip it
@@ -266,6 +367,42 @@ fn codegen_lambda(ctx : CodegenContext, info : LambdaInfo) -> Unit {
   // MakeClosure pops and reverses, so here we push in order.
   // Important: Boxed variables capture the box itself (do not call BoxGet)
   for var_ref in info.free_vars {
+    // Calculate the correct index for depth=0 vars
+    // After optimization, depth=0 means the var is in the enclosing lambda's scope
+    // But the index might be compile-time param index, not runtime index
+    let actual_depth = var_ref.depth
+    let actual_index = if var_ref.depth == 0 {
+      // Check if this var is a parameter of the enclosing lambda (ctx)
+      let mut param_index = -1
+      for i in 0..<ctx.lambda_params.length() {
+        if ctx.lambda_params[i] == var_ref.name {
+          param_index = i
+          break
+        }
+      }
+      if param_index >= 0 {
+        // It's a parameter: runtime index = num_captures + param_index
+        ctx.builder.num_free_vars + param_index
+      } else {
+        // It's a capture: find index in ctx.lambda_free_vars by name
+        let mut capture_index = -1
+        for i in 0..<ctx.lambda_free_vars.length() {
+          if ctx.lambda_free_vars[i].name == var_ref.name {
+            capture_index = i
+            break
+          }
+        }
+        if capture_index >= 0 {
+          capture_index
+        } else {
+          // Fallback to original index (for let bindings etc.)
+          var_ref.index
+        }
+      }
+    } else {
+      var_ref.index
+    }
+
     // Determine if this variable is boxed
     let is_boxed = {
       let mut found = false
@@ -279,10 +416,11 @@ fn codegen_lambda(ctx : CodegenContext, info : LambdaInfo) -> Unit {
     }
     if is_boxed {
       // If boxed: push the box itself (do not call BoxGet)
-      ctx.builder.emit(Opcode::LoadLocal(var_ref.depth, var_ref.index))
+      ctx.builder.emit(Opcode::LoadLocal(actual_depth, actual_index))
     } else {
       // If unboxed: regular variable reference
-      codegen_expr(ctx, IRExpr::Var(var_ref))
+      // Use the corrected index
+      codegen_var_with_index(ctx, var_ref.name, actual_depth, actual_index)
     }
   }
 
@@ -625,14 +763,32 @@ fn codegen_let(
   // Collect variables set! in body
   let set_vars = codegen_collect_set_vars(body)
 
+  // Also collect variables that are free_vars in any lambda within body
+  // These need to be boxed if they might be set! inside those lambdas
+  let captured_free_vars : Array[String] = []
+  codegen_collect_free_var_names(body, captured_free_vars)
+
   // Identify bindings that need to be boxed
+  // A binding needs boxing if:
+  // 1. It is set! anywhere (including inside nested lambdas), OR
+  // 2. It is captured as a free variable in any lambda (and thus might be set!)
   let needs_boxing : Array[Bool] = []
   for binding in bindings {
     let mut need = false
+    // Check if set! anywhere
     for v in set_vars {
       if v == binding.name {
         need = true
         break
+      }
+    }
+    // Check if captured as free variable (safety: box it just in case)
+    if not(need) {
+      for fv in captured_free_vars {
+        if fv == binding.name {
+          need = true
+          break
+        }
       }
     }
     needs_boxing.push(need)
@@ -640,6 +796,9 @@ fn codegen_let(
 
   // Reserve local variable slot
   ctx.builder.emit(Opcode::AllocateLocals(num_bindings))
+
+  // Save current offset and update for new bindings
+  let saved_offset = ctx.local_offset
 
   // Evaluate the initial value of each binding and store it in a local variable
   let mut i = 0
@@ -651,12 +810,18 @@ fn codegen_let(
       // Add to boxed_locals
       ctx.boxed_locals.push(bindings[i].name)
     }
-    ctx.builder.emit(Opcode::InitLocal(0, i))
+    ctx.builder.emit(Opcode::InitLocal(0, saved_offset + i))
     i = i + 1
   }
 
+  // Update local_offset for nested scopes
+  ctx.local_offset = saved_offset + num_bindings
+
   // Evaluate the main unit
   codegen_expr(ctx, body)
+
+  // Restore local_offset
+  ctx.local_offset = saved_offset
 
   // Delete from boxed_locals as it goes out of scope
   for binding in bindings {
@@ -710,12 +875,27 @@ fn codegen_letrec(
     }
   }
 
+  // Identify which bindings are captured by lambdas in init expressions
+  // These need special handling for letrec semantics
+  let is_captured : Array[Bool] = []
+  for binding in bindings {
+    let mut cap = false
+    for v in captured_free_vars {
+      if v == binding.name {
+        cap = true
+        break
+      }
+    }
+    is_captured.push(cap)
+  }
+
   // Identify bindings that need to be boxed
   // A binding needs boxing if:
   // 1. It is set! anywhere, OR
-  // 2. It is captured as a free variable in any lambda (and thus might be set!)
+  // 2. It is captured by a lambda in an init expression (letrec self-reference)
   let needs_boxing : Array[Bool] = []
-  for binding in bindings {
+  for i in 0..<num_bindings {
+    let binding = bindings[i]
     let mut need = false
     // Check if set! anywhere
     for v in set_vars {
@@ -724,20 +904,18 @@ fn codegen_letrec(
         break
       }
     }
-    // Check if captured as free variable (safety: box it just in case)
-    if !need {
-      for fv in captured_free_vars {
-        if fv == binding.name {
-          need = true
-          break
-        }
-      }
+    // Check if captured
+    if not(need) && is_captured[i] {
+      need = true
     }
     needs_boxing.push(need)
   }
 
-  // First, reserve an uninitialized slot
+  // First, reserve slots for all bindings
   ctx.builder.emit(Opcode::AllocateLocals(num_bindings))
+
+  // Save current offset and update for new bindings
+  let saved_offset = ctx.local_offset
 
   // Add variables that need to be boxed to boxed_locals (to use BoxGet when referencing)
   let mut i = 0
@@ -748,20 +926,46 @@ fn codegen_letrec(
     i = i + 1
   }
 
-  // Initialize each binding
+  // Update local_offset for init expressions (they can reference each other in letrec)
+  ctx.local_offset = saved_offset + num_bindings
+
+  // For letrec with self-reference: first create boxes and store them in slots
+  // This allows lambdas to capture the box (not the uninitialized value)
+  // Then evaluate init expressions and store values INTO the boxes via BoxSet
   i = 0
   while i < num_bindings {
-    codegen_expr(ctx, bindings[i].init)
     if needs_boxing[i] {
-      // When boxing is required
+      // Create an empty box with placeholder (nil)
+      let nil_idx = ctx.builder.add_const(BCValue::Nil)
+      ctx.builder.emit(Opcode::Push(nil_idx))
       ctx.builder.emit(Opcode::MakeBox)
+      ctx.builder.emit(Opcode::InitLocal(0, saved_offset + i))
     }
-    ctx.builder.emit(Opcode::InitLocal(0, i))
+    i = i + 1
+  }
+
+  // Now evaluate init expressions and store results
+  i = 0
+  while i < num_bindings {
+    if needs_boxing[i] {
+      // Load the box first, then evaluate init, then BoxSet
+      // Stack order for BoxSet: [box, value]
+      ctx.builder.emit(Opcode::LoadLocal(0, saved_offset + i))
+      codegen_expr(ctx, bindings[i].init)
+      ctx.builder.emit(Opcode::BoxSet)
+    } else {
+      // Non-boxed: evaluate and store directly
+      codegen_expr(ctx, bindings[i].init)
+      ctx.builder.emit(Opcode::InitLocal(0, saved_offset + i))
+    }
     i = i + 1
   }
 
   // Evaluate the main unit
   codegen_expr(ctx, body)
+
+  // Restore local_offset
+  ctx.local_offset = saved_offset
 
   // Delete from boxed_locals as it goes out of scope
   for binding in bindings {
