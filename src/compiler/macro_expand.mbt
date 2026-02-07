@@ -130,6 +130,49 @@ fn expand_list(expr : SExpr, macro_env : MacroEnv) -> Result[SExpr, CompileError
   }
 }
 
+/// Global counter for generating unique hygienic names
+let hyg_counter : Ref[Int] = Ref::new(0)
+
+/// Generate a unique hygienic name
+fn gensym(prefix : String) -> String {
+  hyg_counter.val = hyg_counter.val + 1
+  prefix + "__hyg_" + hyg_counter.val.to_string()
+}
+
+/// Check if a name is a special form (should not be renamed)
+fn is_special_form(name : String) -> Bool {
+  match name {
+    "if" | "lambda" | "define" | "set!" | "begin" | "and" | "or" | "let"
+    | "let*" | "letrec" | "cond" | "case" | "do" | "delay" | "define-syntax"
+    | "let-syntax" | "letrec-syntax" | "syntax-rules" | "load" | "quote"
+    | "quasiquote" | "unquote" | "unquote-splicing" => true
+    _ => false
+  }
+}
+
+/// Collect free variables from a template (symbols that are not pattern variables,
+/// literals, or special forms)
+fn collect_template_free_vars(
+  template : SExpr,
+  pattern_vars : Array[String],
+  literals : Array[String],
+  free_vars : Array[String]
+) -> Unit {
+  match template {
+    SExpr::Symbol(name) =>
+      if not(pattern_vars.contains(name)) && not(literals.contains(name)) && not(
+        is_special_form(name),
+      ) && name != "_" && name != "..." && not(free_vars.contains(name)) {
+        free_vars.push(name)
+      }
+    SExpr::Pair(car, cdr) => {
+      collect_template_free_vars(car, pattern_vars, literals, free_vars)
+      collect_template_free_vars(cdr, pattern_vars, literals, free_vars)
+    }
+    _ => ()
+  }
+}
+
 /// Expand let-syntax or letrec-syntax
 /// (let-syntax ((name (syntax-rules ...)) ...) body ...)
 fn expand_let_syntax(
@@ -143,7 +186,9 @@ fn expand_let_syntax(
       // Create new macro environment
       let local_env = extend_macro_env(parent_env)
 
-      // Parse and register bindings
+      // First pass: parse all bindings and collect free variables
+      let all_rules : Array[(String, SyntaxRules)] = []
+      let all_free_vars : Array[String] = []
       let mut current = bindings
       let _ = while true {
         match current {
@@ -156,7 +201,17 @@ fn expand_let_syntax(
               ) => {
                 match parse_syntax_rules(syntax_rules_expr) {
                   Ok(rules) => {
-                    define_macro(local_env, name, rules)
+                    // Collect free vars from each rule's template
+                    for rule in rules.rules {
+                      let pattern_vars = collect_pattern_variables(
+                        rule.pattern, rules.literals,
+                      )
+                      collect_template_free_vars(
+                        rule.template, pattern_vars, rules.literals,
+                        all_free_vars,
+                      )
+                    }
+                    all_rules.push((name, rules))
                     current = rest
                   }
                   Err(e) => return Err(e)
@@ -179,8 +234,52 @@ fn expand_let_syntax(
         ()
       }
 
+      // Build rename map for hygienic expansion
+      let rename_map : Map[String, String] = Map::new()
+      for var in all_free_vars {
+        rename_map.set(var, gensym(var))
+      }
+
+      // Register macros with the rename map
+      for pair in all_rules {
+        let (name, rules) = pair
+        let hygienic_rules : SyntaxRules = {
+          literals: rules.literals,
+          rules: rules.rules,
+          def_env: rules.def_env,
+          rename_map,
+        }
+        define_macro(local_env, name, hygienic_rules)
+      }
+
       // Expand body with the new environment
-      expand_body(body, local_env)
+      let expanded_body = match expand_body(body, local_env) {
+        Ok(e) => e
+        Err(e) => return Err(e)
+      }
+
+      // Wrap in let bindings if there are any renames
+      if rename_map.size() == 0 {
+        Ok(expanded_body)
+      } else {
+        // Build (let ((gensym1 orig1) ...) expanded_body)
+        let mut let_bindings : SExpr = SExpr::Nil
+        rename_map.each(
+          fn(orig, gensym_name) {
+            let binding = SExpr::Pair(
+              SExpr::Symbol(gensym_name),
+              SExpr::Pair(SExpr::Symbol(orig), SExpr::Nil),
+            )
+            let_bindings = SExpr::Pair(binding, let_bindings)
+          },
+        )
+        Ok(
+          SExpr::Pair(
+            SExpr::Symbol("let"),
+            SExpr::Pair(let_bindings, SExpr::Pair(expanded_body, SExpr::Nil)),
+          ),
+        )
+      }
     }
     _ =>
       Err(
@@ -280,9 +379,9 @@ pub fn parse_syntax_rules(expr : SExpr) -> Result[SyntaxRules, CompileError] {
         ()
       }
 
-      // Create SyntaxRules with empty def_env
-      // Note: Full hygienic macros would need proper environment handling
-      Ok({ literals, rules, def_env: empty_env() })
+      // Create SyntaxRules with empty def_env and rename_map
+      // rename_map will be populated by expand_let_syntax for hygiene
+      Ok({ literals, rules, def_env: empty_env(), rename_map: Map::new() })
     }
     _ =>
       Err(

@@ -275,6 +275,12 @@ pub fn apply(proc : Value, args : Array[Value]) -> Result[Value, EvalError] {
       // Propagates that a continuation was called as an error
       Err(EvalError::ContinuationInvoked(cont.id, args[0]))
     }
+    Value::Procedure(Procedure::VMClosure(closure)) => {
+      vm_apply_closure(closure, args)
+    }
+    Value::Procedure(Procedure::VMCont(_)) => {
+      Err(EvalError::TypeError("cannot apply VM continuation outside VM"))
+    }
     _ => Err(EvalError::TypeError("not a procedure"))
   }
 }
