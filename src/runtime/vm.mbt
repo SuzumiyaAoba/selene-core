@@ -6,6 +6,138 @@
 /// - VMClosure, VMContinuation, VMCallFrame are defined in value.mbt
 /// - VMClosure and VMCont have been added to Procedure enum.
 
+/// Active VM context for native builtins to call VMClosures.
+/// Set before calling native builtins, cleared after.
+let active_vm_module : Ref[CompiledModule?] = Ref::new(None)
+
+let active_vm_globals : Ref[@hashmap.T[String, Value]?] = Ref::new(None)
+
+/// Call a VMClosure from outside the VM (used by native builtins like map).
+/// Creates a mini VM to execute the closure and returns the result.
+pub fn vm_apply_closure(
+  closure : VMClosure,
+  args : Array[Value]
+) -> Result[Value, EvalError] {
+  let module = match active_vm_module.val {
+    Some(m) => m
+    None =>
+      return Err(
+        EvalError::TypeError(
+          "cannot call VM closure outside of VM execution context",
+        ),
+      )
+  }
+  let globals = match active_vm_globals.val {
+    Some(g) => g
+    None =>
+      return Err(
+        EvalError::TypeError(
+          "cannot call VM closure: no globals context",
+        ),
+      )
+  }
+  let target_chunk = module.chunks[closure.chunk_idx]
+
+  // Arity check
+  if target_chunk.has_rest_param {
+    if target_chunk.arity >= 0 && args.length() < target_chunk.arity {
+      return Err(EvalError::ArityError("VM closure arity mismatch (too few arguments)"))
+    }
+  } else {
+    if target_chunk.arity >= 0 && args.length() != target_chunk.arity {
+      return Err(EvalError::ArityError("VM closure arity mismatch"))
+    }
+  }
+
+  // Prepare actual args (collect rest into list if variadic)
+  let actual_args : Array[Value] = []
+  if target_chunk.has_rest_param {
+    let mut i = 0
+    while i < target_chunk.arity {
+      actual_args.push(args[i])
+      i = i + 1
+    }
+    let mut rest_list : Value = Value::Nil
+    let mut j = args.length() - 1
+    while j >= target_chunk.arity {
+      rest_list = Value::Pair(args[j], rest_list)
+      j = j - 1
+    }
+    actual_args.push(rest_list)
+  } else {
+    for arg in args {
+      actual_args.push(arg)
+    }
+  }
+
+  // Create a mini compiled module with just a call-and-return wrapper
+  // We build a small main chunk that calls the closure
+  let main_code : Array[Opcode] = []
+
+  // Push closure captures
+  for capture in closure.captures {
+    let idx = main_code.length()
+    // We need to push capture values onto the stack, so use Push with constants
+    // But we can't easily add constants. Instead, we'll set up the VM state directly.
+    let _ = idx
+  }
+
+  // Rather than building bytecode, set up VM state directly
+  let vm = new_vm_state_with_globals(module, globals)
+
+  // Push captures and args onto the stack
+  for capture in closure.captures {
+    vm_push(vm, capture)
+  }
+  for arg in actual_args {
+    vm_push(vm, arg)
+  }
+
+  // Set up call frame
+  let frame : VMCallFrame = {
+    return_chunk: -1,
+    return_ip: module.main.code.length(),
+    base_ptr: 0,
+    num_locals: closure.captures.length() + actual_args.length(),
+  }
+  vm.call_stack.push(frame)
+
+  // Jump to closure's chunk
+  vm.current_chunk = closure.chunk_idx
+  vm.ip = 0
+
+  // Run the VM
+  match vm_run_from_current(vm) {
+    Ok(value) => Ok(value)
+    Err(e) => Err(EvalError::TypeError(e.to_string()))
+  }
+}
+
+/// Run VM from current state (without pushing initial frame)
+fn vm_run_from_current(vm : VMState) -> Result[Value, VMError] {
+  let mut step_count = 0
+  let gc_check_interval = 1000
+
+  while true {
+    match vm_step(vm) {
+      Ok(true) => {
+        step_count = step_count + 1
+        if step_count % gc_check_interval == 0 {
+          let _ = gc_check_and_run(vm)
+        }
+        continue
+      }
+      Ok(false) => break
+      Err(e) => return Err(e)
+    }
+  }
+  if vm.stack.length() > 0 {
+    Ok(vm.stack[vm.stack.length() - 1])
+  } else {
+    Ok(Value::Nil)
+  }
+}
+
 /// VM errors
 pub(all) enum VMError {
   StackUnderflow
@@ -141,7 +273,7 @@ fn vm_peek(vm : VMState) -> Result[Value, VMError] {
 fn vm_get_local(vm : VMState, depth : Int, index : Int) -> Result[Value, VMError] {
   let frame_idx = vm.call_stack.length() - 1 - depth
   if frame_idx < 0 {
-    return Err(VMError::RuntimeError("invalid frame depth"))
+    return Err(VMError::RuntimeError("invalid frame depth: depth=" + depth.to_string() + " index=" + index.to_string() + " call_stack.len=" + vm.call_stack.length().to_string()))
   }
   let frame = vm.call_stack[frame_idx]
   let stack_idx = frame.base_ptr + index
@@ -160,7 +292,7 @@ fn vm_set_local(
 ) -> Result[Unit, VMError] {
   let frame_idx = vm.call_stack.length() - 1 - depth
   if frame_idx < 0 {
-    return Err(VMError::RuntimeError("invalid frame depth"))
+    return Err(VMError::RuntimeError("set_local: invalid frame depth: depth=" + depth.to_string() + " index=" + index.to_string() + " call_stack.len=" + vm.call_stack.length().to_string()))
   }
   let frame = vm.call_stack[frame_idx]
   let stack_idx = frame.base_ptr + index
@@ -169,6 +301,170 @@ fn vm_set_local(
   }
   vm.stack[stack_idx] = value
   Ok(())
+}
+
+/// Convert PrimOpKind to builtin function name (for delegation to apply_builtin)
+fn primop_to_builtin_name(kind : PrimOpKind) -> String {
+  match kind {
+    PrimOpKind::Add => "+"
+    PrimOpKind::Sub => "-"
+    PrimOpKind::Mul => "*"
+    PrimOpKind::Div => "/"
+    PrimOpKind::Quotient => "quotient"
+    PrimOpKind::Remainder => "remainder"
+    PrimOpKind::Modulo => "modulo"
+    PrimOpKind::Abs => "abs"
+    PrimOpKind::Max => "max"
+    PrimOpKind::Min => "min"
+    PrimOpKind::Gcd => "gcd"
+    PrimOpKind::Lcm => "lcm"
+    PrimOpKind::NumEq => "="
+    PrimOpKind::Lt => "<"
+    PrimOpKind::Gt => ">"
+    PrimOpKind::Le => "<="
+    PrimOpKind::Ge => ">="
+    PrimOpKind::Eq => "eq?"
+    PrimOpKind::Eqv => "eqv?"
+    PrimOpKind::Equal => "equal?"
+    PrimOpKind::ZeroP => "zero?"
+    PrimOpKind::PositiveP => "positive?"
+    PrimOpKind::NegativeP => "negative?"
+    PrimOpKind::OddP => "odd?"
+    PrimOpKind::EvenP => "even?"
+    PrimOpKind::PairP => "pair?"
+    PrimOpKind::NumberP => "number?"
+    PrimOpKind::IntegerP => "integer?"
+    PrimOpKind::RealP => "real?"
+    PrimOpKind::BooleanP => "boolean?"
+    PrimOpKind::SymbolP => "symbol?"
+    PrimOpKind::NullP => "null?"
+    PrimOpKind::ProcedureP => "procedure?"
+    PrimOpKind::ListP => "list?"
+    PrimOpKind::StringP => "string?"
+    PrimOpKind::CharP => "char?"
+    PrimOpKind::VectorP => "vector?"
+    PrimOpKind::PromiseP => "promise?"
+    PrimOpKind::PortP => "port?"
+    PrimOpKind::Cons => "cons"
+    PrimOpKind::Car => "car"
+    PrimOpKind::Cdr => "cdr"
+    PrimOpKind::SetCar => "set-car!"
+    PrimOpKind::SetCdr => "set-cdr!"
+    PrimOpKind::List => "list"
+    PrimOpKind::Length => "length"
+    PrimOpKind::Append => "append"
+    PrimOpKind::Reverse => "reverse"
+    PrimOpKind::ListRef => "list-ref"
+    PrimOpKind::ListTail => "list-tail"
+    PrimOpKind::Not => "not"
+    PrimOpKind::Apply => "apply"
+    PrimOpKind::Map => "map"
+    PrimOpKind::ForEach => "for-each"
+    PrimOpKind::Filter => "filter"
+    PrimOpKind::FoldLeft => "fold-left"
+    PrimOpKind::FoldRight => "fold-right"
+    PrimOpKind::Force => "force"
+    PrimOpKind::Values => "values"
+    PrimOpKind::CallWithValues => "call-with-values"
+    PrimOpKind::DynamicWind => "dynamic-wind"
+    PrimOpKind::Display => "display"
+    PrimOpKind::Newline => "newline"
+    PrimOpKind::Write => "write"
+    PrimOpKind::Read => "read"
+    PrimOpKind::CharEq => "char=?"
+    PrimOpKind::CharLt => "char<?"
+    PrimOpKind::CharGt => "char>?"
+    PrimOpKind::CharLe => "char<=?"
+    PrimOpKind::CharGe => "char>=?"
+    PrimOpKind::CharAlphabeticP => "char-alphabetic?"
+    PrimOpKind::CharNumericP => "char-numeric?"
+    PrimOpKind::CharWhitespaceP => "char-whitespace?"
+    PrimOpKind::CharUpperCaseP => "char-upper-case?"
+    PrimOpKind::CharLowerCaseP => "char-lower-case?"
+    PrimOpKind::CharUpcase => "char-upcase"
+    PrimOpKind::CharDowncase => "char-downcase"
+    PrimOpKind::CharToInteger => "char->integer"
+    PrimOpKind::IntegerToChar => "integer->char"
+    PrimOpKind::StringLength => "string-length"
+    PrimOpKind::StringRef => "string-ref"
+    PrimOpKind::StringAppend => "string-append"
+    PrimOpKind::StringEq => "string=?"
+    PrimOpKind::StringLt => "string<?"
+    PrimOpKind::StringGt => "string>?"
+    PrimOpKind::StringLe => "string<=?"
+    PrimOpKind::StringGe => "string>=?"
+    PrimOpKind::MakeString => "make-string"
+    PrimOpKind::Substring => "substring"
+    PrimOpKind::StringToList => "string->list"
+    PrimOpKind::ListToString => "list->string"
+    PrimOpKind::MakeVector => "make-vector"
+    PrimOpKind::Vector => "vector"
+    PrimOpKind::VectorLength => "vector-length"
+    PrimOpKind::VectorRef => "vector-ref"
+    PrimOpKind::VectorSet => "vector-set!"
+    PrimOpKind::VectorToList => "vector->list"
+    PrimOpKind::ListToVector => "list->vector"
+    PrimOpKind::Floor => "floor"
+    PrimOpKind::Ceiling => "ceiling"
+    PrimOpKind::Truncate => "truncate"
+    PrimOpKind::Round => "round"
+    PrimOpKind::Sqrt => "sqrt"
+    PrimOpKind::Expt => "expt"
+    PrimOpKind::Sin => "sin"
+    PrimOpKind::Cos => "cos"
+    PrimOpKind::Tan => "tan"
+    PrimOpKind::Asin => "asin"
+    PrimOpKind::Acos => "acos"
+    PrimOpKind::Atan => "atan"
+    PrimOpKind::Exp => "exp"
+    PrimOpKind::Log => "log"
+    PrimOpKind::NumberToString => "number->string"
+    PrimOpKind::StringToNumber => "string->number"
+    PrimOpKind::SymbolToString => "symbol->string"
+    PrimOpKind::StringToSymbol => "string->symbol"
+    PrimOpKind::MakeRectangular => "make-rectangular"
+    PrimOpKind::MakePolar => "make-polar"
+    PrimOpKind::RealPart => "real-part"
+    PrimOpKind::ImagPart => "imag-part"
+    PrimOpKind::Magnitude => "magnitude"
+    PrimOpKind::Angle => "angle"
+    PrimOpKind::ComplexP => "complex?"
+    PrimOpKind::Numerator => "numerator"
+    PrimOpKind::Denominator => "denominator"
+    PrimOpKind::RationalP => "rational?"
+    PrimOpKind::ExactP => "exact?"
+    PrimOpKind::InexactP => "inexact?"
+    PrimOpKind::InputPortP => "input-port?"
+    PrimOpKind::OutputPortP => "output-port?"
+    PrimOpKind::OpenInputFile => "open-input-file"
+    PrimOpKind::OpenOutputFile => "open-output-file"
+    PrimOpKind::CloseInputPort => "close-input-port"
+    PrimOpKind::CloseOutputPort => "close-output-port"
+    PrimOpKind::ReadChar => "read-char"
+    PrimOpKind::PeekChar => "peek-char"
+    PrimOpKind::WriteChar => "write-char"
+    PrimOpKind::EofObjectP => "eof-object?"
+    PrimOpKind::Assq => "assq"
+    PrimOpKind::Assv => "assv"
+    PrimOpKind::Assoc => "assoc"
+    PrimOpKind::Memq => "memq"
+    PrimOpKind::Memv => "memv"
+    PrimOpKind::Member => "member"
+    PrimOpKind::Caar => "caar"
+    PrimOpKind::Cadr => "cadr"
+    PrimOpKind::Cdar => "cdar"
+    PrimOpKind::Cddr => "cddr"
+    PrimOpKind::Caaar => "caaar"
+    PrimOpKind::Caadr => "caadr"
+    PrimOpKind::Cadar => "cadar"
+    PrimOpKind::Caddr => "caddr"
+    PrimOpKind::Cdaar => "cdaar"
+    PrimOpKind::Cdadr => "cdadr"
+    PrimOpKind::Cddar => "cddar"
+    PrimOpKind::Cdddr => "cdddr"
+    // String comparison (case-insensitive)
+    _ => kind.to_string()
+  }
 }
 
 /// Perform primitive operations
@@ -232,7 +528,21 @@ fn vm_exec_primop(
     PrimOpKind::Cdadr => vm_exec_cdadr(args)
     PrimOpKind::Cddar => vm_exec_cddar(args)
     PrimOpKind::Cdddr => vm_exec_cdddr(args)
-    _ => Err(VMError::RuntimeError("unimplemented primitive: " + kind.to_string()))
+    _ => {
+      // Higher-order primitives: delegate to apply_builtin with active VM context
+      let prev_module = active_vm_module.val
+      let prev_globals = active_vm_globals.val
+      active_vm_module.val = Some(vm.compiled_module)
+      active_vm_globals.val = Some(vm.globals)
+      let name = primop_to_builtin_name(kind)
+      let result = match apply_builtin(name, args) {
+        Ok(v) => Ok(v)
+        Err(e) => Err(VMError::RuntimeError(e.to_string()))
+      }
+      active_vm_module.val = prev_module
+      active_vm_globals.val = prev_globals
+      result
+    }
   }
 }
 
@@ -964,7 +1274,15 @@ fn vm_call_function(
       Ok(())
     }
     Value::Procedure(Procedure::Native(name)) => {
-      match apply_builtin(name, args) {
+      // Set active VM context so native builtins (like map) can call VMClosures
+      let prev_module = active_vm_module.val
+      let prev_globals = active_vm_globals.val
+      active_vm_module.val = Some(vm.compiled_module)
+      active_vm_globals.val = Some(vm.globals)
+      let result = apply_builtin(name, args)
+      active_vm_module.val = prev_module
+      active_vm_globals.val = prev_globals
+      match result {
         Ok(v) => {
           vm_push(vm, v)
           Ok(())
@@ -1354,9 +1672,11 @@ pub fn vm_step(vm : VMState) -> Result[Bool, VMError] {
 /// Run the VM
 pub fn vm_run(vm : VMState) -> Result[Value, VMError] {
   // Create a dummy frame for the top level
+  // return_ip is set to past the end of code so that after a tail call returns,
+  // execution will halt correctly (vm_step will see ip >= code.length())
   let initial_frame : VMCallFrame = {
     return_chunk: -1,
-    return_ip: 0,
+    return_ip: vm.compiled_module.main.code.length(),
     base_ptr: 0,
     num_locals: 0,
   }

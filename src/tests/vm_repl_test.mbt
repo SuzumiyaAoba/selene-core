@@ -1271,6 +1271,18 @@ test "vm repl: letrec - recursive counter" {
   }
 }
 
+/// Test: passing lambda as argument (debugging issue with 4.2)
+test "vm repl: lambda as argument" {
+  let ctx = new_repl_context()
+  // Even simpler: pass identity lambda
+  let result = repl_eval(ctx, "((lambda (f) (f 5)) (lambda (x) x))")
+  match result {
+    Ok(Value::Number(Number::Int(n))) => assert_eq(n, 5)
+    Err(e) => fail("Error: " + e)
+    _ => fail("Expected 5")
+  }
+}
+
 /// =============================================
 /// Do Loop Tests (VM REPL)
 /// =============================================

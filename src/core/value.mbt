@@ -176,6 +176,8 @@ pub(all) struct SyntaxRules {
   rules : Array[SyntaxRule]
   /// Environment at macro definition (for hygienic macros)
   def_env : Env
+  /// Rename map for hygienic macro expansion (original -> gensym)
+  rename_map : Map[String, String]
 } derive(Show)
 
 /// individual syntax rules

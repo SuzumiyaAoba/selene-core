@@ -107,8 +107,10 @@ fn optimize_app(func : IRExpr, args : Array[IRExpr], is_tail : Bool) -> IRExpr {
               bindings.push({ name: info.params[i], init: opt_args[i] })
               i = i + 1
             }
-            // The variable reference index in body should already be correct
-            return optimize_expr(IRExpr::Let(bindings, info.body))
+            // Convert TailApp to App in the body since after inlining,
+            // the code is no longer in tail position
+            let untailed_body = untail_calls(info.body)
+            return optimize_expr(IRExpr::Let(bindings, untailed_body))
           }
         }
       }
@@ -1930,6 +1932,98 @@ fn adjust_var_indices_inner(
       let new_exprs : Array[IRExpr] = []
       for e in exprs {
         new_exprs.push(adjust_var_indices_inner(e, removed_indices, current_depth))
+      }
+      IRExpr::Or(new_exprs)
+    }
+  }
+}
+
+/// Convert all TailApp to App in an expression tree.
+/// This is needed when inlining a lambda body, because the inlined code
+/// is no longer in tail position.
+fn untail_calls(expr : IRExpr) -> IRExpr {
+  match expr {
+    IRExpr::Const(_) => expr
+    IRExpr::Var(_) => expr
+    IRExpr::GlobalVar(_) => expr
+    IRExpr::Quote(_) => expr
+
+    IRExpr::If(cond, then_branch, else_branch) =>
+      IRExpr::If(untail_calls(cond), untail_calls(then_branch), untail_calls(else_branch))
+
+    IRExpr::Begin(exprs) => {
+      let new_exprs : Array[IRExpr] = []
+      for e in exprs {
+        new_exprs.push(untail_calls(e))
+      }
+      IRExpr::Begin(new_exprs)
+    }
+
+    IRExpr::Lambda(_) =>
+      // Don't modify the body of nested lambdas - their tail calls are still valid
+      expr
+
+    IRExpr::App(func, args) => {
+      let new_args : Array[IRExpr] = []
+      for arg in args {
+        new_args.push(untail_calls(arg))
+      }
+      IRExpr::App(untail_calls(func), new_args)
+    }
+
+    IRExpr::TailApp(func, args) => {
+      // Convert TailApp to App
+      let new_args : Array[IRExpr] = []
+      for arg in args {
+        new_args.push(untail_calls(arg))
+      }
+      IRExpr::App(untail_calls(func), new_args)
+    }
+
+    IRExpr::Let(bindings, body) => {
+      let new_bindings : Array[LetBinding] = []
+      for binding in bindings {
+        new_bindings.push({ name: binding.name, init: untail_calls(binding.init) })
+      }
+      IRExpr::Let(new_bindings, untail_calls(body))
+    }
+
+    IRExpr::Letrec(bindings, body) => {
+      let new_bindings : Array[LetBinding] = []
+      for binding in bindings {
+        new_bindings.push({ name: binding.name, init: untail_calls(binding.init) })
+      }
+      IRExpr::Letrec(new_bindings, untail_calls(body))
+    }
+
+    IRExpr::PrimOp(kind, args) => {
+      let new_args : Array[IRExpr] = []
+      for arg in args {
+        new_args.push(untail_calls(arg))
+      }
+      IRExpr::PrimOp(kind, new_args)
+    }
+
+    IRExpr::Set(var_ref, value) => IRExpr::Set(var_ref, untail_calls(value))
+
+    IRExpr::GlobalSet(name, value) => IRExpr::GlobalSet(name, untail_calls(value))
+
+    IRExpr::CallCC(proc) => IRExpr::CallCC(untail_calls(proc))
+
+    IRExpr::Delay(body) => IRExpr::Delay(untail_calls(body))
+
+    IRExpr::And(exprs) => {
+      let new_exprs : Array[IRExpr] = []
+      for e in exprs {
+        new_exprs.push(untail_calls(e))
+      }
+      IRExpr::And(new_exprs)
+    }
+
+    IRExpr::Or(exprs) => {
+      let new_exprs : Array[IRExpr] = []
+      for e in exprs {
+        new_exprs.push(untail_calls(e))
       }
       IRExpr::Or(new_exprs)
     }

@@ -20,12 +20,38 @@ pub fn expand_macro(
     match match_pattern(rule.pattern, expr, syntax_rules.literals) {
       Some(bindings) => {
         // Match successful, deploy template
-        return expand_template(rule.template, bindings)
+        let expanded = match expand_template(rule.template, bindings) {
+          Ok(e) => e
+          Err(e) => return Err(e)
+        }
+        // Apply hygienic renaming if rename_map is non-empty
+        return Ok(apply_hygienic_rename(expanded, syntax_rules.rename_map))
       }
       None => continue
     }
   }
   Err("syntax-rules: no matching pattern")
+}
+
+/// Apply hygienic renaming to an expanded macro form
+fn apply_hygienic_rename(sexpr : SExpr, rename_map : Map[String, String]) -> SExpr {
+  if rename_map.size() == 0 {
+    return sexpr
+  }
+  match sexpr {
+    SExpr::Symbol(name) =>
+      match rename_map.get(name) {
+        Some(new_name) => SExpr::Symbol(new_name)
+        None => sexpr
+      }
+    SExpr::Pair(car, cdr) =>
+      SExpr::Pair(
+        apply_hygienic_rename(car, rename_map),
+        apply_hygienic_rename(cdr, rename_map),
+      )
+    SExpr::Quote(_) => sexpr // Don't rename inside quote
+    _ => sexpr
+  }
 }
 
 /// perform pattern matching
@@ -194,7 +220,7 @@ fn match_ellipsis_pattern(
 }
 
 /// Collect pattern variables within a pattern
-fn collect_pattern_variables(pattern : SExpr, literals : Array[String]) -> Array[String] {
+pub fn collect_pattern_variables(pattern : SExpr, literals : Array[String]) -> Array[String] {
   let vars : Array[String] = []
   collect_pattern_variables_inner(pattern, literals, vars)
   vars

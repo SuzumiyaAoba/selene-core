@@ -56,8 +56,9 @@ test "r5rs pitfalls (guile r5rs_pitfall)" {
       "(letrec ((x (call/cc list)) (y (call/cc list))) (cond ((procedure? x) (x (pair? y))) ((procedure? y) (y (pair? x)))) (let ((x (car x)) (y (car y))) (and (call/cc x) (call/cc y) (call/cc x))))",
     )
 
-    // Test 1.3: cadr is implemented
-    // Skipped: letrec + call/cc interaction is complex
+    // Test 1.3: Requires pair object identity (eq?) support.
+    // vm_values_eq always returns false for pairs since MoonBit enum values
+    // lack physical identity comparison for compound types.
     // assert_should_be(
     //   ctx,
     //   "1.3",
@@ -74,17 +75,16 @@ test "r5rs pitfalls (guile r5rs_pitfall)" {
   }
 
   if enable_macros {
-    // Note: Tests 3.1, 3.2, 3.3 require full hygienic macro support
-    // (def_env preservation at macro definition time).
-    // Currently skipped as we use empty_env() for def_env.
+    assert_should_be(
+      ctx,
+      "3.1",
+      "4",
+      "(let-syntax ((foo (syntax-rules () ((_ expr) (+ expr 1))))) (let ((+ *)) (foo 3)))",
+    )
 
-    // assert_should_be(
-    //   ctx,
-    //   "3.1",
-    //   "4",
-    //   "(let-syntax ((foo (syntax-rules () ((_ expr) (+ expr 1))))) (let ((+ *)) (foo 3)))",
-    // )
-
+    // Test 3.2: Requires define inside macro template to interact with
+    // let-bound variables and macro shadowing. Needs macro expansion and
+    // compilation to cooperate on variable/macro binding scopes.
     // assert_should_be(
     //   ctx,
     //   "3.2",
@@ -92,6 +92,8 @@ test "r5rs pitfalls (guile r5rs_pitfall)" {
     //   "(let-syntax ((foo (syntax-rules () ((_ var) (define var 1))))) (let ((x 2)) (begin (define foo +)) (cond (else (foo x))) x))",
     // )
 
+    // Test 3.3: Requires full hygienic macros with nested macro scope tracking.
+    // The inner let-syntax bar introduces x=2, but y should refer to the outer x=1.
     // assert_should_be(
     //   ctx,
     //   "3.3",
@@ -115,13 +117,13 @@ test "r5rs pitfalls (guile r5rs_pitfall)" {
       "((lambda lambda lambda) 'x)",
     )
 
-    // Skipped: 4.2 requires nested keyword shadowing which causes frame depth issues
-    // assert_should_be(
-    //   ctx,
-    //   "4.2",
-    //   "'(1 2 3)",
-    //   "((lambda (begin) (begin 1 2 3)) (lambda lambda lambda))",
-    // )
+    // Test 4.2 - lambda passed as argument (tests tail call return handling)
+    assert_should_be(
+      ctx,
+      "4.2",
+      "'(1 2 3)",
+      "((lambda (begin) (begin 1 2 3)) (lambda lambda lambda))",
+    )
   }
 
   if enable_keyword_shadowing {
@@ -172,7 +174,9 @@ test "r5rs pitfalls (guile r5rs_pitfall)" {
       "(let () (set! r (+ 1 (+ 2 (+ 3 (call/cc (lambda (k) (set! a k) 4)))) (+ 5 (+ 6 (call/cc (lambda (k) (set! b k) 7)))))) (if (not c) (set! c a)) (set! i (+ i 1)) (case i ((1) (b 8)) ((2) (a 5)) ((3) (b 7)) ((4) (c 4))) r)",
     )
 
-    // Skipped: 7.3 and 7.4 use internal define with recursion which has boxing issues
+    // Skipped: 7.3 causes infinite loop when continuations are invoked inside
+    // internal define + call/cc interaction (continuation restores state that
+    // re-enters the continuation invocation).
     // assert_should_be(
     //   ctx,
     //   "7.3",
@@ -202,7 +206,9 @@ test "r5rs pitfalls (guile r5rs_pitfall)" {
     )
   }
 
-  // Skipped: 8.3 requires internal define which is not implemented
+  // Test 8.3: Requires call/cc inside map's lambda. Continuations captured
+  // inside vm_apply_closure (mini VM) cannot be restored in the main VM context,
+  // since the stack/call_stack belong to separate VM instances.
   // if enable_callcc {
   //   assert_should_be(
   //     ctx,

@@ -58,7 +58,7 @@ pub fn eval_syntax_rules(args : SExpr, env : Env) -> Result[Value, EvalError] {
     ()
   }
 
-  Ok(Value::Syntax({ literals, rules, def_env: env }))
+  Ok(Value::Syntax({ literals, rules, def_env: env, rename_map: Map::new() }))
 }
 
 /// Expand a macro (runtime wrapper that returns EvalError)
