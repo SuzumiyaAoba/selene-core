@@ -102,7 +102,7 @@ test "set-car! creates new pair with new car" {
   let env = initial_env()
   let expr = parse_one("(set-car! (cons 1 2) 10)")
   match eval(expr, env) {
-    Ok(Value::Pair(Value::Number(Number::Int(10)), Value::Number(Number::Int(2)))) =>
+    Ok(Value::Pair(Value::Number(Number::Int(10)), Value::Number(Number::Int(2)), _)) =>
       ()
     _ => fail("Expected (10 . 2)")
   }
@@ -112,7 +112,7 @@ test "set-cdr! creates new pair with new cdr" {
   let env = initial_env()
   let expr = parse_one("(set-cdr! (cons 1 2) 20)")
   match eval(expr, env) {
-    Ok(Value::Pair(Value::Number(Number::Int(1)), Value::Number(Number::Int(20)))) =>
+    Ok(Value::Pair(Value::Number(Number::Int(1)), Value::Number(Number::Int(20)), _)) =>
       ()
     _ => fail("Expected (1 . 20)")
   }
@@ -142,7 +142,7 @@ test "filter selects elements" {
   let env = initial_env()
   let expr = parse_one("(filter (lambda (x) (> x 2)) '(1 2 3 4 5))")
   match eval(expr, env) {
-    Ok(Value::Pair(Value::Number(Number::Int(3)), Value::Pair(Value::Number(Number::Int(4)), Value::Pair(Value::Number(Number::Int(5)), Value::Nil)))) =>
+    Ok(Value::Pair(Value::Number(Number::Int(3)), Value::Pair(Value::Number(Number::Int(4)), Value::Pair(Value::Number(Number::Int(5)), Value::Nil, _), _), _)) =>
       ()
     _ => fail("Expected (3 4 5)")
   }
@@ -211,7 +211,7 @@ test "fold-right with cons builds list" {
   let env = initial_env()
   let expr = parse_one("(fold-right cons '() '(1 2 3))")
   match eval(expr, env) {
-    Ok(Value::Pair(Value::Number(Number::Int(1)), Value::Pair(Value::Number(Number::Int(2)), Value::Pair(Value::Number(Number::Int(3)), Value::Nil)))) =>
+    Ok(Value::Pair(Value::Number(Number::Int(1)), Value::Pair(Value::Number(Number::Int(2)), Value::Pair(Value::Number(Number::Int(3)), Value::Nil, _), _), _)) =>
       ()
     _ => fail("Expected (1 2 3)")
   }

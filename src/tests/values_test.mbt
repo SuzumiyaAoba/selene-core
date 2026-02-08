@@ -81,7 +81,7 @@ test "values with list construction" {
   let expr = parse_one("(call-with-values (lambda () (values 1 2 3)) list)")
   let result = eval(expr, env)
   match result {
-    Ok(Value::Pair(_, _)) => ()
+    Ok(Value::Pair(_, _, _)) => ()
     _ => fail("expected a list")
   }
 }

@@ -88,7 +88,7 @@ test "assq found" {
   let expr = parse_one("(assq 'b (list (list 'a 1) (list 'b 2) (list 'c 3)))")
   let result = eval(expr, env)
   match result {
-    Ok(Value::Pair(Value::Symbol("b"), _)) => ()
+    Ok(Value::Pair(Value::Symbol("b"), _, _)) => ()
     _ => fail("expected pair starting with 'b")
   }
 }
@@ -110,7 +110,7 @@ test "assv with numbers" {
   let expr = parse_one("(assv 2 (list (list 1 'a) (list 2 'b) (list 3 'c)))")
   let result = eval(expr, env)
   match result {
-    Ok(Value::Pair(Value::Number(Number::Int(2)), _)) => ()
+    Ok(Value::Pair(Value::Number(Number::Int(2)), _, _)) => ()
     _ => fail("expected pair starting with 2")
   }
 }
@@ -121,7 +121,7 @@ test "assoc with lists" {
   let expr = parse_one("(assoc '(1 2) (list (list '(1) 'a) (list '(1 2) 'b) (list '(1 2 3) 'c)))")
   let result = eval(expr, env)
   match result {
-    Ok(Value::Pair(_, _)) => ()
+    Ok(Value::Pair(_, _, _)) => ()
     _ => fail("expected pair")
   }
 }
@@ -145,7 +145,7 @@ test "memq found" {
   let expr = parse_one("(memq 'b '(a b c))")
   let result = eval(expr, env)
   match result {
-    Ok(Value::Pair(Value::Symbol("b"), Value::Pair(Value::Symbol("c"), Value::Nil))) => ()
+    Ok(Value::Pair(Value::Symbol("b"), Value::Pair(Value::Symbol("c"), Value::Nil, _), _)) => ()
     _ => fail("expected (b c)")
   }
 }
@@ -167,7 +167,7 @@ test "memv with numbers" {
   let expr = parse_one("(memv 2 '(1 2 3))")
   let result = eval(expr, env)
   match result {
-    Ok(Value::Pair(Value::Number(Number::Int(2)), _)) => ()
+    Ok(Value::Pair(Value::Number(Number::Int(2)), _, _)) => ()
     _ => fail("expected list starting with 2")
   }
 }
@@ -178,7 +178,7 @@ test "member with lists" {
   let expr = parse_one("(member '(2) '((1) (2) (3)))")
   let result = eval(expr, env)
   match result {
-    Ok(Value::Pair(_, _)) => ()
+    Ok(Value::Pair(_, _, _)) => ()
     _ => fail("expected list")
   }
 }

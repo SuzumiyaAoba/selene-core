@@ -111,34 +111,74 @@ pub fn gc_mark_continuation(cont_id : Int) -> Unit {
   }
 }
 
-/// Scan and mark values ​​in VM stack
+/// Scan and mark values in VM stack (iterative to avoid stack overflow)
 fn gc_mark_value(value : Value) -> Unit {
-  match value {
-    Value::Procedure(Procedure::Cont(cont)) => gc_mark_continuation(cont.id)
-    Value::Procedure(Procedure::VMCont(cont)) => gc_mark_continuation(cont.id)
-    Value::Procedure(Procedure::Closure(_, _, _)) => ()  // Continuations within the environment also require marking, but simplified
-    Value::Procedure(Procedure::VMClosure(closure)) => {
-      // Scan values ​​in capture
-      for capture in closure.captures {
-        gc_mark_value(capture)
-      }
+  let worklist : Array[Value] = [value]
+  let visited_boxes : Array[Int] = []
+  let _ = while worklist.length() > 0 {
+    let current = worklist.pop()
+    match current {
+      Some(v) =>
+        match v {
+          Value::Procedure(Procedure::Cont(cont)) =>
+            gc_mark_continuation(cont.id)
+          Value::Procedure(Procedure::VMCont(cont)) =>
+            gc_mark_continuation(cont.id)
+          Value::Procedure(Procedure::Closure(_, _, _)) => ()
+          Value::Procedure(Procedure::VMClosure(closure)) => {
+            for capture in closure.captures {
+              worklist.push(capture)
+            }
+          }
+          Value::Pair(car, cdr, _) => {
+            worklist.push(car)
+            // Iterate on cdr inline to reduce worklist pressure
+            let mut tail = cdr
+            let _ = while true {
+              match tail {
+                Value::Pair(c, d, _) => {
+                  worklist.push(c)
+                  tail = d
+                }
+                _ => {
+                  worklist.push(tail)
+                  break
+                }
+              }
+            } else {
+              ()
+            }
+          }
+          Value::Vector(items) => {
+            for item in items {
+              worklist.push(item)
+            }
+          }
+          Value::Box(cell) => {
+            // Cycle detection: skip already-visited boxes
+            let mut already_visited = false
+            for bid in visited_boxes {
+              if bid == cell.id {
+                already_visited = true
+                break
+              }
+            }
+            if not(already_visited) {
+              visited_boxes.push(cell.id)
+              worklist.push(cell.val)
+            }
+          }
+          Value::MultipleValues(values) => {
+            for mv in values {
+              worklist.push(mv)
+            }
+          }
+          _ => ()
+        }
+      None => break
     }
-    Value::Pair(car, cdr) => {
-      gc_mark_value(car)
-      gc_mark_value(cdr)
-    }
-    Value::Vector(items) => {
-      for item in items {
-        gc_mark_value(item)
-      }
-    }
-    Value::Box(cell) => gc_mark_value(cell.val)
-    Value::MultipleValues(values) => {
-      for v in values {
-        gc_mark_value(v)
-      }
-    }
-    _ => ()
+  } else {
+    ()
   }
 }
 

@@ -20,7 +20,7 @@ test "builtin cons" {
   let env = initial_env()
   let expr = parse_one("(cons 1 2)")
   match eval(expr, env) {
-    Ok(Value::Pair(Value::Number(Number::Int(1)), Value::Number(Number::Int(2)))) => ()
+    Ok(Value::Pair(Value::Number(Number::Int(1)), Value::Number(Number::Int(2)), _)) => ()
     _ => fail("expected pair (1 . 2)")
   }
 }
@@ -50,7 +50,7 @@ test "build list with cons" {
   let env = initial_env()
   let expr = parse_one("(cons 1 (cons 2 (cons 3 ())))")
   match eval(expr, env) {
-    Ok(Value::Pair(_, _)) => ()
+    Ok(Value::Pair(_, _, _)) => ()
     _ => fail("expected list")
   }
 }

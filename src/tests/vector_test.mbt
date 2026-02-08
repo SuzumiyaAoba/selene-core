@@ -277,7 +277,7 @@ test "vector with complex elements" {
       assert_eq(items.length(), 3)
       for item in items {
         match item {
-          Value::Pair(_, _) => ()
+          Value::Pair(_, _, _) => ()
           _ => fail("Expected Pair")
         }
       }
@@ -320,7 +320,7 @@ fn vector_test_value_to_string(value : Value) -> String {
     Value::Char(c) => "#\\" + c.to_string()
     Value::String(s) => "\"" + s + "\""
     Value::Symbol(s) => s
-    Value::Pair(car, cdr) => {
+    Value::Pair(car, cdr, _) => {
       let mut result = "("
       result = result + vector_test_value_to_string(car)
       let mut current = cdr
@@ -330,7 +330,7 @@ fn vector_test_value_to_string(value : Value) -> String {
             result = result + ")"
             return result
           }
-          Value::Pair(car2, cdr2) => {
+          Value::Pair(car2, cdr2, _) => {
             result = result + " " + vector_test_value_to_string(car2)
             current = cdr2
           }

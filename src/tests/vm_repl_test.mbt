@@ -286,9 +286,9 @@ test "vm: list capture vs param" {
   let expr = parse_one("(((lambda (n) (lambda (x) (list n x))) 5) 10)")
   let result = vm_eval(expr)
   match result {
-    Ok(Value::Pair(car, cdr)) => {
+    Ok(Value::Pair(car, cdr, _)) => {
       match (car, cdr) {
-        (Value::Number(Number::Int(n)), Value::Pair(x_val, Value::Nil)) => {
+        (Value::Number(Number::Int(n)), Value::Pair(x_val, Value::Nil, _)) => {
           match x_val {
             Value::Number(Number::Int(x)) => {
               println("list: n = " + n.to_string() + ", x = " + x.to_string())
@@ -889,11 +889,11 @@ test "vm repl: rest params - all args as list" {
   // (list-all 1 2 3) => (1 2 3)
   let result = repl_eval(ctx, "(list-all 1 2 3)")
   match result {
-    Ok(Value::Pair(a, rest)) => {
+    Ok(Value::Pair(a, rest, _)) => {
       match (a, rest) {
-        (Value::Number(Number::Int(1)), Value::Pair(b, rest2)) => {
+        (Value::Number(Number::Int(1)), Value::Pair(b, rest2, _)) => {
           match (b, rest2) {
-            (Value::Number(Number::Int(2)), Value::Pair(c, rest3)) => {
+            (Value::Number(Number::Int(2)), Value::Pair(c, rest3, _)) => {
               match (c, rest3) {
                 (Value::Number(Number::Int(3)), Value::Nil) => ()
                 _ => fail("Expected (1 2 3)")
@@ -934,7 +934,7 @@ test "vm repl: rest params - required + rest" {
   // (my-list 1 2 3 4) => (1 2 3 4)
   let result = repl_eval(ctx, "(my-list 1 2 3 4)")
   match result {
-    Ok(Value::Pair(a, _)) => {
+    Ok(Value::Pair(a, _, _)) => {
       match a {
         Value::Number(Number::Int(1)) => ()
         _ => fail("Expected first element to be 1")
@@ -954,7 +954,7 @@ test "vm repl: rest params - dotted minimum args" {
   // (my-list 42) => (42)
   let result = repl_eval(ctx, "(my-list 42)")
   match result {
-    Ok(Value::Pair(a, rest)) => {
+    Ok(Value::Pair(a, rest, _)) => {
       match (a, rest) {
         (Value::Number(Number::Int(42)), Value::Nil) => ()
         _ => fail("Expected (42)")
@@ -1002,11 +1002,11 @@ test "vm repl: quasiquote - simple" {
   // `(a b c) => (a b c)
   let result = repl_eval(ctx, "`(a b c)")
   match result {
-    Ok(Value::Pair(a, rest)) => {
+    Ok(Value::Pair(a, rest, _)) => {
       match (a, rest) {
-        (Value::Symbol("a"), Value::Pair(b, rest2)) => {
+        (Value::Symbol("a"), Value::Pair(b, rest2, _)) => {
           match (b, rest2) {
-            (Value::Symbol("b"), Value::Pair(c, rest3)) => {
+            (Value::Symbol("b"), Value::Pair(c, rest3, _)) => {
               match (c, rest3) {
                 (Value::Symbol("c"), Value::Nil) => ()
                 _ => fail("Expected (a b c)")
@@ -1032,11 +1032,11 @@ test "vm repl: quasiquote - with unquote" {
   // `(a ,x c) => (a 42 c)
   let result = repl_eval(ctx, "`(a ,x c)")
   match result {
-    Ok(Value::Pair(a, rest)) => {
+    Ok(Value::Pair(a, rest, _)) => {
       match (a, rest) {
-        (Value::Symbol("a"), Value::Pair(b, rest2)) => {
+        (Value::Symbol("a"), Value::Pair(b, rest2, _)) => {
           match (b, rest2) {
-            (Value::Number(Number::Int(42)), Value::Pair(c, rest3)) => {
+            (Value::Number(Number::Int(42)), Value::Pair(c, rest3, _)) => {
               match (c, rest3) {
                 (Value::Symbol("c"), Value::Nil) => ()
                 _ => fail("Expected (a 42 c)")
@@ -1060,11 +1060,11 @@ test "vm repl: quasiquote - unquote expression" {
   // `(1 ,(+ 2 3) 4) => (1 5 4)
   let result = repl_eval(ctx, "`(1 ,(+ 2 3) 4)")
   match result {
-    Ok(Value::Pair(a, rest)) => {
+    Ok(Value::Pair(a, rest, _)) => {
       match (a, rest) {
-        (Value::Number(Number::Int(1)), Value::Pair(b, rest2)) => {
+        (Value::Number(Number::Int(1)), Value::Pair(b, rest2, _)) => {
           match (b, rest2) {
-            (Value::Number(Number::Int(5)), Value::Pair(c, rest3)) => {
+            (Value::Number(Number::Int(5)), Value::Pair(c, rest3, _)) => {
               match (c, rest3) {
                 (Value::Number(Number::Int(4)), Value::Nil) => ()
                 _ => fail("Expected (1 5 4)")
@@ -1091,13 +1091,13 @@ test "vm repl: quasiquote - unquote-splicing" {
   // `(1 ,@xs 4) => (1 2 3 4)
   let result = repl_eval(ctx, "`(1 ,@xs 4)")
   match result {
-    Ok(Value::Pair(a, rest)) => {
+    Ok(Value::Pair(a, rest, _)) => {
       match (a, rest) {
-        (Value::Number(Number::Int(1)), Value::Pair(b, rest2)) => {
+        (Value::Number(Number::Int(1)), Value::Pair(b, rest2, _)) => {
           match (b, rest2) {
-            (Value::Number(Number::Int(2)), Value::Pair(c, rest3)) => {
+            (Value::Number(Number::Int(2)), Value::Pair(c, rest3, _)) => {
               match (c, rest3) {
-                (Value::Number(Number::Int(3)), Value::Pair(d, rest4)) => {
+                (Value::Number(Number::Int(3)), Value::Pair(d, rest4, _)) => {
                   match (d, rest4) {
                     (Value::Number(Number::Int(4)), Value::Nil) => ()
                     _ => fail("Expected (1 2 3 4)")
@@ -1127,9 +1127,9 @@ test "vm repl: quasiquote - empty unquote-splicing" {
   // `(1 ,@xs 4) => (1 4)
   let result = repl_eval(ctx, "`(1 ,@xs 4)")
   match result {
-    Ok(Value::Pair(a, rest)) => {
+    Ok(Value::Pair(a, rest, _)) => {
       match (a, rest) {
-        (Value::Number(Number::Int(1)), Value::Pair(b, rest2)) => {
+        (Value::Number(Number::Int(1)), Value::Pair(b, rest2, _)) => {
           match (b, rest2) {
             (Value::Number(Number::Int(4)), Value::Nil) => ()
             _ => fail("Expected (1 4)")
@@ -1345,11 +1345,11 @@ test "vm repl: do loop - build list" {
   let ctx = new_repl_context()
   let result = repl_eval(ctx, "(do ((i 0 (+ i 1)) (lst '() (cons i lst))) ((= i 3) lst))")
   match result {
-    Ok(Value::Pair(a, rest)) => {
+    Ok(Value::Pair(a, rest, _)) => {
       match (a, rest) {
-        (Value::Number(Number::Int(2)), Value::Pair(b, rest2)) => {
+        (Value::Number(Number::Int(2)), Value::Pair(b, rest2, _)) => {
           match (b, rest2) {
-            (Value::Number(Number::Int(1)), Value::Pair(c, rest3)) => {
+            (Value::Number(Number::Int(1)), Value::Pair(c, rest3, _)) => {
               match (c, rest3) {
                 (Value::Number(Number::Int(0)), Value::Nil) => ()
                 _ => fail("Expected (2 1 0)")

@@ -224,7 +224,7 @@ pub(all) enum Value {
   Char(Char)
   String(String)
   Symbol(String)
-  Pair(Value, Value)
+  Pair(Value, Value, Int)
   Vector(Array[Value])
   Procedure(Procedure)
   Promise(Promise)
@@ -234,6 +234,40 @@ pub(all) enum Value {
   Syntax(SyntaxRules)
   /// Port (input/output)
   Port(Port)
-  /// Boxed values ​​(for reference capture)
-  Box(Ref[Value])
+  /// Boxed values (for reference capture)
+  Box(BoxedValue)
 } derive(Show)
+
+/// Boxed value with unique ID (for GC cycle detection)
+pub(all) struct BoxedValue {
+  mut val : Value
+  id : Int
+} derive(Show)
+
+/// Box ID counter (global)
+let box_counter : Ref[Int] = { val: 0 }
+
+/// Generate a new box ID
+pub fn next_box_id() -> Int {
+  box_counter.val = box_counter.val + 1
+  box_counter.val
+}
+
+/// Create a new boxed value with a unique ID
+pub fn make_box(value : Value) -> Value {
+  Value::Box({ val: value, id: next_box_id() })
+}
+
+/// Pair ID counter (global)
+let pair_counter : Ref[Int] = { val: 0 }
+
+/// Generate a new pair ID
+pub fn next_pair_id() -> Int {
+  pair_counter.val = pair_counter.val + 1
+  pair_counter.val
+}
+
+/// Create a new pair with a unique ID
+pub fn make_pair(car : Value, cdr : Value) -> Value {
+  Value::Pair(car, cdr, next_pair_id())
+}

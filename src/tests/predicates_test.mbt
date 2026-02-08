@@ -401,7 +401,7 @@ test "cddr" {
   let expr = parse_one("(cddr '(1 2 3 4))")
   let result = eval(expr, env)
   match result {
-    Ok(Value::Pair(Value::Number(Number::Int(3)), Value::Pair(Value::Number(Number::Int(4)), Value::Nil))) => ()
+    Ok(Value::Pair(Value::Number(Number::Int(3)), Value::Pair(Value::Number(Number::Int(4)), Value::Nil, _), _)) => ()
     _ => fail("expected (3 4)")
   }
 }
@@ -423,7 +423,7 @@ test "cdar" {
   let expr = parse_one("(cdar '((1 2 3) 4))")
   let result = eval(expr, env)
   match result {
-    Ok(Value::Pair(Value::Number(Number::Int(2)), _)) => ()
+    Ok(Value::Pair(Value::Number(Number::Int(2)), _, _)) => ()
     _ => fail("expected (2 3)")
   }
 }
@@ -434,7 +434,7 @@ test "cdddr" {
   let expr = parse_one("(cdddr '(1 2 3 4 5))")
   let result = eval(expr, env)
   match result {
-    Ok(Value::Pair(Value::Number(Number::Int(4)), Value::Pair(Value::Number(Number::Int(5)), Value::Nil))) => ()
+    Ok(Value::Pair(Value::Number(Number::Int(4)), Value::Pair(Value::Number(Number::Int(5)), Value::Nil, _), _)) => ()
     _ => fail("expected (4 5)")
   }
 }

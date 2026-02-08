@@ -19,7 +19,7 @@ fn value_to_display_string(value : Value) -> String {
     Value::Char(c) => c.to_string()
     Value::String(s) => s // display outputs the string without quotes
     Value::Symbol(s) => s
-    Value::Pair(car, cdr) => {
+    Value::Pair(car, cdr, _) => {
       let mut result = "("
       result = result + value_to_display_string(car)
       let mut current = cdr
@@ -29,7 +29,7 @@ fn value_to_display_string(value : Value) -> String {
             result = result + ")"
             return result
           }
-          Value::Pair(car2, cdr2) => {
+          Value::Pair(car2, cdr2, _) => {
             result = result + " " + value_to_display_string(car2)
             current = cdr2
           }
@@ -107,7 +107,7 @@ fn value_to_write_string(value : Value) -> String {
     Value::Char(c) => "#\\" + c.to_string()
     Value::String(s) => "\"" + s + "\"" // write outputs a string with quotes
     Value::Symbol(s) => s
-    Value::Pair(car, cdr) => {
+    Value::Pair(car, cdr, _) => {
       let mut result = "("
       result = result + value_to_write_string(car)
       let mut current = cdr
@@ -117,7 +117,7 @@ fn value_to_write_string(value : Value) -> String {
             result = result + ")"
             return result
           }
-          Value::Pair(car2, cdr2) => {
+          Value::Pair(car2, cdr2, _) => {
             result = result + " " + value_to_write_string(car2)
             current = cdr2
           }

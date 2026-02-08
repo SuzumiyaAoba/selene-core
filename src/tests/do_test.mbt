@@ -17,7 +17,7 @@ test "do loop building list" {
   let expr = parse_one("(do ((i 0 (+ i 1)) (lst () (cons i lst))) ((= i 3) lst))")
   let result = eval(expr, env)
   match result {
-    Ok(Value::Pair(_, _)) => ()
+    Ok(Value::Pair(_, _, _)) => ()
     _ => fail("expected a list")
   }
 }

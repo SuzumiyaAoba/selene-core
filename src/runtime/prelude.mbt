@@ -28,6 +28,9 @@ using @core {
   remove_continuation,
   clear_continuations,
   expand_macro,
+  make_pair,
+  make_box,
+  type BoxedValue,
 }
 using @frontend { parse }
 using @ffi { file_exists, read_file }

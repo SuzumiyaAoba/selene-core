@@ -34,7 +34,7 @@ pub fn sexpr_to_value(sexpr : SExpr) -> Value {
     SExpr::Char(c) => Value::Char(c)
     SExpr::String(s) => Value::String(s)
     SExpr::Pair(car, cdr) =>
-      Value::Pair(sexpr_to_value(car), sexpr_to_value(cdr))
+      make_pair(sexpr_to_value(car), sexpr_to_value(cdr))
     SExpr::Vector(items) => {
       let values : Array[Value] = []
       for item in items {
@@ -43,17 +43,17 @@ pub fn sexpr_to_value(sexpr : SExpr) -> Value {
       Value::Vector(values)
     }
     SExpr::Quote(expr) => sexpr_to_value(expr)
-    SExpr::Quasiquote(expr) => Value::Pair(
+    SExpr::Quasiquote(expr) => make_pair(
       Value::Symbol("quasiquote"),
-      Value::Pair(sexpr_to_value(expr), Value::Nil)
+      make_pair(sexpr_to_value(expr), Value::Nil)
     )
-    SExpr::Unquote(expr) => Value::Pair(
+    SExpr::Unquote(expr) => make_pair(
       Value::Symbol("unquote"),
-      Value::Pair(sexpr_to_value(expr), Value::Nil)
+      make_pair(sexpr_to_value(expr), Value::Nil)
     )
-    SExpr::UnquoteSplicing(expr) => Value::Pair(
+    SExpr::UnquoteSplicing(expr) => make_pair(
       Value::Symbol("unquote-splicing"),
-      Value::Pair(sexpr_to_value(expr), Value::Nil)
+      make_pair(sexpr_to_value(expr), Value::Nil)
     )
   }
 }
