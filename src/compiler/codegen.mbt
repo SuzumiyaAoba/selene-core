@@ -358,7 +358,11 @@ fn codegen_lambda(ctx : CodegenContext, info : LambdaInfo) -> Unit {
   ctx.chunks.push(func_chunk)
 
   // Also added chunks of child context (recursively offset)
+  // Child chunks need the same offset as func_chunk because their internal
+  // MakeClosure/MakePromise references were relative to func_ctx.chunks,
+  // and they now need to be relative to ctx.chunks.
   for chunk in func_ctx.chunks {
+    offset_chunk_indices(chunk, chunk_idx + 1)
     ctx.chunks.push(chunk)
   }
 
@@ -367,10 +371,8 @@ fn codegen_lambda(ctx : CodegenContext, info : LambdaInfo) -> Unit {
   // MakeClosure pops and reverses, so here we push in order.
   // Important: Boxed variables capture the box itself (do not call BoxGet)
   for var_ref in info.free_vars {
-    // Calculate the correct index for depth=0 vars
-    // After optimization, depth=0 means the var is in the enclosing lambda's scope
-    // But the index might be compile-time param index, not runtime index
-    let actual_depth = var_ref.depth
+    // Calculate the correct index and depth for capture instructions.
+    // These instructions are emitted in the enclosing context's code.
     let actual_index = if var_ref.depth == 0 {
       // Check if this var is a parameter of the enclosing lambda (ctx)
       let mut param_index = -1
@@ -400,7 +402,53 @@ fn codegen_lambda(ctx : CodegenContext, info : LambdaInfo) -> Unit {
         }
       }
     } else {
-      var_ref.index
+      // For depth > 0: try to find the variable in the current context first.
+      // This is essential for delay lambdas where the parent frame may not be
+      // on the call stack at execution time.
+      let mut resolved_in_ctx = false
+      let mut ctx_index = 0
+      // Check params
+      for i in 0..<ctx.lambda_params.length() {
+        if ctx.lambda_params[i] == var_ref.name {
+          resolved_in_ctx = true
+          ctx_index = ctx.builder.num_free_vars + i
+          break
+        }
+      }
+      // Check captures
+      if !resolved_in_ctx {
+        for i in 0..<ctx.lambda_free_vars.length() {
+          if ctx.lambda_free_vars[i].name == var_ref.name {
+            resolved_in_ctx = true
+            ctx_index = i
+            break
+          }
+        }
+      }
+      if resolved_in_ctx { ctx_index } else { var_ref.index }
+    }
+
+    // Resolve depth: if we found the variable in the current context, use depth=0
+    let actual_depth = if var_ref.depth == 0 {
+      0
+    } else {
+      // Check if we resolved it in ctx (same logic)
+      let mut found_in_ctx = false
+      for i in 0..<ctx.lambda_params.length() {
+        if ctx.lambda_params[i] == var_ref.name {
+          found_in_ctx = true
+          break
+        }
+      }
+      if !found_in_ctx {
+        for i in 0..<ctx.lambda_free_vars.length() {
+          if ctx.lambda_free_vars[i].name == var_ref.name {
+            found_in_ctx = true
+            break
+          }
+        }
+      }
+      if found_in_ctx { 0 } else { var_ref.depth }
     }
 
     // Determine if this variable is boxed
@@ -1063,24 +1111,29 @@ fn codegen_quote(ctx : CodegenContext, c : IRConst) -> Unit {
 
 /// Generate code for delay
 fn codegen_delay(ctx : CodegenContext, body : IRExpr) -> Unit {
-  // Compile lazy body in new context
-  let delay_ctx = new_context(None)
-  delay_ctx.builder.arity = 0
-  codegen_expr(delay_ctx, body)
-  delay_ctx.builder.emit(Opcode::Return)
-
-  // Add promise chunk
-  let chunk = delay_ctx.builder.build()
-  let chunk_idx = ctx.chunks.length()
-  ctx.chunks.push(chunk)
-
-  // Also added child context chunks
-  for c in delay_ctx.chunks {
-    ctx.chunks.push(c)
+  // body should be a Lambda (wrapped by compile_delay)
+  match body {
+    IRExpr::Lambda(info) => {
+      // Use codegen_lambda to handle all capture logic properly
+      codegen_lambda(ctx, info)
+      // MakeClosure has been emitted, now wrap the closure as a promise
+      ctx.builder.emit(Opcode::MakePromise(0))
+    }
+    _ => {
+      // Fallback: compile body directly (no captures, only works for simple cases)
+      let delay_ctx = new_context(None)
+      delay_ctx.builder.arity = 0
+      codegen_expr(delay_ctx, body)
+      delay_ctx.builder.emit(Opcode::Return)
+      let chunk = delay_ctx.builder.build()
+      let chunk_idx = ctx.chunks.length()
+      ctx.chunks.push(chunk)
+      for c in delay_ctx.chunks {
+        ctx.chunks.push(c)
+      }
+      ctx.builder.emit(Opcode::MakePromise(chunk_idx))
+    }
   }
-
-  // Create a promise
-  ctx.builder.emit(Opcode::MakePromise(chunk_idx))
 }
 
 /// Generate code for and expressions

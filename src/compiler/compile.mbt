@@ -1644,11 +1644,39 @@ fn compile_quote(args : SExpr) -> Result[IRExpr, CompileError] {
 fn compile_delay(args : SExpr, env : CompileEnv) -> Result[IRExpr, CompileError] {
   match args {
     SExpr::Pair(expr, SExpr::Nil) => {
-      let ir = match compile(expr, env, false) {
+      // Compile body in a new nested env (like a 0-arg lambda)
+      // so that VarRef depths account for the extra lambda scope
+      let new_env = extend_compile_env(env, [])
+      let body_ir = match compile(expr, new_env, false) {
         Ok(ir) => ir
         Err(e) => return Err(e)
       }
-      Ok(IRExpr::Delay(ir))
+      // Collect free variables (all params are empty since arity=0)
+      let free_vars = collect_free_vars(body_ir, [])
+      let set_vars = collect_set_vars(body_ir)
+      let boxed_free_vars : Array[Int] = []
+      let mut j = 0
+      while j < free_vars.length() {
+        let free_var = free_vars[j]
+        for sv in set_vars {
+          if sv == free_var.name {
+            boxed_free_vars.push(j)
+            break
+          }
+        }
+        j = j + 1
+      }
+      let lambda_info : LambdaInfo = {
+        params: [],
+        arity: 0,
+        rest_param: None,
+        body: body_ir,
+        free_vars,
+        boxed_params: [],
+        boxed_locals: [],
+        boxed_free_vars,
+      }
+      Ok(IRExpr::Delay(IRExpr::Lambda(lambda_info)))
     }
     _ => Err(CompileError::SyntaxError("delay: requires exactly one argument"))
   }
