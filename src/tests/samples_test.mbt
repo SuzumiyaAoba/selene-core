@@ -1,0 +1,335 @@
+/// Integration tests for sample Scheme programs.
+/// Each test corresponds to a .scm file in the samples/ directory.
+
+fn sample_eval(ctx : VMReplContext, code : String) -> Unit raise Error {
+  match repl_eval(ctx, code) {
+    Ok(_) => ()
+    Err(e) => fail("eval failed: " + e)
+  }
+}
+
+fn sample_assert_int(ctx : VMReplContext, expr : String, expected : Int) -> Unit raise Error {
+  match repl_eval(ctx, expr) {
+    Ok(Value::Number(Number::Int(n))) => assert_eq(n, expected)
+    Ok(v) => fail("expected " + expected.to_string() + ", got " + v.to_string())
+    Err(e) => fail("error: " + e)
+  }
+}
+
+fn sample_assert_true(ctx : VMReplContext, expr : String) -> Unit raise Error {
+  match repl_eval(ctx, expr) {
+    Ok(Value::Bool(true)) => ()
+    Ok(v) => fail("expected #t, got " + v.to_string())
+    Err(e) => fail("error: " + e)
+  }
+}
+
+fn sample_assert_str(ctx : VMReplContext, expr : String, expected : String) -> Unit raise Error {
+  match repl_eval(ctx, expr) {
+    Ok(Value::String(s)) => assert_eq(s, expected)
+    Ok(v) => fail("expected \"" + expected + "\", got " + v.to_string())
+    Err(e) => fail("error: " + e)
+  }
+}
+
+fn sample_assert_list_eq(ctx : VMReplContext, expr : String, expected : String) -> Unit raise Error {
+  let code = "(equal? " + expr + " " + expected + ")"
+  match repl_eval(ctx, code) {
+    Ok(Value::Bool(true)) => ()
+    Ok(v) => fail("list mismatch: " + v.to_string())
+    Err(e) => fail("error: " + e)
+  }
+}
+
+// ============================================================
+// samples/fibonacci/fibonacci.scm
+// ============================================================
+
+test "sample: fibonacci" {
+  let ctx = new_repl_context()
+
+  // 1. Naive recursive fibonacci
+  sample_eval(ctx,
+    "(define (fib n) (if (< n 2) n (+ (fib (- n 1)) (fib (- n 2)))))",
+  )
+  sample_assert_int(ctx, "(fib 10)", 55)
+
+  // 2. Tail-recursive fibonacci
+  sample_eval(ctx,
+    "(define (fib-tail n) (define (iter a b count) (if (= count 0) b (iter (+ a b) a (- count 1)))) (iter 1 0 n))",
+  )
+  sample_assert_int(ctx, "(fib-tail 30)", 832040)
+
+  // 3. Fibonacci with do loop
+  sample_eval(ctx,
+    "(define (fib-do n) (if (= n 0) 0 (do ((i 1 (+ i 1)) (a 1 (+ a b)) (b 0 a)) ((= i n) a))))",
+  )
+  sample_assert_int(ctx, "(fib-do 30)", 832040)
+
+  // 4. Fibonacci sequence as a list
+  sample_eval(ctx,
+    "(define (fib-list n) (let loop ((i 0) (acc '())) (if (> i n) (reverse acc) (loop (+ i 1) (cons (fib-tail i) acc)))))",
+  )
+  sample_assert_list_eq(ctx, "(fib-list 10)", "'(0 1 1 2 3 5 8 13 21 34 55)")
+
+  // 5. Generalized tabulate
+  sample_eval(ctx,
+    "(define (tabulate f start end) (let loop ((i start) (acc '())) (if (> i end) (reverse acc) (loop (+ i 1) (cons (f i) acc)))))",
+  )
+  sample_assert_list_eq(ctx,
+    "(tabulate fib-tail 0 10)",
+    "'(0 1 1 2 3 5 8 13 21 34 55)",
+  )
+
+  // 6. All implementations agree
+  sample_eval(ctx,
+    "(define (fib-check n) (let ((r1 (fib n)) (r2 (fib-tail n)) (r3 (fib-do n))) (and (= r1 r2) (= r2 r3))))",
+  )
+  sample_assert_true(ctx, "(fib-check 10)")
+}
+
+// ============================================================
+// samples/sort/sort.scm
+// ============================================================
+
+test "sample: sort" {
+  let ctx = new_repl_context()
+
+  // filter utility
+  sample_eval(ctx,
+    "(define (filter pred lst) (let loop ((l lst) (acc '())) (cond ((null? l) (reverse acc)) ((pred (car l)) (loop (cdr l) (cons (car l) acc))) (else (loop (cdr l) acc)))))",
+  )
+
+  // Insertion sort
+  sample_eval(ctx,
+    "(define (insert x sorted less?) (cond ((null? sorted) (list x)) ((less? x (car sorted)) (cons x sorted)) (else (cons (car sorted) (insert x (cdr sorted) less?)))))",
+  )
+  sample_eval(ctx,
+    "(define (insertion-sort lst less?) (let loop ((l lst) (acc '())) (if (null? l) acc (loop (cdr l) (insert (car l) acc less?)))))",
+  )
+  sample_assert_list_eq(ctx,
+    "(insertion-sort '(5 3 8 1 9 2 7 4 6) <)",
+    "'(1 2 3 4 5 6 7 8 9)",
+  )
+
+  // Quicksort
+  sample_eval(ctx,
+    "(define (quicksort lst less?) (if (or (null? lst) (null? (cdr lst))) lst (let ((pivot (car lst)) (rest (cdr lst))) (let ((lo (filter (lambda (x) (less? x pivot)) rest)) (hi (filter (lambda (x) (not (less? x pivot))) rest))) (append (quicksort lo less?) (cons pivot (quicksort hi less?)))))))",
+  )
+  sample_assert_list_eq(ctx,
+    "(quicksort '(5 3 8 1 9 2 7 4 6) <)",
+    "'(1 2 3 4 5 6 7 8 9)",
+  )
+
+  // Merge sort
+  sample_eval(ctx,
+    "(define (merge xs ys less?) (cond ((null? xs) ys) ((null? ys) xs) ((less? (car xs) (car ys)) (cons (car xs) (merge (cdr xs) ys less?))) (else (cons (car ys) (merge xs (cdr ys) less?)))))",
+  )
+  sample_eval(ctx,
+    "(define (split lst) (let loop ((l lst) (left '()) (right '()) (toggle #t)) (if (null? l) (list (reverse left) (reverse right)) (if toggle (loop (cdr l) (cons (car l) left) right #f) (loop (cdr l) left (cons (car l) right) #t)))))",
+  )
+  sample_eval(ctx,
+    "(define (merge-sort lst less?) (if (or (null? lst) (null? (cdr lst))) lst (let ((halves (split lst))) (merge (merge-sort (car halves) less?) (merge-sort (cadr halves) less?) less?))))",
+  )
+  sample_assert_list_eq(ctx,
+    "(merge-sort '(5 3 8 1 9 2 7 4 6) <)",
+    "'(1 2 3 4 5 6 7 8 9)",
+  )
+
+  // All three sorts agree
+  sample_eval(ctx,
+    "(define (sort-check) (let ((data '(38 27 43 3 9 82 10 1 57 24))) (let ((r1 (insertion-sort data <)) (r2 (quicksort data <)) (r3 (merge-sort data <))) (and (equal? r1 r2) (equal? r2 r3) (equal? r1 '(1 3 9 10 24 27 38 43 57 82))))))",
+  )
+  sample_assert_true(ctx, "(sort-check)")
+}
+
+// ============================================================
+// samples/stream/stream.scm
+// ============================================================
+
+test "sample: stream" {
+  let ctx = new_repl_context()
+
+  // Stream primitives
+  sample_eval(ctx, "(define stream-null '())")
+  sample_eval(ctx, "(define (stream-null? s) (null? s))")
+  sample_eval(ctx,
+    "(define-syntax stream-cons (syntax-rules () ((stream-cons x s) (cons x (delay s)))))",
+  )
+  sample_eval(ctx, "(define (stream-car s) (car s))")
+  sample_eval(ctx, "(define (stream-cdr s) (force (cdr s)))")
+
+  // Stream operations
+  sample_eval(ctx,
+    "(define (stream-take n s) (if (or (= n 0) (stream-null? s)) '() (cons (stream-car s) (stream-take (- n 1) (stream-cdr s)))))",
+  )
+  sample_eval(ctx,
+    "(define (stream-map f s) (if (stream-null? s) stream-null (stream-cons (f (stream-car s)) (stream-map f (stream-cdr s)))))",
+  )
+  sample_eval(ctx,
+    "(define (stream-filter pred s) (cond ((stream-null? s) stream-null) ((pred (stream-car s)) (stream-cons (stream-car s) (stream-filter pred (stream-cdr s)))) (else (stream-filter pred (stream-cdr s)))))",
+  )
+  sample_eval(ctx,
+    "(define (stream-zip-with f s1 s2) (if (or (stream-null? s1) (stream-null? s2)) stream-null (stream-cons (f (stream-car s1) (stream-car s2)) (stream-zip-with f (stream-cdr s1) (stream-cdr s2)))))",
+  )
+
+  // Natural numbers
+  sample_eval(ctx, "(define (integers-from n) (stream-cons n (integers-from (+ n 1))))")
+  sample_eval(ctx, "(define nats (integers-from 0))")
+  sample_assert_list_eq(ctx, "(stream-take 5 nats)", "'(0 1 2 3 4)")
+
+  // Fibonacci stream
+  sample_eval(ctx,
+    "(define fibs (stream-cons 0 (stream-cons 1 (stream-zip-with + fibs (stream-cdr fibs)))))",
+  )
+  sample_assert_list_eq(ctx,
+    "(stream-take 10 fibs)",
+    "'(0 1 1 2 3 5 8 13 21 34)",
+  )
+
+  // Stream-filter
+  sample_assert_list_eq(ctx,
+    "(stream-take 5 (stream-filter odd? (integers-from 0)))",
+    "'(1 3 5 7 9)",
+  )
+
+  // Sieve of Eratosthenes (delay + nested lambda captures)
+  sample_eval(ctx,
+    "(define (sieve s) (stream-cons (stream-car s) (sieve (stream-filter (lambda (x) (not (= (remainder x (stream-car s)) 0))) (stream-cdr s)))))",
+  )
+  sample_eval(ctx, "(define primes (sieve (integers-from 2)))")
+  sample_assert_list_eq(ctx,
+    "(stream-take 10 primes)",
+    "'(2 3 5 7 11 13 17 19 23 29)",
+  )
+
+  // Delay + lambda capturing from enclosing scope
+  sample_eval(ctx, "(define (test-d4 s n) (delay (stream-filter (lambda (x) (> x n)) s)))")
+  sample_assert_list_eq(ctx, "(stream-take 3 (force (test-d4 (integers-from 0) 5)))", "'(6 7 8)")
+
+  // Combined verification
+  sample_eval(ctx,
+    "(define (stream-check) (and (equal? (stream-take 5 nats) '(0 1 2 3 4)) (equal? (stream-take 10 fibs) '(0 1 1 2 3 5 8 13 21 34)) (equal? (stream-take 5 (stream-filter odd? (integers-from 0))) '(1 3 5 7 9)) (equal? (stream-take 10 primes) '(2 3 5 7 11 13 17 19 23 29))))",
+  )
+  sample_assert_true(ctx, "(stream-check)")
+}
+
+// ============================================================
+// samples/continuation/continuation.scm
+// ============================================================
+
+test "sample: continuation" {
+  let ctx = new_repl_context()
+  // Enable call/cc
+  ctx.globals.set("call/cc", Value::Procedure(Procedure::Native("call/cc")))
+  ctx.globals.set(
+    "call-with-current-continuation",
+    Value::Procedure(Procedure::Native("call-with-current-continuation")),
+  )
+  ctx.compiler_globals.set("call/cc", ())
+  ctx.compiler_globals.set("call-with-current-continuation", ())
+
+  // 1. Non-local exit (early return)
+  sample_eval(ctx,
+    "(define (find-first pred lst) (call/cc (lambda (return) (for-each (lambda (x) (if (pred x) (return x))) lst) #f)))",
+  )
+  sample_assert_int(ctx, "(find-first even? '(1 3 5 4 7))", 4)
+  sample_assert_true(ctx, "(eq? (find-first even? '(1 3 5 7)) #f)")
+
+  // 2. Exception handling with call/cc
+  sample_eval(ctx,
+    "(define (try thunk handler) (call/cc (lambda (exit) (let ((raise (lambda (err) (exit (handler err))))) (thunk raise)))))",
+  )
+  sample_eval(ctx,
+    "(define (safe-divide a b) (try (lambda (raise) (if (= b 0) (raise \"division by zero\") (quotient a b))) (lambda (err) (string-append \"Error: \" err))))",
+  )
+  sample_assert_int(ctx, "(safe-divide 10 3)", 3)
+  sample_assert_str(ctx, "(safe-divide 10 0)", "Error: division by zero")
+
+  // 3. Collect results
+  sample_eval(ctx,
+    "(define (collect-matches pred lst) (let ((results '())) (call/cc (lambda (done) (for-each (lambda (x) (if (pred x) (set! results (cons x results)))) lst) (reverse results)))))",
+  )
+  sample_assert_list_eq(ctx,
+    "(collect-matches odd? '(1 2 3 4 5 6 7 8 9))",
+    "'(1 3 5 7 9)",
+  )
+
+  // 4. Tree traversal with early exit (helper defined separately to avoid letrec-in-callcc)
+  sample_eval(ctx,
+    "(define (tree-walk t sum abort) (cond ((number? t) (if (< t 0) (abort sum) (+ sum t))) ((null? t) sum) (else (tree-walk (cdr t) (tree-walk (car t) sum abort) abort))))",
+  )
+  sample_eval(ctx,
+    "(define (tree-sum-until-negative tree) (call/cc (lambda (abort) (tree-walk tree 0 abort))))",
+  )
+  sample_assert_int(ctx, "(tree-sum-until-negative '(1 (2 3) (4 (5 6))))", 21)
+  sample_assert_int(ctx, "(tree-sum-until-negative '(1 (2 -1) (4 (5 6))))", 3)
+
+  // 5. Range collection (pure recursion, no call/cc needed)
+  sample_eval(ctx,
+    "(define (range-collect start end) (let loop ((i end) (result '())) (if (< i start) result (loop (- i 1) (cons i result)))))",
+  )
+  sample_assert_list_eq(ctx, "(range-collect 1 5)", "'(1 2 3 4 5)")
+
+  // Combined verification
+  sample_eval(ctx,
+    "(define (continuation-check) (and (= (find-first even? '(1 3 5 4 7)) 4) (eq? (find-first even? '(1 3 5 7)) #f) (= (safe-divide 10 3) 3) (string=? (safe-divide 10 0) \"Error: division by zero\") (equal? (collect-matches odd? '(1 2 3 4 5 6 7 8 9)) '(1 3 5 7 9)) (= (tree-sum-until-negative '(1 (2 3) (4 (5 6)))) 21) (= (tree-sum-until-negative '(1 (2 -1) (4 (5 6)))) 3) (equal? (range-collect 1 5) '(1 2 3 4 5))))",
+  )
+  sample_assert_true(ctx, "(continuation-check)")
+}
+
+// ============================================================
+// samples/oop/oop.scm
+// ============================================================
+
+test "sample: oop" {
+  let ctx = new_repl_context()
+
+  // 1. Counter object
+  sample_eval(ctx,
+    "(define (make-counter . args) (let ((count (if (null? args) 0 (car args)))) (define (dispatch msg . params) (cond ((eq? msg 'inc) (set! count (+ count 1)) count) ((eq? msg 'dec) (set! count (- count 1)) count) ((eq? msg 'get) count) ((eq? msg 'reset) (set! count 0) count) (else (string-append \"Unknown message: \" (symbol->string msg))))) dispatch))",
+  )
+  sample_eval(ctx, "(define c (make-counter 10))")
+  sample_eval(ctx, "(c 'inc)")
+  sample_eval(ctx, "(c 'inc)")
+  sample_eval(ctx, "(c 'inc)")
+  sample_assert_int(ctx, "(c 'get)", 13)
+
+  // 2. Stack object
+  sample_eval(ctx,
+    "(define (make-stack) (let ((items '())) (define (dispatch msg . params) (cond ((eq? msg 'push) (set! items (cons (car params) items)) items) ((eq? msg 'pop) (if (null? items) 'empty (let ((top (car items))) (set! items (cdr items)) top))) ((eq? msg 'peek) (if (null? items) 'empty (car items))) ((eq? msg 'size) (length items)) ((eq? msg 'empty?) (null? items)) ((eq? msg 'to-list) items) (else \"unknown\"))) dispatch))",
+  )
+  sample_eval(ctx, "(define s (make-stack))")
+  sample_eval(ctx, "(s 'push 1)")
+  sample_eval(ctx, "(s 'push 2)")
+  sample_eval(ctx, "(s 'push 3)")
+  sample_assert_int(ctx, "(s 'peek)", 3)
+  sample_assert_int(ctx, "(s 'size)", 3)
+  sample_assert_int(ctx, "(s 'pop)", 3)
+  sample_assert_int(ctx, "(s 'pop)", 2)
+  sample_assert_int(ctx, "(s 'size)", 1)
+
+  // 3. Bank account with transaction log
+  sample_eval(ctx,
+    "(define (make-account name initial-balance) (let ((balance initial-balance) (log '())) (define (record! action amount) (set! log (cons (list action amount balance) log))) (define (dispatch msg . params) (cond ((eq? msg 'deposit) (let ((amount (car params))) (set! balance (+ balance amount)) (record! 'deposit amount) balance)) ((eq? msg 'withdraw) (let ((amount (car params))) (if (< balance amount) 'insufficient-funds (begin (set! balance (- balance amount)) (record! 'withdraw amount) balance)))) ((eq? msg 'balance) balance) ((eq? msg 'name) name) ((eq? msg 'history) (reverse log)) (else \"unknown\"))) dispatch))",
+  )
+  sample_eval(ctx, "(define acc (make-account \"Alice\" 1000))")
+  sample_eval(ctx, "(acc 'deposit 500)")
+  sample_eval(ctx, "(acc 'withdraw 200)")
+  sample_assert_int(ctx, "(acc 'balance)", 1300)
+  sample_assert_int(ctx, "(length (acc 'history))", 2)
+
+  // 4. Inheritance via delegation (savings account)
+  sample_eval(ctx,
+    "(define (make-savings-account name initial-balance interest-pct) (let ((base (make-account name initial-balance))) (define (dispatch msg . params) (cond ((eq? msg 'add-interest) (let ((interest (quotient (* (base 'balance) interest-pct) 100))) (base 'deposit interest))) ((eq? msg 'rate) interest-pct) (else (apply base (cons msg params))))) dispatch))",
+  )
+  sample_eval(ctx, "(define sav (make-savings-account \"Bob\" 1000 10))")
+  sample_eval(ctx, "(sav 'add-interest)")
+  sample_assert_int(ctx, "(sav 'balance)", 1100)
+
+  // Combined verification
+  sample_eval(ctx,
+    "(define (oop-check) (let ((c (make-counter 10))) (c 'inc) (c 'inc) (c 'inc) (let ((counter-ok (= (c 'get) 13))) (let ((s (make-stack))) (s 'push 1) (s 'push 2) (s 'push 3) (let ((stack-ok (and (= (s 'peek) 3) (= (s 'size) 3) (= (s 'pop) 3) (= (s 'pop) 2) (= (s 'size) 1)))) (let ((acc (make-account \"Alice\" 1000))) (acc 'deposit 500) (acc 'withdraw 200) (let ((account-ok (and (= (acc 'balance) 1300) (= (length (acc 'history)) 2)))) (let ((sav (make-savings-account \"Bob\" 1000 10))) (sav 'add-interest) (let ((savings-ok (= (sav 'balance) 1100))) (and counter-ok stack-ok account-ok savings-ok))))))))))",
+  )
+  sample_assert_true(ctx, "(oop-check)")
+}
