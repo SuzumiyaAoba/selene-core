@@ -165,6 +165,7 @@ pub(all) struct Promise {
 /// Promise content
 pub(all) enum PromiseContent {
   Delayed(SExpr, Env)
+  VMDelayed(VMClosure)
   Forced(Value)
 } derive(Show)
 

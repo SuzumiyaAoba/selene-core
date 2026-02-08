@@ -368,6 +368,16 @@ fn builtin_force(args : Array[Value]) -> Result[Value, EvalError] {
             promise.content.val = PromiseContent::Forced(result)
             Ok(result)
           }
+          PromiseContent::VMDelayed(closure) => {
+            let result = match vm_apply_closure(closure, []) {
+              Ok(v) => v
+              Err(e) => return Err(e)
+            }
+            // Memoize: Save Result
+            promise.forced.val = true
+            promise.content.val = PromiseContent::Forced(result)
+            Ok(result)
+          }
           _ => Err(EvalError::InvalidSyntax("force: invalid promise state"))
         }
       }

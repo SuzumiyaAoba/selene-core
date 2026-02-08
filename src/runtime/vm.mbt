@@ -213,27 +213,60 @@ pub fn new_vm_state_with_globals(
 /// Create initial global environment
 pub fn create_initial_globals() -> @hashmap.T[String, Value] {
   let globals : @hashmap.T[String, Value] = @hashmap.new()
-  globals.set("+", Value::Procedure(Procedure::Native("+")))
-  globals.set("-", Value::Procedure(Procedure::Native("-")))
-  globals.set("*", Value::Procedure(Procedure::Native("*")))
-  globals.set("/", Value::Procedure(Procedure::Native("/")))
-  globals.set("cons", Value::Procedure(Procedure::Native("cons")))
-  globals.set("car", Value::Procedure(Procedure::Native("car")))
-  globals.set("cdr", Value::Procedure(Procedure::Native("cdr")))
-  globals.set("null?", Value::Procedure(Procedure::Native("null?")))
-  globals.set("pair?", Value::Procedure(Procedure::Native("pair?")))
-  globals.set("list", Value::Procedure(Procedure::Native("list")))
-  globals.set("=", Value::Procedure(Procedure::Native("=")))
-  globals.set("<", Value::Procedure(Procedure::Native("<")))
-  globals.set(">", Value::Procedure(Procedure::Native(">")))
-  globals.set("<=", Value::Procedure(Procedure::Native("<=")))
-  globals.set(">=", Value::Procedure(Procedure::Native(">=")))
-  globals.set("eq?", Value::Procedure(Procedure::Native("eq?")))
-  globals.set("eqv?", Value::Procedure(Procedure::Native("eqv?")))
-  globals.set("equal?", Value::Procedure(Procedure::Native("equal?")))
-  globals.set("not", Value::Procedure(Procedure::Native("not")))
-  globals.set("display", Value::Procedure(Procedure::Native("display")))
-  globals.set("newline", Value::Procedure(Procedure::Native("newline")))
+  let names = [
+    // Arithmetic
+    "+", "-", "*", "/", "quotient", "remainder", "modulo",
+    "abs", "max", "min", "gcd", "lcm",
+    // Comparison
+    "=", "<", ">", "<=", ">=", "eq?", "eqv?", "equal?",
+    // Predicates
+    "zero?", "positive?", "negative?", "odd?", "even?",
+    "pair?", "number?", "integer?", "real?", "boolean?",
+    "symbol?", "null?", "procedure?", "list?", "string?",
+    "char?", "vector?", "promise?", "port?",
+    // List
+    "cons", "car", "cdr", "set-car!", "set-cdr!",
+    "list", "length", "append", "reverse", "list-ref", "list-tail",
+    // Character
+    "char=?", "char<?", "char>?", "char<=?", "char>=?",
+    "char-alphabetic?", "char-numeric?", "char-whitespace?",
+    "char-upper-case?", "char-lower-case?",
+    "char-upcase", "char-downcase", "char->integer", "integer->char",
+    // String
+    "string-length", "string-ref", "string-append",
+    "string=?", "string<?", "string>?", "string<=?", "string>=?",
+    "make-string", "substring", "string->list", "list->string",
+    // Vector
+    "make-vector", "vector", "vector-length", "vector-ref",
+    "vector-set!", "vector->list", "list->vector",
+    // Math
+    "floor", "ceiling", "truncate", "round", "sqrt", "expt",
+    "sin", "cos", "tan", "asin", "acos", "atan", "exp", "log",
+    // Conversion
+    "number->string", "string->number", "symbol->string", "string->symbol",
+    // Logic
+    "not",
+    // Complex/Rational
+    "make-rectangular", "make-polar", "real-part", "imag-part",
+    "magnitude", "angle", "complex?",
+    "numerator", "denominator", "rational?", "exact?", "inexact?",
+    // I/O
+    "display", "newline", "write", "read",
+    // Higher-order
+    "apply", "force",
+    "values", "call-with-values", "dynamic-wind",
+    // Association lists
+    "assq", "assv", "assoc", "memq", "memv", "member",
+    // cXXr
+    "caar", "cadr", "cdar", "cddr",
+    "caaar", "caadr", "cadar", "caddr",
+    "cdaar", "cdadr", "cddar", "cdddr",
+    // Continuation
+    "call/cc", "call-with-current-continuation",
+  ]
+  for name in names {
+    globals.set(name, Value::Procedure(Procedure::Native(name)))
+  }
   globals
 }
 
@@ -546,204 +579,60 @@ fn vm_exec_primop(
   }
 }
 
+/// Helper: delegate to builtin arithmetic and convert error type
+fn vm_delegate_builtin(
+  f : (Array[Value]) -> Result[Value, EvalError],
+  args : Array[Value]
+) -> Result[Value, VMError] {
+  match f(args) {
+    Ok(v) => Ok(v)
+    Err(e) => Err(VMError::RuntimeError(e.to_string()))
+  }
+}
+
 /// addition
 fn vm_exec_add(args : Array[Value]) -> Result[Value, VMError] {
-  let mut result = 0
-  for arg in args {
-    match arg {
-      Value::Number(Number::Int(n)) => result = result + n
-      _ => return Err(VMError::TypeError("+ requires numbers"))
-    }
-  }
-  Ok(Value::Number(Number::Int(result)))
+  vm_delegate_builtin(builtin_add, args)
 }
 
 /// subtraction
 fn vm_exec_sub(args : Array[Value]) -> Result[Value, VMError] {
-  if args.length() == 0 {
-    return Err(VMError::ArityError("- requires at least 1 argument"))
-  }
-  if args.length() == 1 {
-    match args[0] {
-      Value::Number(Number::Int(n)) => return Ok(Value::Number(Number::Int(-n)))
-      _ => return Err(VMError::TypeError("- requires numbers"))
-    }
-  }
-  let first = match args[0] {
-    Value::Number(Number::Int(n)) => n
-    _ => return Err(VMError::TypeError("- requires numbers"))
-  }
-  let mut result = first
-  let mut i = 1
-  while i < args.length() {
-    match args[i] {
-      Value::Number(Number::Int(n)) => result = result - n
-      _ => return Err(VMError::TypeError("- requires numbers"))
-    }
-    i = i + 1
-  }
-  Ok(Value::Number(Number::Int(result)))
+  vm_delegate_builtin(builtin_sub, args)
 }
 
 /// multiplication
 fn vm_exec_mul(args : Array[Value]) -> Result[Value, VMError] {
-  let mut result = 1
-  for arg in args {
-    match arg {
-      Value::Number(Number::Int(n)) => result = result * n
-      _ => return Err(VMError::TypeError("* requires numbers"))
-    }
-  }
-  Ok(Value::Number(Number::Int(result)))
+  vm_delegate_builtin(builtin_mul, args)
 }
 
 /// division
 fn vm_exec_div(args : Array[Value]) -> Result[Value, VMError] {
-  if args.length() < 2 {
-    return Err(VMError::ArityError("/ requires at least 2 arguments"))
-  }
-  let first = match args[0] {
-    Value::Number(Number::Int(n)) => n
-    _ => return Err(VMError::TypeError("/ requires numbers"))
-  }
-  let mut result = first
-  let mut i = 1
-  while i < args.length() {
-    match args[i] {
-      Value::Number(Number::Int(n)) => {
-        if n == 0 {
-          return Err(VMError::DivisionByZero)
-        }
-        result = result / n
-      }
-      _ => return Err(VMError::TypeError("/ requires numbers"))
-    }
-    i = i + 1
-  }
-  Ok(Value::Number(Number::Int(result)))
+  vm_delegate_builtin(builtin_div, args)
 }
 
 /// Numerical equivalent
 fn vm_exec_num_eq(args : Array[Value]) -> Result[Value, VMError] {
-  if args.length() < 2 {
-    return Ok(Value::Bool(true))
-  }
-  let first = match args[0] {
-    Value::Number(Number::Int(n)) => n
-    _ => return Err(VMError::TypeError("= requires numbers"))
-  }
-  let mut i = 1
-  while i < args.length() {
-    match args[i] {
-      Value::Number(Number::Int(n)) =>
-        if n != first {
-          return Ok(Value::Bool(false))
-        }
-      _ => return Err(VMError::TypeError("= requires numbers"))
-    }
-    i = i + 1
-  }
-  Ok(Value::Bool(true))
+  vm_delegate_builtin(builtin_num_eq, args)
 }
 
-/// Smaller
+/// Less than
 fn vm_exec_lt(args : Array[Value]) -> Result[Value, VMError] {
-  if args.length() < 2 {
-    return Ok(Value::Bool(true))
-  }
-  let mut prev = match args[0] {
-    Value::Number(Number::Int(n)) => n
-    _ => return Err(VMError::TypeError("< requires numbers"))
-  }
-  let mut i = 1
-  while i < args.length() {
-    match args[i] {
-      Value::Number(Number::Int(n)) => {
-        if prev >= n {
-          return Ok(Value::Bool(false))
-        }
-        prev = n
-      }
-      _ => return Err(VMError::TypeError("< requires numbers"))
-    }
-    i = i + 1
-  }
-  Ok(Value::Bool(true))
+  vm_delegate_builtin(builtin_lt, args)
 }
 
-/// big
+/// Greater than
 fn vm_exec_gt(args : Array[Value]) -> Result[Value, VMError] {
-  if args.length() < 2 {
-    return Ok(Value::Bool(true))
-  }
-  let mut prev = match args[0] {
-    Value::Number(Number::Int(n)) => n
-    _ => return Err(VMError::TypeError("> requires numbers"))
-  }
-  let mut i = 1
-  while i < args.length() {
-    match args[i] {
-      Value::Number(Number::Int(n)) => {
-        if prev <= n {
-          return Ok(Value::Bool(false))
-        }
-        prev = n
-      }
-      _ => return Err(VMError::TypeError("> requires numbers"))
-    }
-    i = i + 1
-  }
-  Ok(Value::Bool(true))
+  vm_delegate_builtin(builtin_gt, args)
 }
 
-/// below
+/// Less than or equal
 fn vm_exec_le(args : Array[Value]) -> Result[Value, VMError] {
-  if args.length() < 2 {
-    return Ok(Value::Bool(true))
-  }
-  let mut prev = match args[0] {
-    Value::Number(Number::Int(n)) => n
-    _ => return Err(VMError::TypeError("<= requires numbers"))
-  }
-  let mut i = 1
-  while i < args.length() {
-    match args[i] {
-      Value::Number(Number::Int(n)) => {
-        if prev > n {
-          return Ok(Value::Bool(false))
-        }
-        prev = n
-      }
-      _ => return Err(VMError::TypeError("<= requires numbers"))
-    }
-    i = i + 1
-  }
-  Ok(Value::Bool(true))
+  vm_delegate_builtin(builtin_le, args)
 }
 
-/// That's all
+/// Greater than or equal
 fn vm_exec_ge(args : Array[Value]) -> Result[Value, VMError] {
-  if args.length() < 2 {
-    return Ok(Value::Bool(true))
-  }
-  let mut prev = match args[0] {
-    Value::Number(Number::Int(n)) => n
-    _ => return Err(VMError::TypeError(">= requires numbers"))
-  }
-  let mut i = 1
-  while i < args.length() {
-    match args[i] {
-      Value::Number(Number::Int(n)) => {
-        if prev < n {
-          return Ok(Value::Bool(false))
-        }
-        prev = n
-      }
-      _ => return Err(VMError::TypeError(">= requires numbers"))
-    }
-    i = i + 1
-  }
-  Ok(Value::Bool(true))
+  vm_delegate_builtin(builtin_ge, args)
 }
 
 /// cons
@@ -1607,8 +1496,19 @@ pub fn vm_step(vm : VMState) -> Result[Bool, VMError] {
     }
 
     Opcode::MakePromise(_) => {
-      vm_push(vm, Value::Nil)
-      Ok(true)
+      // Pop the closure from stack (created by preceding MakeClosure)
+      match vm_pop(vm) {
+        Ok(Value::Procedure(Procedure::VMClosure(closure))) => {
+          let promise : Promise = {
+            forced: Ref::new(false),
+            content: Ref::new(PromiseContent::VMDelayed(closure)),
+          }
+          vm_push(vm, Value::Promise(promise))
+          Ok(true)
+        }
+        Ok(_) => Err(VMError::RuntimeError("MakePromise: expected closure on stack"))
+        Err(e) => Err(e)
+      }
     }
 
     Opcode::AndJump(target) => {
