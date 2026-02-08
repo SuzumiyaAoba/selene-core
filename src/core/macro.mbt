@@ -19,13 +19,17 @@ pub fn expand_macro(
   for rule in syntax_rules.rules {
     match match_pattern(rule.pattern, expr, syntax_rules.literals) {
       Some(bindings) => {
-        // Match successful, deploy template
-        let expanded = match expand_template(rule.template, bindings) {
+        // Apply hygienic renaming to template BEFORE expansion.
+        // This ensures template-introduced bindings are renamed before
+        // pattern variable substitution, preventing capture of use-site names.
+        let renamed_template = apply_hygienic_rename(
+          rule.template, syntax_rules.rename_map,
+        )
+        let expanded = match expand_template(renamed_template, bindings) {
           Ok(e) => e
           Err(e) => return Err(e)
         }
-        // Apply hygienic renaming if rename_map is non-empty
-        return Ok(apply_hygienic_rename(expanded, syntax_rules.rename_map))
+        return Ok(expanded)
       }
       None => continue
     }

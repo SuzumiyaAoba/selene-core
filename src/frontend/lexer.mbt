@@ -218,6 +218,18 @@ pub fn tokenize(input : String) -> Array[Token] {
       tokens.push(Token::Number(value))
       continue
     }
+    // Handle +/- followed by digit as signed number literal
+    if (ch == '+' || ch == '-') && i + 1 < len && is_digit(chars[i + 1]) {
+      let sign = if ch == '-' { -1 } else { 1 }
+      i = i + 1
+      let mut value = 0
+      let _ = while i < len && is_digit(chars[i]) {
+        value = value * 10 + digit_value(chars[i])
+        i = i + 1
+      } else { () }
+      tokens.push(Token::Number(sign * value))
+      continue
+    }
     if is_ident_initial(ch) {
       let builder = StringBuilder::new()
       let _ = while i < len && is_ident_subsequent(chars[i]) {

@@ -82,24 +82,21 @@ test "r5rs pitfalls (guile r5rs_pitfall)" {
       "(let-syntax ((foo (syntax-rules () ((_ expr) (+ expr 1))))) (let ((+ *)) (foo 3)))",
     )
 
-    // Test 3.2: Requires define inside macro template to interact with
-    // let-bound variables and macro shadowing. Needs macro expansion and
-    // compilation to cooperate on variable/macro binding scopes.
-    // assert_should_be(
-    //   ctx,
-    //   "3.2",
-    //   "2",
-    //   "(let-syntax ((foo (syntax-rules () ((_ var) (define var 1))))) (let ((x 2)) (begin (define foo +)) (cond (else (foo x))) x))",
-    // )
+    // Test 3.2: internal define shadows macro in body context
+    assert_should_be(
+      ctx,
+      "3.2",
+      "2",
+      "(let-syntax ((foo (syntax-rules () ((_ var) (define var 1))))) (let ((x 2)) (begin (define foo +)) (cond (else (foo x))) x))",
+    )
 
-    // Test 3.3: Requires full hygienic macros with nested macro scope tracking.
-    // The inner let-syntax bar introduces x=2, but y should refer to the outer x=1.
-    // assert_should_be(
-    //   ctx,
-    //   "3.3",
-    //   "1",
-    //   "(let ((x 1)) (let-syntax ((foo (syntax-rules () ((_ y) (let-syntax ((bar (syntax-rules () ((_) (let ((x 2)) y))))) (bar)))))) (foo x)))",
-    // )
+    // Test 3.3: nested hygienic macros - template bindings don't capture use-site names
+    assert_should_be(
+      ctx,
+      "3.3",
+      "1",
+      "(let ((x 1)) (let-syntax ((foo (syntax-rules () ((_ y) (let-syntax ((bar (syntax-rules () ((_) (let ((x 2)) y))))) (bar)))))) (foo x)))",
+    )
 
     assert_should_be(
       ctx,
@@ -174,15 +171,14 @@ test "r5rs pitfalls (guile r5rs_pitfall)" {
       "(let () (set! r (+ 1 (+ 2 (+ 3 (call/cc (lambda (k) (set! a k) 4)))) (+ 5 (+ 6 (call/cc (lambda (k) (set! b k) 7)))))) (if (not c) (set! c a)) (set! i (+ i 1)) (case i ((1) (b 8)) ((2) (a 5)) ((3) (b 7)) ((4) (c 4))) r)",
     )
 
-    // Skipped: 7.3 causes infinite loop when continuations are invoked inside
-    // internal define + call/cc interaction (continuation restores state that
-    // re-enters the continuation invocation).
-    // assert_should_be(
-    //   ctx,
-    //   "7.3",
-    //   "'((-1 4 5 3) (4 -1 5 3) (-1 5 4 3) (5 -1 4 3) (4 5 -1 3) (5 4 -1 3))",
-    //   "(let ((k1 #f) (k2 #f) (k3 #f) (state 0)) (define (identity x) x) (define (fn) ((identity (if (= state 0) (call/cc (lambda (k) (set! k1 k) +)) +)) (identity (if (= state 0) (call/cc (lambda (k) (set! k2 k) 1)) 1)) (identity (if (= state 0) (call/cc (lambda (k) (set! k3 k) 2)) 2)))) (define (check states) (set! state 0) (let* ((res '()) (r (fn))) (set! res (cons r res)) (if (null? states) res (begin (set! state (car states)) (set! states (cdr states)) (case state ((1) (k3 4)) ((2) (k2 2)) ((3) (k1 -))))))) (map check '((1 2 3) (1 3 2) (2 1 3) (2 3 1) (3 1 2) (3 2 1))))",
-    // )
+    // Test 7.3: map + call/cc + continuations. Now works because map is defined
+    // as a Scheme prelude function that runs in the main VM context.
+    assert_should_be(
+      ctx,
+      "7.3",
+      "'((-1 4 5 3) (4 -1 5 3) (-1 5 4 3) (5 -1 4 3) (4 5 -1 3) (5 4 -1 3))",
+      "(let ((k1 #f) (k2 #f) (k3 #f) (state 0)) (define (identity x) x) (define (fn) ((identity (if (= state 0) (call/cc (lambda (k) (set! k1 k) +)) +)) (identity (if (= state 0) (call/cc (lambda (k) (set! k2 k) 1)) 1)) (identity (if (= state 0) (call/cc (lambda (k) (set! k3 k) 2)) 2)))) (define (check states) (set! state 0) (let* ((res '()) (r (fn))) (set! res (cons r res)) (if (null? states) res (begin (set! state (car states)) (set! states (cdr states)) (case state ((1) (k3 4)) ((2) (k2 2)) ((3) (k1 -))))))) (map check '((1 2 3) (1 3 2) (2 1 3) (2 3 1) (3 1 2) (3 2 1))))",
+    )
 
     // Test 7.4: yin-yang puzzle
     assert_should_be(
@@ -206,15 +202,14 @@ test "r5rs pitfalls (guile r5rs_pitfall)" {
     )
   }
 
-  // Test 8.3: Requires call/cc inside map's lambda. Continuations captured
-  // inside vm_apply_closure (mini VM) cannot be restored in the main VM context,
-  // since the stack/call_stack belong to separate VM instances.
-  // if enable_callcc {
-  //   assert_should_be(
-  //     ctx,
-  //     "8.3",
-  //     "'(0 0 0)",
-  //     "(let () (define executed-k #f) (define cont #f) (define res1 #f) (define res2 #f) (set! res1 (map (lambda (x) (if (= x 0) (call/cc (lambda (k) (set! cont k) 0)) 0)) '(1 0 2))) (if (not executed-k) (begin (set! executed-k #t) (set! res2 res1) (cont 1))) res2)",
-  //   )
-  // }
+  // Test 8.3: call/cc inside map's lambda. Now works because map is defined
+  // as a Scheme prelude function that runs in the main VM context.
+  if enable_callcc {
+    assert_should_be(
+      ctx,
+      "8.3",
+      "'(0 0 0)",
+      "(let () (define executed-k #f) (define cont #f) (define res1 #f) (define res2 #f) (set! res1 (map (lambda (x) (if (= x 0) (call/cc (lambda (k) (set! cont k) 0)) 0)) '(1 0 2))) (if (not executed-k) (begin (set! executed-k #t) (set! res2 res1) (cont 1))) res2)",
+    )
+  }
 }
