@@ -60,7 +60,7 @@ pub fn vm_apply_closure(
     let mut rest_list : Value = Value::Nil
     let mut j = args.length() - 1
     while j >= target_chunk.arity {
-      rest_list = Value::Pair(args[j], rest_list)
+      rest_list = make_pair(args[j], rest_list)
       j = j - 1
     }
     actual_args.push(rest_list)
@@ -752,7 +752,7 @@ fn vm_exec_cons(args : Array[Value]) -> Result[Value, VMError] {
     return Err(VMError::ArityError("cons requires 2 arguments"))
   }
   gc_track_pair()
-  Ok(Value::Pair(args[0], args[1]))
+  Ok(make_pair(args[0], args[1]))
 }
 
 /// car
@@ -761,7 +761,7 @@ fn vm_exec_car(args : Array[Value]) -> Result[Value, VMError] {
     return Err(VMError::ArityError("car requires 1 argument"))
   }
   match args[0] {
-    Value::Pair(car, _) => Ok(car)
+    Value::Pair(car, _, _) => Ok(car)
     _ => Err(VMError::TypeError("car requires a pair"))
   }
 }
@@ -772,7 +772,7 @@ fn vm_exec_cdr(args : Array[Value]) -> Result[Value, VMError] {
     return Err(VMError::ArityError("cdr requires 1 argument"))
   }
   match args[0] {
-    Value::Pair(_, cdr) => Ok(cdr)
+    Value::Pair(_, cdr, _) => Ok(cdr)
     _ => Err(VMError::TypeError("cdr requires a pair"))
   }
 }
@@ -783,7 +783,7 @@ fn vm_exec_caar(args : Array[Value]) -> Result[Value, VMError] {
     return Err(VMError::ArityError("caar requires 1 argument"))
   }
   match args[0] {
-    Value::Pair(Value::Pair(caar, _), _) => Ok(caar)
+    Value::Pair(Value::Pair(caar, _, _), _, _) => Ok(caar)
     _ => Err(VMError::TypeError("caar requires nested pair"))
   }
 }
@@ -794,7 +794,7 @@ fn vm_exec_cadr(args : Array[Value]) -> Result[Value, VMError] {
     return Err(VMError::ArityError("cadr requires 1 argument"))
   }
   match args[0] {
-    Value::Pair(_, Value::Pair(cadr, _)) => Ok(cadr)
+    Value::Pair(_, Value::Pair(cadr, _, _), _) => Ok(cadr)
     _ => Err(VMError::TypeError("cadr requires pair with cdr being pair"))
   }
 }
@@ -805,7 +805,7 @@ fn vm_exec_cdar(args : Array[Value]) -> Result[Value, VMError] {
     return Err(VMError::ArityError("cdar requires 1 argument"))
   }
   match args[0] {
-    Value::Pair(Value::Pair(_, cdar), _) => Ok(cdar)
+    Value::Pair(Value::Pair(_, cdar, _), _, _) => Ok(cdar)
     _ => Err(VMError::TypeError("cdar requires pair with car being pair"))
   }
 }
@@ -816,7 +816,7 @@ fn vm_exec_cddr(args : Array[Value]) -> Result[Value, VMError] {
     return Err(VMError::ArityError("cddr requires 1 argument"))
   }
   match args[0] {
-    Value::Pair(_, Value::Pair(_, cddr)) => Ok(cddr)
+    Value::Pair(_, Value::Pair(_, cddr, _), _) => Ok(cddr)
     _ => Err(VMError::TypeError("cddr requires pair with cdr being pair"))
   }
 }
@@ -827,7 +827,7 @@ fn vm_exec_caaar(args : Array[Value]) -> Result[Value, VMError] {
     return Err(VMError::ArityError("caaar requires 1 argument"))
   }
   match args[0] {
-    Value::Pair(Value::Pair(Value::Pair(caaar, _), _), _) => Ok(caaar)
+    Value::Pair(Value::Pair(Value::Pair(caaar, _, _), _, _), _, _) => Ok(caaar)
     _ => Err(VMError::TypeError("caaar requires deeply nested pair"))
   }
 }
@@ -838,7 +838,7 @@ fn vm_exec_caadr(args : Array[Value]) -> Result[Value, VMError] {
     return Err(VMError::ArityError("caadr requires 1 argument"))
   }
   match args[0] {
-    Value::Pair(_, Value::Pair(Value::Pair(caadr, _), _)) => Ok(caadr)
+    Value::Pair(_, Value::Pair(Value::Pair(caadr, _, _), _, _), _) => Ok(caadr)
     _ => Err(VMError::TypeError("caadr requires deeply nested pair"))
   }
 }
@@ -849,7 +849,7 @@ fn vm_exec_cadar(args : Array[Value]) -> Result[Value, VMError] {
     return Err(VMError::ArityError("cadar requires 1 argument"))
   }
   match args[0] {
-    Value::Pair(Value::Pair(_, Value::Pair(cadar, _)), _) => Ok(cadar)
+    Value::Pair(Value::Pair(_, Value::Pair(cadar, _, _), _), _, _) => Ok(cadar)
     _ => Err(VMError::TypeError("cadar requires deeply nested pair"))
   }
 }
@@ -860,7 +860,7 @@ fn vm_exec_caddr(args : Array[Value]) -> Result[Value, VMError] {
     return Err(VMError::ArityError("caddr requires 1 argument"))
   }
   match args[0] {
-    Value::Pair(_, Value::Pair(_, Value::Pair(caddr, _))) => Ok(caddr)
+    Value::Pair(_, Value::Pair(_, Value::Pair(caddr, _, _), _), _) => Ok(caddr)
     _ => Err(VMError::TypeError("caddr requires list with at least 3 elements"))
   }
 }
@@ -871,7 +871,7 @@ fn vm_exec_cdaar(args : Array[Value]) -> Result[Value, VMError] {
     return Err(VMError::ArityError("cdaar requires 1 argument"))
   }
   match args[0] {
-    Value::Pair(Value::Pair(Value::Pair(_, cdaar), _), _) => Ok(cdaar)
+    Value::Pair(Value::Pair(Value::Pair(_, cdaar, _), _, _), _, _) => Ok(cdaar)
     _ => Err(VMError::TypeError("cdaar requires deeply nested pair"))
   }
 }
@@ -882,7 +882,7 @@ fn vm_exec_cdadr(args : Array[Value]) -> Result[Value, VMError] {
     return Err(VMError::ArityError("cdadr requires 1 argument"))
   }
   match args[0] {
-    Value::Pair(_, Value::Pair(Value::Pair(_, cdadr), _)) => Ok(cdadr)
+    Value::Pair(_, Value::Pair(Value::Pair(_, cdadr, _), _, _), _) => Ok(cdadr)
     _ => Err(VMError::TypeError("cdadr requires deeply nested pair"))
   }
 }
@@ -893,7 +893,7 @@ fn vm_exec_cddar(args : Array[Value]) -> Result[Value, VMError] {
     return Err(VMError::ArityError("cddar requires 1 argument"))
   }
   match args[0] {
-    Value::Pair(Value::Pair(_, Value::Pair(_, cddar)), _) => Ok(cddar)
+    Value::Pair(Value::Pair(_, Value::Pair(_, cddar, _), _), _, _) => Ok(cddar)
     _ => Err(VMError::TypeError("cddar requires deeply nested pair"))
   }
 }
@@ -904,7 +904,7 @@ fn vm_exec_cdddr(args : Array[Value]) -> Result[Value, VMError] {
     return Err(VMError::ArityError("cdddr requires 1 argument"))
   }
   match args[0] {
-    Value::Pair(_, Value::Pair(_, Value::Pair(_, cdddr))) => Ok(cdddr)
+    Value::Pair(_, Value::Pair(_, Value::Pair(_, cdddr, _), _), _) => Ok(cdddr)
     _ => Err(VMError::TypeError("cdddr requires list with at least 3 elements"))
   }
 }
@@ -926,7 +926,7 @@ fn vm_exec_pair_p(args : Array[Value]) -> Result[Value, VMError] {
     return Err(VMError::ArityError("pair? requires 1 argument"))
   }
   match args[0] {
-    Value::Pair(_, _) => Ok(Value::Bool(true))
+    Value::Pair(_, _, _) => Ok(Value::Bool(true))
     _ => Ok(Value::Bool(false))
   }
 }
@@ -947,7 +947,7 @@ fn vm_exec_list(args : Array[Value]) -> Result[Value, VMError] {
   let mut result : Value = Value::Nil
   let mut i = args.length() - 1
   while i >= 0 {
-    result = Value::Pair(args[i], result)
+    result = make_pair(args[i], result)
     gc_track_pair()
     i = i - 1
   }
@@ -964,7 +964,7 @@ fn vm_exec_length(args : Array[Value]) -> Result[Value, VMError] {
   while true {
     match current {
       Value::Nil => return Ok(Value::Number(Number::Int(count)))
-      Value::Pair(_, cdr) => {
+      Value::Pair(_, cdr, _) => {
         count = count + 1
         current = cdr
       }
@@ -1012,13 +1012,13 @@ fn vm_exec_append(args : Array[Value]) -> Result[Value, VMError] {
 fn vm_append_two_lists(list1 : Value, list2 : Value) -> Result[Value, VMError] {
   match list1 {
     Value::Nil => Ok(list2)
-    Value::Pair(car, cdr) => {
+    Value::Pair(car, cdr, _) => {
       let rest = match vm_append_two_lists(cdr, list2) {
         Ok(v) => v
         Err(e) => return Err(e)
       }
       gc_track_pair()
-      Ok(Value::Pair(car, rest))
+      Ok(make_pair(car, rest))
     }
     _ => Err(VMError::TypeError("append: arguments must be lists"))
   }
@@ -1032,6 +1032,9 @@ fn vm_values_eq(a : Value, b : Value) -> Bool {
     (Value::Number(Number::Int(x)), Value::Number(Number::Int(y))) => x == y
     (Value::Symbol(x), Value::Symbol(y)) => x == y
     (Value::Char(x), Value::Char(y)) => x == y
+    (Value::Pair(_, _, id1), Value::Pair(_, _, id2)) => id1 == id2
+    (Value::Procedure(Procedure::VMCont(a)), Value::Procedure(Procedure::VMCont(b))) =>
+      a.id == b.id
     _ => false
   }
 }
@@ -1045,7 +1048,7 @@ fn vm_values_equal(a : Value, b : Value) -> Bool {
     (Value::Symbol(x), Value::Symbol(y)) => x == y
     (Value::Char(x), Value::Char(y)) => x == y
     (Value::String(x), Value::String(y)) => x == y
-    (Value::Pair(car1, cdr1), Value::Pair(car2, cdr2)) =>
+    (Value::Pair(car1, cdr1, _), Value::Pair(car2, cdr2, _)) =>
       vm_values_equal(car1, car2) && vm_values_equal(cdr1, cdr2)
     _ => false
   }
@@ -1227,7 +1230,7 @@ fn vm_call_function(
         let mut rest_list : Value = Value::Nil
         let mut j = args.length() - 1
         while j >= target_chunk.arity {
-          rest_list = Value::Pair(args[j], rest_list)
+          rest_list = make_pair(args[j], rest_list)
           j = j - 1
         }
         actual_args.push(rest_list)
@@ -1399,8 +1402,7 @@ pub fn vm_step(vm : VMState) -> Result[Bool, VMError] {
     Opcode::MakeBox => {
       match vm_pop(vm) {
         Ok(val) => {
-          let boxed_ref = Ref::new(val)
-          vm_push(vm, Value::Box(boxed_ref))
+          vm_push(vm, make_box(val))
           gc_track_box()
           Ok(true)
         }
@@ -1564,7 +1566,7 @@ pub fn vm_step(vm : VMState) -> Result[Bool, VMError] {
         Ok(cdr) =>
           match vm_pop(vm) {
             Ok(car) => {
-              vm_push(vm, Value::Pair(car, cdr))
+              vm_push(vm, make_pair(car, cdr))
               gc_track_pair()
               Ok(true)
             }
@@ -1579,7 +1581,7 @@ pub fn vm_step(vm : VMState) -> Result[Bool, VMError] {
       let mut i = 0
       while i < n {
         match vm_pop(vm) {
-          Ok(elem) => result = Value::Pair(elem, result)
+          Ok(elem) => result = make_pair(elem, result)
           Err(e) => return Err(e)
         }
         i = i + 1

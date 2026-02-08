@@ -32,7 +32,7 @@ pub fn builtin_list_p(args : Array[Value]) -> Result[Value, EvalError] {
   fn is_list(v : Value) -> Bool {
     match v {
       Value::Nil => true
-      Value::Pair(_, cdr) => is_list(cdr)
+      Value::Pair(_, cdr, _) => is_list(cdr)
       _ => false
     }
   }
@@ -143,7 +143,7 @@ pub fn builtin_pair_p(args : Array[Value]) -> Result[Value, EvalError] {
     return Err(EvalError::ArityError("pair?: requires exactly 1 argument"))
   }
   match args[0] {
-    Value::Pair(_, _) => Ok(Value::Bool(true))
+    Value::Pair(_, _, _) => Ok(Value::Bool(true))
     _ => Ok(Value::Bool(false))
   }
 }
@@ -181,6 +181,7 @@ pub fn builtin_eq_p(args : Array[Value]) -> Result[Value, EvalError] {
     (Value::Bool(a), Value::Bool(b)) => a == b
     (Value::Number(Number::Int(a)), Value::Number(Number::Int(b))) => a == b
     (Value::Symbol(a), Value::Symbol(b)) => a == b
+    (Value::Pair(_, _, id1), Value::Pair(_, _, id2)) => id1 == id2
     _ => false
   }
   Ok(Value::Bool(result))
@@ -200,7 +201,7 @@ pub fn builtin_eqv_p(args : Array[Value]) -> Result[Value, EvalError] {
     (Value::Char(a), Value::Char(b)) => a == b
     (Value::Symbol(a), Value::Symbol(b)) => a == b
     (Value::String(a), Value::String(b)) => physical_identity(a, b)
-    (Value::Pair(_, _), Value::Pair(_, _)) => physical_identity(args[0], args[1])
+    (Value::Pair(_, _, id1), Value::Pair(_, _, id2)) => id1 == id2
     (Value::Vector(_), Value::Vector(_)) => physical_identity(args[0], args[1])
     (Value::Procedure(Procedure::Native(a)), Value::Procedure(Procedure::Native(b))) =>
       a == b
@@ -244,7 +245,7 @@ fn values_equal(a : Value, b : Value) -> Bool {
     (Value::Char(x), Value::Char(y)) => x == y
     (Value::String(x), Value::String(y)) => x == y
     (Value::Symbol(x), Value::Symbol(y)) => x == y
-    (Value::Pair(car1, cdr1), Value::Pair(car2, cdr2)) =>
+    (Value::Pair(car1, cdr1, _), Value::Pair(car2, cdr2, _)) =>
       values_equal(car1, car2) && values_equal(cdr1, cdr2)
     (Value::Vector(v1), Value::Vector(v2)) => {
       if v1.length() != v2.length() {

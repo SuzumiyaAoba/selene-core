@@ -565,7 +565,7 @@ fn debug_value_to_string(value : Value) -> String {
     Value::Char(c) => "#\\" + c.to_string()
     Value::String(s) => "\"" + s + "\""
     Value::Symbol(s) => s
-    Value::Pair(_, _) => "(pair ...)"
+    Value::Pair(_, _, _) => "(pair ...)"
     Value::Vector(_) => "#(vector ...)"
     Value::Procedure(Procedure::Native(name)) => "#<native:" + name + ">"
     Value::Procedure(Procedure::Closure(_, _, _)) => "#<closure>"

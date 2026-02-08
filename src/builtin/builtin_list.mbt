@@ -7,7 +7,7 @@ pub fn builtin_cons(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 2 {
     return Err(EvalError::ArityError("cons: requires exactly 2 arguments"))
   }
-  Ok(Value::Pair(args[0], args[1]))
+  Ok(make_pair(args[0], args[1]))
 }
 
 /// Built-in function: car
@@ -16,7 +16,7 @@ pub fn builtin_car(args : Array[Value]) -> Result[Value, EvalError] {
     return Err(EvalError::ArityError("car: requires exactly 1 argument"))
   }
   match args[0] {
-    Value::Pair(car, _) => Ok(car)
+    Value::Pair(car, _, _) => Ok(car)
     _ => Err(EvalError::TypeError("car: expected pair"))
   }
 }
@@ -27,7 +27,7 @@ pub fn builtin_cdr(args : Array[Value]) -> Result[Value, EvalError] {
     return Err(EvalError::ArityError("cdr: requires exactly 1 argument"))
   }
   match args[0] {
-    Value::Pair(_, cdr) => Ok(cdr)
+    Value::Pair(_, cdr, _) => Ok(cdr)
     _ => Err(EvalError::TypeError("cdr: expected pair"))
   }
 }
@@ -40,7 +40,7 @@ pub fn builtin_set_car(args : Array[Value]) -> Result[Value, EvalError] {
     return Err(EvalError::ArityError("set-car!: requires exactly 2 arguments"))
   }
   match args[0] {
-    Value::Pair(_, cdr) => Ok(Value::Pair(args[1], cdr))
+    Value::Pair(_, cdr, _) => Ok(make_pair(args[1], cdr))
     _ => Err(EvalError::TypeError("set-car!: first argument must be a pair"))
   }
 }
@@ -53,7 +53,7 @@ pub fn builtin_set_cdr(args : Array[Value]) -> Result[Value, EvalError] {
     return Err(EvalError::ArityError("set-cdr!: requires exactly 2 arguments"))
   }
   match args[0] {
-    Value::Pair(car, _) => Ok(Value::Pair(car, args[1]))
+    Value::Pair(car, _, _) => Ok(make_pair(car, args[1]))
     _ => Err(EvalError::TypeError("set-cdr!: first argument must be a pair"))
   }
 }
@@ -64,7 +64,7 @@ pub fn builtin_caar(args : Array[Value]) -> Result[Value, EvalError] {
     return Err(EvalError::ArityError("caar: requires exactly 1 argument"))
   }
   match args[0] {
-    Value::Pair(Value::Pair(x, _), _) => Ok(x)
+    Value::Pair(Value::Pair(x, _, _), _, _) => Ok(x)
     _ => Err(EvalError::TypeError("caar: expected nested pair"))
   }
 }
@@ -75,7 +75,7 @@ pub fn builtin_cadr(args : Array[Value]) -> Result[Value, EvalError] {
     return Err(EvalError::ArityError("cadr: requires exactly 1 argument"))
   }
   match args[0] {
-    Value::Pair(_, Value::Pair(x, _)) => Ok(x)
+    Value::Pair(_, Value::Pair(x, _, _), _) => Ok(x)
     _ => Err(EvalError::TypeError("cadr: expected pair with cdr being pair"))
   }
 }
@@ -86,7 +86,7 @@ pub fn builtin_cdar(args : Array[Value]) -> Result[Value, EvalError] {
     return Err(EvalError::ArityError("cdar: requires exactly 1 argument"))
   }
   match args[0] {
-    Value::Pair(Value::Pair(_, x), _) => Ok(x)
+    Value::Pair(Value::Pair(_, x, _), _, _) => Ok(x)
     _ => Err(EvalError::TypeError("cdar: expected pair with car being pair"))
   }
 }
@@ -97,7 +97,7 @@ pub fn builtin_cddr(args : Array[Value]) -> Result[Value, EvalError] {
     return Err(EvalError::ArityError("cddr: requires exactly 1 argument"))
   }
   match args[0] {
-    Value::Pair(_, Value::Pair(_, x)) => Ok(x)
+    Value::Pair(_, Value::Pair(_, x, _), _) => Ok(x)
     _ => Err(EvalError::TypeError("cddr: expected pair with cdr being pair"))
   }
 }
@@ -108,7 +108,7 @@ pub fn builtin_caaar(args : Array[Value]) -> Result[Value, EvalError] {
     return Err(EvalError::ArityError("caaar: requires exactly 1 argument"))
   }
   match args[0] {
-    Value::Pair(Value::Pair(Value::Pair(x, _), _), _) => Ok(x)
+    Value::Pair(Value::Pair(Value::Pair(x, _, _), _, _), _, _) => Ok(x)
     _ => Err(EvalError::TypeError("caaar: expected deeply nested pair"))
   }
 }
@@ -119,7 +119,7 @@ pub fn builtin_caadr(args : Array[Value]) -> Result[Value, EvalError] {
     return Err(EvalError::ArityError("caadr: requires exactly 1 argument"))
   }
   match args[0] {
-    Value::Pair(_, Value::Pair(Value::Pair(x, _), _)) => Ok(x)
+    Value::Pair(_, Value::Pair(Value::Pair(x, _, _), _, _), _) => Ok(x)
     _ => Err(EvalError::TypeError("caadr: expected appropriate nested pair"))
   }
 }
@@ -130,7 +130,7 @@ pub fn builtin_cadar(args : Array[Value]) -> Result[Value, EvalError] {
     return Err(EvalError::ArityError("cadar: requires exactly 1 argument"))
   }
   match args[0] {
-    Value::Pair(Value::Pair(_, Value::Pair(x, _)), _) => Ok(x)
+    Value::Pair(Value::Pair(_, Value::Pair(x, _, _), _), _, _) => Ok(x)
     _ => Err(EvalError::TypeError("cadar: expected appropriate nested pair"))
   }
 }
@@ -141,7 +141,7 @@ pub fn builtin_caddr(args : Array[Value]) -> Result[Value, EvalError] {
     return Err(EvalError::ArityError("caddr: requires exactly 1 argument"))
   }
   match args[0] {
-    Value::Pair(_, Value::Pair(_, Value::Pair(x, _))) => Ok(x)
+    Value::Pair(_, Value::Pair(_, Value::Pair(x, _, _), _), _) => Ok(x)
     _ => Err(EvalError::TypeError("caddr: expected list with at least 3 elements"))
   }
 }
@@ -152,7 +152,7 @@ pub fn builtin_cdaar(args : Array[Value]) -> Result[Value, EvalError] {
     return Err(EvalError::ArityError("cdaar: requires exactly 1 argument"))
   }
   match args[0] {
-    Value::Pair(Value::Pair(Value::Pair(_, x), _), _) => Ok(x)
+    Value::Pair(Value::Pair(Value::Pair(_, x, _), _, _), _, _) => Ok(x)
     _ => Err(EvalError::TypeError("cdaar: expected deeply nested pair"))
   }
 }
@@ -163,7 +163,7 @@ pub fn builtin_cdadr(args : Array[Value]) -> Result[Value, EvalError] {
     return Err(EvalError::ArityError("cdadr: requires exactly 1 argument"))
   }
   match args[0] {
-    Value::Pair(_, Value::Pair(Value::Pair(_, x), _)) => Ok(x)
+    Value::Pair(_, Value::Pair(Value::Pair(_, x, _), _, _), _) => Ok(x)
     _ => Err(EvalError::TypeError("cdadr: expected appropriate nested pair"))
   }
 }
@@ -174,7 +174,7 @@ pub fn builtin_cddar(args : Array[Value]) -> Result[Value, EvalError] {
     return Err(EvalError::ArityError("cddar: requires exactly 1 argument"))
   }
   match args[0] {
-    Value::Pair(Value::Pair(_, Value::Pair(_, x)), _) => Ok(x)
+    Value::Pair(Value::Pair(_, Value::Pair(_, x, _), _), _, _) => Ok(x)
     _ => Err(EvalError::TypeError("cddar: expected appropriate nested pair"))
   }
 }
@@ -185,7 +185,7 @@ pub fn builtin_cdddr(args : Array[Value]) -> Result[Value, EvalError] {
     return Err(EvalError::ArityError("cdddr: requires exactly 1 argument"))
   }
   match args[0] {
-    Value::Pair(_, Value::Pair(_, Value::Pair(_, x))) => Ok(x)
+    Value::Pair(_, Value::Pair(_, Value::Pair(_, x, _), _), _) => Ok(x)
     _ => Err(EvalError::TypeError("cdddr: expected list with at least 3 elements"))
   }
 }
@@ -207,7 +207,7 @@ pub fn builtin_list(args : Array[Value]) -> Result[Value, EvalError] {
   let mut i = args.length()
   let _ = while i > 0 {
     i = i - 1
-    result = Value::Pair(args[i], result)
+    result = make_pair(args[i], result)
   } else {
     ()
   }
@@ -224,7 +224,7 @@ pub fn builtin_length(args : Array[Value]) -> Result[Value, EvalError] {
   let _ = while true {
     match current {
       Value::Nil => break
-      Value::Pair(_, cdr) => {
+      Value::Pair(_, cdr, _) => {
         len = len + 1
         current = cdr
       }
@@ -281,12 +281,12 @@ pub fn builtin_append(args : Array[Value]) -> Result[Value, EvalError] {
 fn append_two_lists(list1 : Value, list2 : Value) -> Result[Value, EvalError] {
   match list1 {
     Value::Nil => Ok(list2)
-    Value::Pair(car, cdr) => {
+    Value::Pair(car, cdr, _) => {
       let rest = match append_two_lists(cdr, list2) {
         Ok(v) => v
         Err(e) => return Err(e)
       }
-      Ok(Value::Pair(car, rest))
+      Ok(make_pair(car, rest))
     }
     _ => Err(EvalError::TypeError("append: arguments must be lists"))
   }
@@ -302,8 +302,8 @@ pub fn builtin_reverse(args : Array[Value]) -> Result[Value, EvalError] {
   let _ = while true {
     match current {
       Value::Nil => break
-      Value::Pair(car, cdr) => {
-        result = Value::Pair(car, result)
+      Value::Pair(car, cdr, _) => {
+        result = make_pair(car, result)
         current = cdr
       }
       _ =>
@@ -336,7 +336,7 @@ pub fn builtin_list_ref(args : Array[Value]) -> Result[Value, EvalError] {
   let mut i = 0
   let _ = while i < index {
     match current {
-      Value::Pair(_, cdr) => {
+      Value::Pair(_, cdr, _) => {
         current = cdr
         i = i + 1
       }
@@ -347,7 +347,7 @@ pub fn builtin_list_ref(args : Array[Value]) -> Result[Value, EvalError] {
   }
 
   match current {
-    Value::Pair(car, _) => Ok(car)
+    Value::Pair(car, _, _) => Ok(car)
     _ => Err(EvalError::TypeError("list-ref: index out of bounds"))
   }
 }
@@ -371,7 +371,7 @@ pub fn builtin_list_tail(args : Array[Value]) -> Result[Value, EvalError] {
   let mut i = 0
   let _ = while i < k {
     match current {
-      Value::Pair(_, cdr) => {
+      Value::Pair(_, cdr, _) => {
         current = cdr
         i = i + 1
       }
@@ -395,9 +395,9 @@ pub fn builtin_assq(args : Array[Value]) -> Result[Value, EvalError] {
   let _ = while true {
     match current {
       Value::Nil => return Ok(Value::Bool(false))
-      Value::Pair(pair, rest) => {
+      Value::Pair(pair, rest, _) => {
         match pair {
-          Value::Pair(key, _) => {
+          Value::Pair(key, _, _) => {
             // comparison by eq?
             if values_eq(obj, key) {
               return Ok(pair)
@@ -429,9 +429,9 @@ pub fn builtin_assv(args : Array[Value]) -> Result[Value, EvalError] {
   let _ = while true {
     match current {
       Value::Nil => return Ok(Value::Bool(false))
-      Value::Pair(pair, rest) => {
+      Value::Pair(pair, rest, _) => {
         match pair {
-          Value::Pair(key, _) => {
+          Value::Pair(key, _, _) => {
             // comparison by eqv?
             if values_eqv(obj, key) {
               return Ok(pair)
@@ -463,9 +463,9 @@ pub fn builtin_assoc(args : Array[Value]) -> Result[Value, EvalError] {
   let _ = while true {
     match current {
       Value::Nil => return Ok(Value::Bool(false))
-      Value::Pair(pair, rest) => {
+      Value::Pair(pair, rest, _) => {
         match pair {
-          Value::Pair(key, _) => {
+          Value::Pair(key, _, _) => {
             // comparison by equal?
             if values_equal(obj, key) {
               return Ok(pair)
@@ -498,7 +498,7 @@ pub fn builtin_memq(args : Array[Value]) -> Result[Value, EvalError] {
   let _ = while true {
     match current {
       Value::Nil => return Ok(Value::Bool(false))
-      Value::Pair(head, tail) => {
+      Value::Pair(head, tail, _) => {
         if values_eq(obj, head) {
           return Ok(current)
         }
@@ -523,7 +523,7 @@ pub fn builtin_memv(args : Array[Value]) -> Result[Value, EvalError] {
   let _ = while true {
     match current {
       Value::Nil => return Ok(Value::Bool(false))
-      Value::Pair(head, tail) => {
+      Value::Pair(head, tail, _) => {
         if values_eqv(obj, head) {
           return Ok(current)
         }
@@ -548,7 +548,7 @@ pub fn builtin_member(args : Array[Value]) -> Result[Value, EvalError] {
   let _ = while true {
     match current {
       Value::Nil => return Ok(Value::Bool(false))
-      Value::Pair(head, tail) => {
+      Value::Pair(head, tail, _) => {
         if values_equal(obj, head) {
           return Ok(current)
         }
@@ -609,7 +609,7 @@ pub fn list_to_array(list : Value) -> Result[Array[Value], EvalError] {
   let _ = while true {
     match current {
       Value::Nil => return Ok(items)
-      Value::Pair(car, cdr) => {
+      Value::Pair(car, cdr, _) => {
         items.push(car)
         current = cdr
       }
@@ -627,7 +627,7 @@ pub fn array_to_list(items : Array[Value]) -> Result[Value, EvalError] {
   let mut i = items.length()
   let _ = while i > 0 {
     i = i - 1
-    result = Value::Pair(items[i], result)
+    result = make_pair(items[i], result)
   } else {
     ()
   }

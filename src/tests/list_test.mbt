@@ -11,11 +11,11 @@ test "builtin list" {
     _ => fail("expected ()")
   }
   match eval(expr2, env) {
-    Ok(Value::Pair(Value::Number(Number::Int(1)), Value::Nil)) => ()
+    Ok(Value::Pair(Value::Number(Number::Int(1)), Value::Nil, _)) => ()
     _ => fail("expected (1)")
   }
   match eval(expr3, env) {
-    Ok(Value::Pair(Value::Number(Number::Int(1)), Value::Pair(Value::Number(Number::Int(2)), Value::Pair(Value::Number(Number::Int(3)), Value::Nil)))) => ()
+    Ok(Value::Pair(Value::Number(Number::Int(1)), Value::Pair(Value::Number(Number::Int(2)), Value::Pair(Value::Number(Number::Int(3)), Value::Nil, _), _), _)) => ()
     _ => fail("expected (1 2 3)")
   }
 }
@@ -57,15 +57,15 @@ test "builtin append" {
     _ => fail("expected ()")
   }
   match eval(expr2, env) {
-    Ok(Value::Pair(Value::Number(Number::Int(1)), Value::Pair(Value::Number(Number::Int(2)), Value::Nil))) => ()
+    Ok(Value::Pair(Value::Number(Number::Int(1)), Value::Pair(Value::Number(Number::Int(2)), Value::Nil, _), _)) => ()
     _ => fail("expected (1 2)")
   }
   match eval(expr3, env) {
-    Ok(Value::Pair(Value::Number(Number::Int(1)), _)) => ()
+    Ok(Value::Pair(Value::Number(Number::Int(1)), _, _)) => ()
     _ => fail("expected list starting with 1")
   }
   match eval(expr4, env) {
-    Ok(Value::Pair(Value::Number(Number::Int(1)), _)) => ()
+    Ok(Value::Pair(Value::Number(Number::Int(1)), _, _)) => ()
     _ => fail("expected list starting with 1")
   }
 }
@@ -81,11 +81,11 @@ test "builtin reverse" {
     _ => fail("expected ()")
   }
   match eval(expr2, env) {
-    Ok(Value::Pair(Value::Number(Number::Int(1)), Value::Nil)) => ()
+    Ok(Value::Pair(Value::Number(Number::Int(1)), Value::Nil, _)) => ()
     _ => fail("expected (1)")
   }
   match eval(expr3, env) {
-    Ok(Value::Pair(Value::Number(Number::Int(3)), Value::Pair(Value::Number(Number::Int(2)), Value::Pair(Value::Number(Number::Int(1)), Value::Nil)))) => ()
+    Ok(Value::Pair(Value::Number(Number::Int(3)), Value::Pair(Value::Number(Number::Int(2)), Value::Pair(Value::Number(Number::Int(1)), Value::Nil, _), _), _)) => ()
     _ => fail("expected (3 2 1)")
   }
 }
@@ -118,15 +118,15 @@ test "builtin list-tail" {
   let expr3 = parse_one("(list-tail (list 1 2 3) 2)")
   let expr4 = parse_one("(list-tail (list 1 2 3) 3)")
   match eval(expr1, env) {
-    Ok(Value::Pair(Value::Number(Number::Int(1)), _)) => ()
+    Ok(Value::Pair(Value::Number(Number::Int(1)), _, _)) => ()
     _ => fail("expected list starting with 1")
   }
   match eval(expr2, env) {
-    Ok(Value::Pair(Value::Number(Number::Int(2)), _)) => ()
+    Ok(Value::Pair(Value::Number(Number::Int(2)), _, _)) => ()
     _ => fail("expected list starting with 2")
   }
   match eval(expr3, env) {
-    Ok(Value::Pair(Value::Number(Number::Int(3)), Value::Nil)) => ()
+    Ok(Value::Pair(Value::Number(Number::Int(3)), Value::Nil, _)) => ()
     _ => fail("expected (3)")
   }
   match eval(expr4, env) {
@@ -162,15 +162,15 @@ test "builtin cons" {
   let expr2 = parse_one("(cons 1 ())")
   let expr3 = parse_one("(cons 1 (cons 2 ()))")
   match eval(expr1, env) {
-    Ok(Value::Pair(Value::Number(Number::Int(1)), Value::Number(Number::Int(2)))) => ()
+    Ok(Value::Pair(Value::Number(Number::Int(1)), Value::Number(Number::Int(2)), _)) => ()
     _ => fail("expected (1 . 2)")
   }
   match eval(expr2, env) {
-    Ok(Value::Pair(Value::Number(Number::Int(1)), Value::Nil)) => ()
+    Ok(Value::Pair(Value::Number(Number::Int(1)), Value::Nil, _)) => ()
     _ => fail("expected (1)")
   }
   match eval(expr3, env) {
-    Ok(Value::Pair(Value::Number(Number::Int(1)), Value::Pair(Value::Number(Number::Int(2)), Value::Nil))) => ()
+    Ok(Value::Pair(Value::Number(Number::Int(1)), Value::Pair(Value::Number(Number::Int(2)), Value::Nil, _), _)) => ()
     _ => fail("expected (1 2)")
   }
 }
@@ -200,7 +200,7 @@ test "builtin cdr" {
     _ => fail("expected 2")
   }
   match eval(expr2, env) {
-    Ok(Value::Pair(Value::Number(Number::Int(2)), _)) => ()
+    Ok(Value::Pair(Value::Number(Number::Int(2)), _, _)) => ()
     _ => fail("expected list starting with 2")
   }
 }

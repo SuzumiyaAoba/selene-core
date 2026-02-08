@@ -838,6 +838,20 @@ fn codegen_let(
   }
 }
 
+/// Check if a letrec init expression is "simple" (can't involve call/cc).
+/// Simple inits: literals, variables, lambda expressions, quoted values.
+/// Complex inits: function calls, special forms that may invoke call/cc.
+fn is_simple_letrec_init(expr : IRExpr) -> Bool {
+  match expr {
+    IRExpr::Const(_) => true
+    IRExpr::Var(_) => true
+    IRExpr::GlobalVar(_) => true
+    IRExpr::Quote(_) => true
+    IRExpr::Lambda(_) => true
+    _ => false
+  }
+}
+
 /// Generate code for letrec expressions
 fn codegen_letrec(
   ctx : CodegenContext,
@@ -850,63 +864,49 @@ fn codegen_letrec(
     return
   }
 
-  // Collect variables set! in body and init expressions
-  let set_vars = codegen_collect_set_vars(body)
-
-  // Also collect variables that are free_vars in any lambda within init expressions
+  // Collect variables that are free_vars in any lambda (init + body)
   let captured_free_vars : Array[String] = []
   for binding in bindings {
     codegen_collect_free_var_names(binding.init, captured_free_vars)
   }
+  codegen_collect_free_var_names(body, captured_free_vars)
 
-  for binding in bindings {
-    let init_set_vars = codegen_collect_set_vars(binding.init)
-    for v in init_set_vars {
-      let mut found = false
-      for sv in set_vars {
-        if sv == v {
-          found = true
-          break
-        }
-      }
-      if !found {
-        set_vars.push(v)
-      }
-    }
-  }
+  // Collect variables that are set! in the body
+  let set_vars = codegen_collect_set_vars(body)
 
-  // Identify which bindings are captured by lambdas in init expressions
-  // These need special handling for letrec semantics
-  let is_captured : Array[Bool] = []
-  for binding in bindings {
-    let mut cap = false
-    for v in captured_free_vars {
-      if v == binding.name {
-        cap = true
-        break
-      }
-    }
-    is_captured.push(cap)
-  }
-
-  // Identify bindings that need to be boxed
-  // A binding needs boxing if:
-  // 1. It is set! anywhere, OR
-  // 2. It is captured by a lambda in an init expression (letrec self-reference)
+  // Identify bindings that need to be boxed.
+  // Boxing criteria:
+  //   1. Captured by any lambda (init or body) → always box
+  //      (needed for recursive references and shared mutable state through closures)
+  //   2. set! AND init is "simple" (literal/lambda/variable/quote) → box
+  //      (safe because simple inits can't involve call/cc, so boxing is correct
+  //       for preserving set! effects across continuation invocations in the body)
+  //   3. set! AND init is "complex" (function call, etc.) → do NOT box
+  //      (if call/cc is in the init, the continuation should restore stack values,
+  //       allowing the init's call/cc to re-initialize the variable properly)
   let needs_boxing : Array[Bool] = []
   for i in 0..<num_bindings {
     let binding = bindings[i]
     let mut need = false
-    // Check if set! anywhere
-    for v in set_vars {
+    // Rule 1: captured by any lambda
+    for v in captured_free_vars {
       if v == binding.name {
         need = true
         break
       }
     }
-    // Check if captured
-    if not(need) && is_captured[i] {
-      need = true
+    // Rule 2: set! with simple init
+    if not(need) {
+      let mut is_set = false
+      for v in set_vars {
+        if v == binding.name {
+          is_set = true
+          break
+        }
+      }
+      if is_set && is_simple_letrec_init(binding.init) {
+        need = true
+      }
     }
     needs_boxing.push(need)
   }

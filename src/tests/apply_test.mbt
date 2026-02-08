@@ -25,7 +25,7 @@ test "apply with list" {
   let env = initial_env()
   let expr = parse_one("(apply list (list 1 2 3))")
   match eval(expr, env) {
-    Ok(Value::Pair(_, _)) => {
+    Ok(Value::Pair(_, _, _)) => {
       // Verify that the list has been created
       let list_expr = parse_one("(list 1 2 3)")
       let expected = match eval(list_expr, env) {
@@ -56,7 +56,7 @@ test "apply with cons" {
   let env = initial_env()
   let expr = parse_one("(apply cons (list 1 2))")
   match eval(expr, env) {
-    Ok(Value::Pair(Value::Number(Number::Int(1)), Value::Number(Number::Int(2)))) => ()
+    Ok(Value::Pair(Value::Number(Number::Int(1)), Value::Number(Number::Int(2)), _)) => ()
     _ => fail("Expected Pair(1, 2)")
   }
 }
@@ -148,7 +148,7 @@ fn value_to_string(value : Value) -> String {
     Value::Char(c) => "#\\" + c.to_string()
     Value::String(s) => "\"" + s + "\""
     Value::Symbol(s) => s
-    Value::Pair(car, cdr) => {
+    Value::Pair(car, cdr, _) => {
       let mut result = "("
       result = result + value_to_string(car)
       let mut current = cdr
@@ -158,7 +158,7 @@ fn value_to_string(value : Value) -> String {
             result = result + ")"
             return result
           }
-          Value::Pair(car2, cdr2) => {
+          Value::Pair(car2, cdr2, _) => {
             result = result + " " + value_to_string(car2)
             current = cdr2
           }

@@ -149,7 +149,7 @@ pub fn builtin_vector_to_list(args : Array[Value]) -> Result[Value, EvalError] {
       let mut i = items.length()
       let _ = while i > 0 {
         i = i - 1
-        result = Value::Pair(items[i], result)
+        result = make_pair(items[i], result)
       } else {
         ()
       }

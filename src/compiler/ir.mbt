@@ -319,7 +319,7 @@ pub fn ir_const_to_value(c : IRConst) -> Value {
     IRConst::String(s) => Value::String(s)
     IRConst::Symbol(s) => Value::Symbol(s)
     IRConst::Pair(car, cdr) =>
-      Value::Pair(ir_const_to_value(car), ir_const_to_value(cdr))
+      make_pair(ir_const_to_value(car), ir_const_to_value(cdr))
     IRConst::Vector(items) => {
       let values : Array[Value] = []
       for item in items {

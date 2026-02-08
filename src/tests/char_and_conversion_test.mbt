@@ -267,7 +267,7 @@ test "string->list" {
   let expr = parse_one("(string->list \"abc\")")
   let result = eval(expr, env)
   match result {
-    Ok(Value::Pair(Value::Char('a'), Value::Pair(Value::Char('b'), Value::Pair(Value::Char('c'), Value::Nil)))) => ()
+    Ok(Value::Pair(Value::Char('a'), Value::Pair(Value::Char('b'), Value::Pair(Value::Char('c'), Value::Nil, _), _), _)) => ()
     _ => fail("expected (#\\a #\\b #\\c)")
   }
 }

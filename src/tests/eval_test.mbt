@@ -96,7 +96,7 @@ test "eval quote" {
   let expr = parse_one("(quote (1 2 3))")
   let result = eval(expr, env)
   match result {
-    Ok(Value::Pair(_, _)) => ()
+    Ok(Value::Pair(_, _, _)) => ()
     _ => fail("expected pair")
   }
 }

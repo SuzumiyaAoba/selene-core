@@ -15,6 +15,7 @@ using @core {
   new_port_id,
   sexpr_to_value,
   values_eqv,
+  make_pair,
 }
 using @frontend { parse_one }
 using @ffi {

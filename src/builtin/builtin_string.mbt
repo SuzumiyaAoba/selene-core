@@ -315,7 +315,7 @@ pub fn builtin_string_to_list(args : Array[Value]) -> Result[Value, EvalError] {
       let mut i = chars.length()
       let _ = while i > 0 {
         i = i - 1
-        result = Value::Pair(Value::Char(chars[i]), result)
+        result = make_pair(Value::Char(chars[i]), result)
       } else {
         ()
       }
@@ -338,11 +338,11 @@ pub fn builtin_list_to_string(args : Array[Value]) -> Result[Value, EvalError] {
   let _ = while true {
     match current {
       Value::Nil => break
-      Value::Pair(Value::Char(c), rest) => {
+      Value::Pair(Value::Char(c), rest, _) => {
         chars.push(c)
         current = rest
       }
-      Value::Pair(_, _) =>
+      Value::Pair(_, _, _) =>
         return Err(
           EvalError::TypeError("list->string: list must contain only characters"),
         )

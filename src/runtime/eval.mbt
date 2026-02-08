@@ -15,7 +15,7 @@ fn expand_quasiquote(
       } else {
         match expand_quasiquote(inner, env, depth - 1) {
           Ok(expanded) =>
-            Ok(Value::Pair(Value::Symbol("unquote"), Value::Pair(expanded, Value::Nil)))
+            Ok(make_pair(Value::Symbol("unquote"), make_pair(expanded, Value::Nil)))
           Err(e) => Err(e)
         }
       }
@@ -28,7 +28,7 @@ fn expand_quasiquote(
           SExpr::UnquoteSplicing(inner) => {
             match expand_quasiquote(inner, env, depth - 1) {
               Ok(expanded) =>
-                Ok(Value::Pair(Value::Symbol("unquote-splicing"), Value::Pair(expanded, Value::Nil)))
+                Ok(make_pair(Value::Symbol("unquote-splicing"), make_pair(expanded, Value::Nil)))
               Err(e) => Err(e)
             }
           }
@@ -39,7 +39,7 @@ fn expand_quasiquote(
     SExpr::Quasiquote(inner) => {
       match expand_quasiquote(inner, env, depth + 1) {
         Ok(expanded) =>
-          Ok(Value::Pair(Value::Symbol("quasiquote"), Value::Pair(expanded, Value::Nil)))
+          Ok(make_pair(Value::Symbol("quasiquote"), make_pair(expanded, Value::Nil)))
         Err(e) => Err(e)
       }
     }
@@ -47,7 +47,7 @@ fn expand_quasiquote(
     SExpr::Pair(car, cdr) => expand_quasiquote_list(car, cdr, env, depth)
     // quote: convert contents
     SExpr::Quote(inner) =>
-      Ok(Value::Pair(Value::Symbol("quote"), Value::Pair(sexpr_to_value(inner), Value::Nil)))
+      Ok(make_pair(Value::Symbol("quote"), make_pair(sexpr_to_value(inner), Value::Nil)))
     // Atom: Convert as is
     _ => Ok(sexpr_to_value(sexpr))
   }
@@ -86,8 +86,8 @@ fn expand_quasiquote_list(
           Ok(v) => v
           Err(e) => return Err(e)
         }
-        Ok(Value::Pair(
-          Value::Pair(Value::Symbol("unquote-splicing"), Value::Pair(expanded_inner, Value::Nil)),
+        Ok(make_pair(
+          make_pair(Value::Symbol("unquote-splicing"), make_pair(expanded_inner, Value::Nil)),
           expanded_cdr
         ))
       }
@@ -101,7 +101,7 @@ fn expand_quasiquote_list(
         Ok(v) => v
         Err(e) => return Err(e)
       }
-      Ok(Value::Pair(expanded_car, expanded_cdr))
+      Ok(make_pair(expanded_car, expanded_cdr))
     }
   }
 }
@@ -110,9 +110,9 @@ fn expand_quasiquote_list(
 fn append_values(list1 : Value, list2 : Value) -> Result[Value, EvalError] {
   match list1 {
     Value::Nil => Ok(list2)
-    Value::Pair(car, cdr) => {
+    Value::Pair(car, cdr, _) => {
       match append_values(cdr, list2) {
-        Ok(rest) => Ok(Value::Pair(car, rest))
+        Ok(rest) => Ok(make_pair(car, rest))
         Err(e) => Err(e)
       }
     }

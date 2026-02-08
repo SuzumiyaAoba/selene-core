@@ -37,16 +37,13 @@ test "r5rs pitfalls (guile r5rs_pitfall)" {
   }
 
   if enable_callcc {
-    // Note: pitfall 1.1 expects 0, but our implementation returns 1.
-    // This is because when y's continuation is invoked after (set! x 1),
-    // x remains 1 (boxed variable retains set! effect across continuation).
-    // This may be a valid R5RS interpretation difference.
-    // assert_should_be(
-    //   ctx,
-    //   "1.1",
-    //   "0",
-    //   "(let ((cont #f)) (letrec ((x (call-with-current-continuation (lambda (c) (set! cont c) 0))) (y (call-with-current-continuation (lambda (c) (set! cont c) 0)))) (if cont (let ((c cont)) (set! cont #f) (set! x 1) (set! y 1) (c 0)) (+ x y))))",
-    // )
+    // Test 1.1: letrec with call/cc in init - set! effects should be undone by continuation
+    assert_should_be(
+      ctx,
+      "1.1",
+      "0",
+      "(let ((cont #f)) (letrec ((x (call-with-current-continuation (lambda (c) (set! cont c) 0))) (y (call-with-current-continuation (lambda (c) (set! cont c) 0)))) (if cont (let ((c cont)) (set! cont #f) (set! x 1) (set! y 1) (c 0)) (+ x y))))",
+    )
 
     // Test 1.2: cond is now implemented
     assert_should_be(
@@ -56,15 +53,13 @@ test "r5rs pitfalls (guile r5rs_pitfall)" {
       "(letrec ((x (call/cc list)) (y (call/cc list))) (cond ((procedure? x) (x (pair? y))) ((procedure? y) (y (pair? x)))) (let ((x (car x)) (y (car y))) (and (call/cc x) (call/cc y) (call/cc x))))",
     )
 
-    // Test 1.3: Requires pair object identity (eq?) support.
-    // vm_values_eq always returns false for pairs since MoonBit enum values
-    // lack physical identity comparison for compound types.
-    // assert_should_be(
-    //   ctx,
-    //   "1.3",
-    //   "#t",
-    //   "(letrec ((x (call-with-current-continuation (lambda (c) (list #T c))))) (if (car x) ((cadr x) (list #F (lambda () x))) (eq? x ((cadr x)))))",
-    // )
+    // Test 1.3: pair identity via unique IDs
+    assert_should_be(
+      ctx,
+      "1.3",
+      "#t",
+      "(letrec ((x (call-with-current-continuation (lambda (c) (list #T c))))) (if (car x) ((cadr x) (list #F (lambda () x))) (eq? x ((cadr x)))))",
+    )
 
     assert_should_be(
       ctx,
@@ -171,8 +166,7 @@ test "r5rs pitfalls (guile r5rs_pitfall)" {
       "(let () (set! r (+ 1 (+ 2 (+ 3 (call/cc (lambda (k) (set! a k) 4)))) (+ 5 (+ 6 (call/cc (lambda (k) (set! b k) 7)))))) (if (not c) (set! c a)) (set! i (+ i 1)) (case i ((1) (b 8)) ((2) (a 5)) ((3) (b 7)) ((4) (c 4))) r)",
     )
 
-    // Test 7.3: map + call/cc + continuations. Now works because map is defined
-    // as a Scheme prelude function that runs in the main VM context.
+    // Test 7.3: map + call/cc + continuations
     assert_should_be(
       ctx,
       "7.3",
@@ -202,8 +196,7 @@ test "r5rs pitfalls (guile r5rs_pitfall)" {
     )
   }
 
-  // Test 8.3: call/cc inside map's lambda. Now works because map is defined
-  // as a Scheme prelude function that runs in the main VM context.
+  // Test 8.3: call/cc inside map's lambda
   if enable_callcc {
     assert_should_be(
       ctx,

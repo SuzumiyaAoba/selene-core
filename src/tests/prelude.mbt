@@ -21,6 +21,7 @@ pub using @core {
   set_bang,
   list2,
   sym,
+  make_pair,
 }
 pub using @frontend { type Token, tokenize, parse, parse_one, parse_tokens, expand_quote }
 pub using @runtime {

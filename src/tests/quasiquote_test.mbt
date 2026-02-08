@@ -6,7 +6,7 @@ test "quasiquote without unquote" {
   let expr = parse_one("`(a b c)")
   let result = eval(expr, env)
   match result {
-    Ok(Value::Pair(Value::Symbol("a"), Value::Pair(Value::Symbol("b"), Value::Pair(Value::Symbol("c"), Value::Nil)))) => ()
+    Ok(Value::Pair(Value::Symbol("a"), Value::Pair(Value::Symbol("b"), Value::Pair(Value::Symbol("c"), Value::Nil, _), _), _)) => ()
     _ => fail("expected (a b c)")
   }
 }
@@ -18,7 +18,7 @@ test "quasiquote with unquote variable" {
   let expr = parse_one("`(a ,x c)")
   let result = eval(expr, env)
   match result {
-    Ok(Value::Pair(Value::Symbol("a"), Value::Pair(Value::Number(Number::Int(42)), Value::Pair(Value::Symbol("c"), Value::Nil)))) => ()
+    Ok(Value::Pair(Value::Symbol("a"), Value::Pair(Value::Number(Number::Int(42)), Value::Pair(Value::Symbol("c"), Value::Nil, _), _), _)) => ()
     _ => fail("expected (a 42 c)")
   }
 }
@@ -29,7 +29,7 @@ test "quasiquote with unquote expression" {
   let expr = parse_one("`(1 ,(+ 2 3) 4)")
   let result = eval(expr, env)
   match result {
-    Ok(Value::Pair(Value::Number(Number::Int(1)), Value::Pair(Value::Number(Number::Int(5)), Value::Pair(Value::Number(Number::Int(4)), Value::Nil)))) => ()
+    Ok(Value::Pair(Value::Number(Number::Int(1)), Value::Pair(Value::Number(Number::Int(5)), Value::Pair(Value::Number(Number::Int(4)), Value::Nil, _), _), _)) => ()
     _ => fail("expected (1 5 4)")
   }
 }
@@ -37,14 +37,14 @@ test "quasiquote with unquote expression" {
 /// Splice a list with unquote-splicing.
 test "quasiquote with unquote-splicing" {
   let env = initial_env()
-  let env = define_var(env, "xs", Value::Pair(
+  let env = define_var(env, "xs", make_pair(
     Value::Number(Number::Int(2)),
-    Value::Pair(Value::Number(Number::Int(3)), Value::Nil)
+    make_pair(Value::Number(Number::Int(3)), Value::Nil)
   ))
   let expr = parse_one("`(1 ,@xs 4)")
   let result = eval(expr, env)
   match result {
-    Ok(Value::Pair(Value::Number(Number::Int(1)), Value::Pair(Value::Number(Number::Int(2)), Value::Pair(Value::Number(Number::Int(3)), Value::Pair(Value::Number(Number::Int(4)), Value::Nil))))) => ()
+    Ok(Value::Pair(Value::Number(Number::Int(1)), Value::Pair(Value::Number(Number::Int(2)), Value::Pair(Value::Number(Number::Int(3)), Value::Pair(Value::Number(Number::Int(4)), Value::Nil, _), _), _), _)) => ()
     _ => fail("expected (1 2 3 4)")
   }
 }
@@ -56,7 +56,7 @@ test "quasiquote with unquote-splicing empty list" {
   let expr = parse_one("`(1 ,@xs 4)")
   let result = eval(expr, env)
   match result {
-    Ok(Value::Pair(Value::Number(Number::Int(1)), Value::Pair(Value::Number(Number::Int(4)), Value::Nil))) => ()
+    Ok(Value::Pair(Value::Number(Number::Int(1)), Value::Pair(Value::Number(Number::Int(4)), Value::Nil, _), _)) => ()
     _ => fail("expected (1 4)")
   }
 }
@@ -67,7 +67,7 @@ test "quasiquote special form" {
   let expr = parse_one("(quasiquote (a b c))")
   let result = eval(expr, env)
   match result {
-    Ok(Value::Pair(Value::Symbol("a"), Value::Pair(Value::Symbol("b"), Value::Pair(Value::Symbol("c"), Value::Nil)))) => ()
+    Ok(Value::Pair(Value::Symbol("a"), Value::Pair(Value::Symbol("b"), Value::Pair(Value::Symbol("c"), Value::Nil, _), _), _)) => ()
     _ => fail("expected (a b c)")
   }
 }
@@ -78,7 +78,7 @@ test "quote with apostrophe" {
   let expr = parse_one("'(a b c)")
   let result = eval(expr, env)
   match result {
-    Ok(Value::Pair(Value::Symbol("a"), Value::Pair(Value::Symbol("b"), Value::Pair(Value::Symbol("c"), Value::Nil)))) => ()
+    Ok(Value::Pair(Value::Symbol("a"), Value::Pair(Value::Symbol("b"), Value::Pair(Value::Symbol("c"), Value::Nil, _), _), _)) => ()
     _ => fail("expected (a b c)")
   }
 }
@@ -135,7 +135,7 @@ test "quasiquote with multiple unquotes" {
   let expr = parse_one("`(,x ,y)")
   let result = eval(expr, env)
   match result {
-    Ok(Value::Pair(Value::Number(Number::Int(1)), Value::Pair(Value::Number(Number::Int(2)), Value::Nil))) => ()
+    Ok(Value::Pair(Value::Number(Number::Int(1)), Value::Pair(Value::Number(Number::Int(2)), Value::Nil, _), _)) => ()
     _ => fail("expected (1 2)")
   }
 }
@@ -148,7 +148,7 @@ test "nested quasiquote" {
   let result = eval(expr, env)
   // Nested quasiquote does not expand inner unquote
   match result {
-    Ok(Value::Pair(Value::Symbol("quasiquote"), _)) => ()
+    Ok(Value::Pair(Value::Symbol("quasiquote"), _, _)) => ()
     _ => fail("expected nested quasiquote structure")
   }
 }
