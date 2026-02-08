@@ -85,6 +85,9 @@ pub fn expand_expr(expr : SExpr, macro_env : MacroEnv) -> Result[SExpr, CompileE
             "quasiquote" => Ok(expr) // Don't expand inside quasiquote (for now)
             "let-syntax" => expand_let_syntax(cdr, macro_env, false)
             "letrec-syntax" => expand_let_syntax(cdr, macro_env, true)
+            // Body forms: scan for internal defines that shadow macros
+            "let" | "let*" | "letrec" | "lambda" =>
+              expand_body_form(name, cdr, macro_env)
             _ =>
               // Check if it's a macro call
               match lookup_macro(macro_env, name) {
@@ -306,6 +309,117 @@ fn expand_body(body : SExpr, macro_env : MacroEnv) -> Result[SExpr, CompileError
       }
     }
     _ => Err(CompileError::InvalidSyntax("let-syntax: invalid body"))
+  }
+}
+
+/// Expand a body-containing form (let, let*, letrec, lambda).
+/// Scans the body for internal defines that shadow macros, and if found,
+/// expands with a masked macro environment.
+fn expand_body_form(
+  form_name : String,
+  args : SExpr,
+  macro_env : MacroEnv
+) -> Result[SExpr, CompileError] {
+  let form = SExpr::Pair(SExpr::Symbol(form_name), args)
+  // Extract body from the form
+  let body = extract_form_body(form_name, args)
+  match body {
+    Some(b) => {
+      let define_names = collect_body_define_names(b)
+      let mut has_shadow = false
+      for name in define_names {
+        if is_macro(macro_env, name) {
+          has_shadow = true
+          break
+        }
+      }
+      if has_shadow {
+        let masked_env = extend_macro_env(macro_env)
+        for name in define_names {
+          if is_macro(macro_env, name) {
+            shadow_macro(masked_env, name)
+          }
+        }
+        expand_list(form, masked_env)
+      } else {
+        expand_list(form, macro_env)
+      }
+    }
+    None => expand_list(form, macro_env)
+  }
+}
+
+/// Extract the body portion from a body-containing form.
+/// Returns the body as an SExpr list (Pair chain), or None if structure is invalid.
+fn extract_form_body(form_name : String, args : SExpr) -> SExpr? {
+  match form_name {
+    "let" =>
+      match args {
+        SExpr::Pair(first, rest) =>
+          match first {
+            // Named let: (let name ((bindings) ...) body ...)
+            SExpr::Symbol(_) =>
+              match rest {
+                SExpr::Pair(_, body) => Some(body)
+                _ => None
+              }
+            // Regular let: (let ((bindings) ...) body ...)
+            _ => Some(rest)
+          }
+        _ => None
+      }
+    "let*" | "letrec" =>
+      match args {
+        SExpr::Pair(_, body) => Some(body)
+        _ => None
+      }
+    "lambda" =>
+      match args {
+        SExpr::Pair(_, body) => Some(body)
+        _ => None
+      }
+    _ => None
+  }
+}
+
+/// Collect names defined by internal defines at the beginning of a body.
+/// Handles (define name ...), (define (name ...) ...), and spliced (begin ...) forms.
+fn collect_body_define_names(body : SExpr) -> Array[String] {
+  let names : Array[String] = []
+  collect_body_define_names_inner(body, names)
+  names
+}
+
+fn collect_body_define_names_inner(body : SExpr, names : Array[String]) -> Unit {
+  match body {
+    SExpr::Pair(first, rest) =>
+      match first {
+        // (define name ...)
+        SExpr::Pair(SExpr::Symbol("define"), SExpr::Pair(SExpr::Symbol(name), _)) => {
+          if not(names.contains(name)) {
+            names.push(name)
+          }
+          collect_body_define_names_inner(rest, names)
+        }
+        // (define (name ...) ...)
+        SExpr::Pair(
+          SExpr::Symbol("define"),
+          SExpr::Pair(SExpr::Pair(SExpr::Symbol(name), _), _)
+        ) => {
+          if not(names.contains(name)) {
+            names.push(name)
+          }
+          collect_body_define_names_inner(rest, names)
+        }
+        // (begin ...) — splice and scan contents
+        SExpr::Pair(SExpr::Symbol("begin"), begin_body) => {
+          collect_body_define_names_inner(begin_body, names)
+          collect_body_define_names_inner(rest, names)
+        }
+        // Non-define form: stop scanning (R5RS: defines must precede expressions)
+        _ => ()
+      }
+    _ => ()
   }
 }
 

@@ -16,11 +16,30 @@ pub(all) struct VMReplContext {
 
 /// Create a new REPL context
 pub fn new_repl_context() -> VMReplContext {
-  {
+  let ctx : VMReplContext = {
     globals: create_initial_globals(),
     compiler_globals: initial_globals(),
     chunks: [],
     macro_env: new_macro_env(),
+  }
+  init_prelude(ctx)
+  ctx
+}
+
+/// Initialize Scheme prelude (define map/for-each as Scheme functions
+/// so they run in the main VM and call/cc works correctly inside them)
+fn init_prelude(ctx : VMReplContext) -> Unit {
+  let prelude = [
+    // map: single-list and multi-list support
+    "(define (map f . lsts) (if (null? (cdr lsts)) (let loop ((lst (car lsts))) (if (null? lst) '() (cons (f (car lst)) (loop (cdr lst))))) (let loop ((lsts lsts)) (if (null? (car lsts)) '() (cons (apply f (map car lsts)) (loop (map cdr lsts)))))))",
+    // for-each: same structure as map but discards results
+    "(define (for-each f . lsts) (if (null? (cdr lsts)) (let loop ((lst (car lsts))) (if (not (null? lst)) (begin (f (car lst)) (loop (cdr lst))))) (let loop ((lsts lsts)) (if (not (null? (car lsts))) (begin (apply f (map car lsts)) (loop (map cdr lsts)))))))",
+  ]
+  for code in prelude {
+    match repl_eval(ctx, code) {
+      Ok(_) => ()
+      Err(_) => ()
+    }
   }
 }
 

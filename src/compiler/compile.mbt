@@ -202,8 +202,10 @@ fn name_to_primop(name : String) -> PrimOpKind? {
     "write-char" => Some(PrimOpKind::WriteChar)
     "eof-object?" => Some(PrimOpKind::EofObjectP)
     "apply" => Some(PrimOpKind::Apply)
-    "map" => Some(PrimOpKind::Map)
-    "for-each" => Some(PrimOpKind::ForEach)
+    // map/for-each are defined as Scheme prelude functions (not PrimOps)
+    // so they run in the main VM and call/cc works correctly inside them
+    "map" => None
+    "for-each" => None
     "filter" => Some(PrimOpKind::Filter)
     "fold-left" => Some(PrimOpKind::FoldLeft)
     "fold-right" => Some(PrimOpKind::FoldRight)
@@ -690,6 +692,44 @@ fn compile_body(
     return Err(CompileError::SyntaxError("empty body"))
   }
 
+  // Splice begin forms at the beginning of the body (R5RS 5.2.2)
+  // (begin (define ...) ...) at body start is equivalent to (define ...)
+  // Only splice if "begin" is the keyword, not a variable binding
+  let begin_is_keyword = lookup_local(env, "begin").is_empty()
+  let spliced_exprs : Array[SExpr] = []
+  let mut splice_done = false
+  for expr in exprs {
+    if not(splice_done) {
+      match expr {
+        SExpr::Pair(SExpr::Symbol("begin"), begin_body) if begin_is_keyword => {
+          // Splice begin contents
+          let mut current = begin_body
+          let _ = while true {
+            match current {
+              SExpr::Pair(item, rest) => {
+                spliced_exprs.push(item)
+                current = rest
+              }
+              _ => break
+            }
+          } else { () }
+          continue
+        }
+        SExpr::Pair(SExpr::Symbol("define"), _) => {
+          spliced_exprs.push(expr)
+          continue
+        }
+        _ => {
+          splice_done = true
+          spliced_exprs.push(expr)
+        }
+      }
+    } else {
+      spliced_exprs.push(expr)
+    }
+  }
+  let exprs = spliced_exprs
+
   // Check for internal defines at the beginning of the body
   let defines : Array[(String, SExpr)] = []  // (name, init_expr)
   let mut body_start = 0
@@ -1122,9 +1162,12 @@ fn compile_case(
       let temp_name = "$case-key"
       let temp_binding : LetBinding = { name: temp_name, init: key_ir }
 
+      // Extend env with $case-key so body VarRef indices account for the Let binding
+      let case_env = extend_compile_env_same_frame(env, [temp_name])
+
       // Build cond clauses from case clauses
       let cond_ir = compile_case_to_cond(
-        temp_name, clause_datums, clause_bodies, 0, env, tail
+        temp_name, clause_datums, clause_bodies, 0, case_env, tail
       )
       match cond_ir {
         Ok(body) => {
@@ -1161,7 +1204,10 @@ fn compile_case_to_cond(
   }
 
   // Build test: (or (eqv? tmp datum1) (eqv? tmp datum2) ...)
-  let temp_var_ref : VarRef = { name: temp_name, depth: 0, index: 0 }
+  let temp_var_ref = match lookup_local(env, temp_name) {
+    Some(ref) => ref
+    None => { name: temp_name, depth: 0, index: 0 } // fallback
+  }
   let temp_var = IRExpr::Var(temp_var_ref)
 
   // Build eqv? comparisons for each datum
