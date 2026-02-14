@@ -1136,3 +1136,351 @@ test "sample: interpreter" {
   )
   sample_assert_true(ctx, "(interpreter-check)")
 }
+
+// ============================================================
+// samples/huffman/huffman.scm
+// Huffman coding: tree construction, encoding, decoding
+// ============================================================
+
+test "sample: huffman" {
+  let ctx = new_repl_context()
+
+  // Tree representation
+  sample_eval(ctx, "(define (make-leaf symbol weight) (list 'leaf symbol weight))")
+  sample_eval(ctx, "(define (leaf? tree) (eq? (car tree) 'leaf))")
+  sample_eval(ctx, "(define (leaf-symbol tree) (cadr tree))")
+  sample_eval(ctx, "(define (leaf-weight tree) (caddr tree))")
+  sample_eval(ctx,
+    "(define (make-tree left right) (list 'node left right (append (tree-symbols left) (tree-symbols right)) (+ (tree-weight left) (tree-weight right))))",
+  )
+  sample_eval(ctx, "(define (tree-left tree) (cadr tree))")
+  sample_eval(ctx, "(define (tree-right tree) (caddr tree))")
+  sample_eval(ctx,
+    "(define (tree-symbols tree) (if (leaf? tree) (list (leaf-symbol tree)) (car (cdr (cdr (cdr tree))))))",
+  )
+  sample_eval(ctx,
+    "(define (tree-weight tree) (if (leaf? tree) (leaf-weight tree) (car (cdr (cdr (cdr (cdr tree)))))))",
+  )
+
+  // Tree construction
+  sample_eval(ctx,
+    "(define (adjoin-set tree set) (cond ((null? set) (list tree)) ((< (tree-weight tree) (tree-weight (car set))) (cons tree set)) (else (cons (car set) (adjoin-set tree (cdr set))))))",
+  )
+  sample_eval(ctx,
+    "(define (make-leaf-set pairs) (if (null? pairs) '() (adjoin-set (make-leaf (caar pairs) (cdar pairs)) (make-leaf-set (cdr pairs)))))",
+  )
+  sample_eval(ctx,
+    "(define (build-huffman-tree pairs) (let ((leaves (make-leaf-set pairs))) (define (merge set) (if (null? (cdr set)) (car set) (let ((new-tree (make-tree (car set) (cadr set)))) (merge (adjoin-set new-tree (cdr (cdr set))))))) (merge leaves)))",
+  )
+
+  // Encoding
+  sample_eval(ctx,
+    "(define (encode-symbol symbol tree) (cond ((leaf? tree) (if (eq? symbol (leaf-symbol tree)) '() #f)) (else (let ((left-result (encode-symbol symbol (tree-left tree)))) (if left-result (cons 0 left-result) (let ((right-result (encode-symbol symbol (tree-right tree)))) (if right-result (cons 1 right-result) #f)))))))",
+  )
+  sample_eval(ctx,
+    "(define (encode message tree) (if (null? message) '() (append (encode-symbol (car message) tree) (encode (cdr message) tree))))",
+  )
+
+  // Decoding
+  sample_eval(ctx,
+    "(define (decode bits tree) (define (decode-1 bits current) (if (leaf? current) (cons (leaf-symbol current) (decode-1 bits tree)) (if (null? bits) '() (if (= (car bits) 0) (decode-1 (cdr bits) (tree-left current)) (decode-1 (cdr bits) (tree-right current)))))) (decode-1 bits tree))",
+  )
+
+  // Build sample tree
+  sample_eval(ctx, "(define sample-pairs '((a . 8) (b . 3) (c . 1) (d . 1) (e . 1) (f . 1) (g . 1) (h . 1)))")
+  sample_eval(ctx, "(define sample-tree (build-huffman-tree sample-pairs))")
+
+  // Test: 'a' has highest frequency => shortest code
+  sample_assert_int(ctx, "(length (encode-symbol 'a sample-tree))", 1)
+
+  // Test: round-trip encode/decode
+  sample_eval(ctx, "(define sample-message '(a b a c a d a e))")
+  sample_eval(ctx, "(define sample-bits (encode sample-message sample-tree))")
+  sample_assert_list_eq(ctx, "(decode sample-bits sample-tree)", "'(a b a c a d a e)")
+
+  // Test: roundtrip helper
+  sample_eval(ctx, "(define (roundtrip msg tree) (equal? (decode (encode msg tree) tree) msg))")
+  sample_assert_true(ctx, "(roundtrip '(a b c d e f g h) sample-tree)")
+  sample_assert_true(ctx, "(roundtrip '(a a a b b c) sample-tree)")
+  sample_assert_true(ctx, "(roundtrip '(h g f e d c b a) sample-tree)")
+
+  // Test: encoding is more compact than fixed-width for skewed frequencies
+  sample_assert_true(ctx, "(< (length sample-bits) (* 3 (length sample-message)))")
+
+  // Combined verification
+  sample_eval(ctx,
+    "(define (huffman-check) (and (equal? (decode sample-bits sample-tree) sample-message) (= (length (encode-symbol 'a sample-tree)) 1) (roundtrip '(a b c d e f g h) sample-tree) (roundtrip '(a a a b b c) sample-tree) (< (length sample-bits) (* 3 (length sample-message)))))",
+  )
+  sample_assert_true(ctx, "(huffman-check)")
+}
+
+// ============================================================
+// samples/matrix/matrix.scm
+// Matrix operations using nested lists
+// ============================================================
+
+test "sample: matrix" {
+  let ctx = new_repl_context()
+
+  // Construction
+  sample_eval(ctx,
+    "(define (make-matrix m n val) (let loop-rows ((i 0) (rows '())) (if (= i m) (reverse rows) (loop-rows (+ i 1) (cons (let loop-cols ((j 0) (cols '())) (if (= j n) (reverse cols) (loop-cols (+ j 1) (cons val cols)))) rows)))))",
+  )
+  sample_eval(ctx,
+    "(define (identity-matrix n) (let loop-rows ((i 0) (rows '())) (if (= i n) (reverse rows) (loop-rows (+ i 1) (cons (let loop-cols ((j 0) (cols '())) (if (= j n) (reverse cols) (loop-cols (+ j 1) (cons (if (= i j) 1 0) cols)))) rows)))))",
+  )
+
+  // Accessors
+  sample_eval(ctx, "(define (matrix-ref mat i j) (list-ref (list-ref mat i) j))")
+  sample_eval(ctx, "(define (matrix-rows mat) (length mat))")
+  sample_eval(ctx, "(define (matrix-cols mat) (length (car mat)))")
+
+  // Element-wise operations
+  sample_eval(ctx, "(define (matrix-map f mat) (map (lambda (row) (map f row)) mat))")
+  sample_eval(ctx, "(define (matrix-zip-with f mat1 mat2) (map (lambda (r1 r2) (map f r1 r2)) mat1 mat2))")
+  sample_eval(ctx, "(define (matrix-add mat1 mat2) (matrix-zip-with + mat1 mat2))")
+  sample_eval(ctx, "(define (matrix-sub mat1 mat2) (matrix-zip-with - mat1 mat2))")
+  sample_eval(ctx, "(define (matrix-scale k mat) (matrix-map (lambda (x) (* k x)) mat))")
+
+  // Transpose
+  sample_eval(ctx,
+    "(define (transpose mat) (if (null? (car mat)) '() (cons (map car mat) (transpose (map cdr mat)))))",
+  )
+
+  // Dot product and matrix multiply
+  sample_eval(ctx, "(define (dot-product v1 v2) (fold-left + 0 (map * v1 v2)))")
+  sample_eval(ctx,
+    "(define (matrix-mul mat1 mat2) (let ((cols2 (transpose mat2))) (map (lambda (row1) (map (lambda (col2) (dot-product row1 col2)) cols2)) mat1)))",
+  )
+
+  // Determinant
+  sample_eval(ctx,
+    "(define (remove-col mat j) (map (lambda (row) (let loop ((k 0) (cells row) (result '())) (cond ((null? cells) (reverse result)) ((= k j) (loop (+ k 1) (cdr cells) result)) (else (loop (+ k 1) (cdr cells) (cons (car cells) result)))))) mat))",
+  )
+  sample_eval(ctx,
+    "(define (determinant mat) (let ((n (matrix-rows mat))) (cond ((= n 1) (matrix-ref mat 0 0)) ((= n 2) (- (* (matrix-ref mat 0 0) (matrix-ref mat 1 1)) (* (matrix-ref mat 0 1) (matrix-ref mat 1 0)))) (else (let ((first-row (car mat)) (rest (cdr mat))) (let loop ((j 0) (cells first-row) (sign 1) (sum 0)) (if (null? cells) sum (loop (+ j 1) (cdr cells) (- sign) (+ sum (* sign (car cells) (determinant (remove-col rest j))))))))))))",
+  )
+
+  // Test: identity matrix
+  sample_assert_list_eq(ctx, "(identity-matrix 3)", "'((1 0 0) (0 1 0) (0 0 1))")
+
+  // Test: zero matrix
+  sample_assert_list_eq(ctx, "(make-matrix 2 3 0)", "'((0 0 0) (0 0 0))")
+
+  // Test: addition
+  sample_assert_list_eq(ctx, "(matrix-add '((1 2) (3 4)) '((5 6) (7 8)))", "'((6 8) (10 12))")
+
+  // Test: subtraction
+  sample_assert_list_eq(ctx, "(matrix-sub '((5 6) (7 8)) '((1 2) (3 4)))", "'((4 4) (4 4))")
+
+  // Test: scalar multiply
+  sample_assert_list_eq(ctx, "(matrix-scale 2 '((1 2) (3 4)))", "'((2 4) (6 8))")
+
+  // Test: transpose
+  sample_assert_list_eq(ctx, "(transpose '((1 2 3) (4 5 6)))", "'((1 4) (2 5) (3 6))")
+
+  // Test: dot product
+  sample_assert_int(ctx, "(dot-product '(1 2 3) '(4 5 6))", 32)
+
+  // Test: matrix multiply
+  sample_assert_list_eq(ctx, "(matrix-mul '((1 2) (3 4)) '((5 6) (7 8)))", "'((19 22) (43 50))")
+
+  // Test: identity is multiplicative identity
+  sample_eval(ctx, "(define a '((1 2) (3 4)))")
+  sample_eval(ctx, "(define id2 (identity-matrix 2))")
+  sample_assert_list_eq(ctx, "(matrix-mul a id2)", "'((1 2) (3 4))")
+  sample_assert_list_eq(ctx, "(matrix-mul id2 a)", "'((1 2) (3 4))")
+
+  // Test: determinant
+  sample_assert_int(ctx, "(determinant '((1 2) (3 4)))", -2)
+  sample_assert_int(ctx, "(determinant '((1 2 3) (4 5 6) (7 8 0)))", 27)
+
+  // Combined verification
+  sample_eval(ctx,
+    "(define (matrix-check) (and (equal? (matrix-add '((1 2) (3 4)) '((5 6) (7 8))) '((6 8) (10 12))) (equal? (transpose '((1 2) (3 4))) '((1 3) (2 4))) (equal? (matrix-mul '((1 2) (3 4)) '((5 6) (7 8))) '((19 22) (43 50))) (equal? (matrix-mul a id2) a) (= (determinant '((1 2) (3 4))) -2) (= (determinant '((1 2 3) (4 5 6) (7 8 0))) 27) (= (dot-product '(1 2 3) '(4 5 6)) 32)))",
+  )
+  sample_assert_true(ctx, "(matrix-check)")
+}
+
+// ============================================================
+// samples/state-machine/state-machine.scm
+// Finite state machine simulator
+// ============================================================
+
+test "sample: state-machine" {
+  let ctx = new_repl_context()
+
+  // DFA construction: (dfa start-state accept-states transitions)
+  // transitions: ((state . ((input . next) ...)) ...)
+  sample_eval(ctx, "(define (make-dfa start accepts transitions) (list 'dfa start accepts transitions))")
+  sample_eval(ctx, "(define (dfa-start dfa) (cadr dfa))")
+  sample_eval(ctx, "(define (dfa-accepts dfa) (caddr dfa))")
+  sample_eval(ctx, "(define (dfa-transitions dfa) (car (cdr (cdr (cdr dfa)))))")
+
+  // Transition lookup
+  sample_eval(ctx,
+    "(define (find-entry key alist) (cond ((null? alist) #f) ((equal? (caar alist) key) (cdar alist)) (else (find-entry key (cdr alist)))))",
+  )
+  sample_eval(ctx,
+    "(define (dfa-next dfa state input) (let ((st (find-entry state (dfa-transitions dfa)))) (if st (find-entry input st) #f)))",
+  )
+  sample_eval(ctx,
+    "(define (dfa-accept? dfa state) (if (member state (dfa-accepts dfa)) #t #f))",
+  )
+
+  // Run DFA on a list of inputs (numbers)
+  sample_eval(ctx,
+    "(define (dfa-run dfa inputs) (let loop ((st (dfa-start dfa)) (rem inputs)) (cond ((not st) #f) ((null? rem) (dfa-accept? dfa st)) (else (loop (dfa-next dfa st (car rem)) (cdr rem))))))",
+  )
+
+  // Convert string to list of integer char codes
+  sample_eval(ctx,
+    "(define (str->ints s) (map char->integer (string->list s)))",
+  )
+  sample_eval(ctx,
+    "(define (dfa-run-str dfa s) (dfa-run dfa (str->ints s)))",
+  )
+
+  // Trace: return list of visited states
+  sample_eval(ctx,
+    "(define (dfa-trace dfa inputs) (let loop ((st (dfa-start dfa)) (rem inputs) (path (list (dfa-start dfa)))) (cond ((null? rem) (reverse path)) (else (let ((nx (dfa-next dfa st (car rem)))) (if nx (loop nx (cdr rem) (cons nx path)) (reverse (cons 'stuck path))))))))",
+  )
+
+  // --- Example 1: Binary strings divisible by 3 ---
+  // Use integer inputs: 0=digit-zero, 1=digit-one
+  sample_eval(ctx,
+    "(define div3 (make-dfa 'r0 '(r0) (list (cons 'r0 (list (cons 0 'r0) (cons 1 'r1))) (cons 'r1 (list (cons 0 'r2) (cons 1 'r0))) (cons 'r2 (list (cons 0 'r1) (cons 1 'r2))))))",
+  )
+  // Run with explicit numeric lists
+  sample_assert_true(ctx, "(dfa-run div3 '(0))")        // 0 div 3
+  sample_assert_true(ctx, "(dfa-run div3 '(1 1 0))")    // 6 div 3
+  sample_assert_true(ctx, "(dfa-run div3 '(1 0 0 1))")  // 9 div 3
+  sample_assert_false(ctx, "(dfa-run div3 '(1 0 1))")   // 5 not div 3
+  sample_assert_false(ctx, "(dfa-run div3 '(1 0))")     // 2 not div 3
+
+  // Trace
+  sample_assert_list_eq(ctx, "(dfa-trace div3 '(1 1 0))", "'(r0 r1 r0 r0)")
+
+  // --- Example 2: Strings ending with "ab" ---
+  // Use char codes: a=97, b=98
+  sample_eval(ctx,
+    "(define ends-ab (make-dfa 'q0 '(q2) (list (cons 'q0 (list (cons 97 'q1) (cons 98 'q0))) (cons 'q1 (list (cons 97 'q1) (cons 98 'q2))) (cons 'q2 (list (cons 97 'q1) (cons 98 'q0))))))",
+  )
+  sample_assert_true(ctx, "(dfa-run-str ends-ab \"ab\")")
+  sample_assert_true(ctx, "(dfa-run-str ends-ab \"aab\")")
+  sample_assert_false(ctx, "(dfa-run-str ends-ab \"abc\")")
+  sample_assert_false(ctx, "(dfa-run-str ends-ab \"ba\")")
+
+  // --- Example 3: Even number of zeros ---
+  sample_eval(ctx,
+    "(define even-z (make-dfa 'ev '(ev) (list (cons 'ev (list (cons 0 'od) (cons 1 'ev))) (cons 'od (list (cons 0 'ev) (cons 1 'od))))))",
+  )
+  sample_assert_true(ctx, "(dfa-run even-z '())")         // zero 0s (even)
+  sample_assert_true(ctx, "(dfa-run even-z '(1 1))")      // zero 0s
+  sample_assert_true(ctx, "(dfa-run even-z '(1 0 0 1))")  // two 0s
+  sample_assert_false(ctx, "(dfa-run even-z '(1 0 0 0))") // three 0s
+
+  // --- Composition ---
+  sample_eval(ctx,
+    "(define (all-accept? dfas inputs) (let loop ((ds dfas)) (cond ((null? ds) #t) ((not (dfa-run (car ds) inputs)) #f) (else (loop (cdr ds))))))",
+  )
+  sample_eval(ctx,
+    "(define (any-accept? dfas inputs) (let loop ((ds dfas)) (cond ((null? ds) #f) ((dfa-run (car ds) inputs) #t) (else (loop (cdr ds))))))",
+  )
+  // '(1 1 0) = 6: div3 accepts, even-z does not (one zero)
+  sample_assert_false(ctx, "(all-accept? (list div3 even-z) '(1 1 0))")
+  sample_assert_true(ctx, "(any-accept? (list div3 even-z) '(1 1 0))")
+  // '(1 0 0 1) = 9: div3 accepts, even-z accepts (two zeros)
+  sample_assert_true(ctx, "(all-accept? (list div3 even-z) '(1 0 0 1))")
+
+  // --- Combined verification ---
+  sample_eval(ctx,
+    "(define (state-machine-check) (and (dfa-run div3 '(1 1 0)) (not (dfa-run div3 '(1 0 1))) (dfa-run-str ends-ab \"ab\") (not (dfa-run-str ends-ab \"ba\")) (dfa-run even-z '(1 0 0 1)) (not (dfa-run even-z '(1 0 0 0))) (equal? (dfa-trace div3 '(1 1 0)) '(r0 r1 r0 r0)) (all-accept? (list div3 even-z) '(1 0 0 1))))",
+  )
+  sample_assert_true(ctx, "(state-machine-check)")
+}
+
+// ============================================================
+// samples/regexp/regexp.scm
+// Simple regular expression matcher using S-expression patterns
+// ============================================================
+
+test "sample: regexp" {
+  let ctx = new_repl_context()
+
+  // Pattern constructors
+  sample_eval(ctx, "(define (lit c) (list 'lit c))")
+  sample_eval(ctx, "(define (any) '(any))")
+  sample_eval(ctx, "(define (seq p1 p2) (list 'seq p1 p2))")
+  sample_eval(ctx, "(define (alt p1 p2) (list 'alt p1 p2))")
+  sample_eval(ctx, "(define (star p) (list 'star p))")
+  sample_eval(ctx, "(define (plus p) (list 'plus p))")
+  sample_eval(ctx, "(define (opt p) (list 'opt p))")
+
+  // Pattern predicates
+  sample_eval(ctx, "(define (lit? p) (and (pair? p) (eq? (car p) 'lit)))")
+  sample_eval(ctx, "(define (any? p) (and (pair? p) (eq? (car p) 'any)))")
+  sample_eval(ctx, "(define (seq? p) (and (pair? p) (eq? (car p) 'seq)))")
+  sample_eval(ctx, "(define (alt? p) (and (pair? p) (eq? (car p) 'alt)))")
+  sample_eval(ctx, "(define (star? p) (and (pair? p) (eq? (car p) 'star)))")
+  sample_eval(ctx, "(define (plus? p) (and (pair? p) (eq? (car p) 'plus)))")
+  sample_eval(ctx, "(define (opt? p) (and (pair? p) (eq? (car p) 'opt)))")
+
+  // Matcher: returns list of possible remaining char lists after matching
+  sample_eval(ctx,
+    "(define (re-match pat chars) (cond ((lit? pat) (if (and (pair? chars) (char=? (car chars) (cadr pat))) (list (cdr chars)) '())) ((any? pat) (if (pair? chars) (list (cdr chars)) '())) ((seq? pat) (let ((after-p1 (re-match (cadr pat) chars))) (let loop ((remaining after-p1) (results '())) (if (null? remaining) results (loop (cdr remaining) (append results (re-match (caddr pat) (car remaining)))))))) ((alt? pat) (append (re-match (cadr pat) chars) (re-match (caddr pat) chars))) ((star? pat) (let ((sub (cadr pat))) (define (star-expand worklist results) (if (null? worklist) results (let ((c (car worklist)) (rest (cdr worklist))) (if (member c results) (star-expand rest results) (let ((matches (re-match sub c))) (star-expand (append rest matches) (cons c results))))))) (star-expand (list chars) '()))) ((plus? pat) (let ((sub (cadr pat))) (let ((first-matches (re-match sub chars))) (let loop ((remaining first-matches) (results '())) (if (null? remaining) results (loop (cdr remaining) (append results (re-match (star sub) (car remaining))))))))) ((opt? pat) (append (list chars) (re-match (cadr pat) chars))) (else '())))",
+  )
+
+  // Full match check
+  sample_eval(ctx,
+    "(define (re-full-match? pat str) (let ((chars (string->list str))) (let ((results (re-match pat chars))) (if (member '() results) #t #f))))",
+  )
+
+  // --- Test: literal sequence ab ---
+  sample_eval(ctx, "(define pat-ab (seq (lit #\\a) (lit #\\b)))")
+  sample_assert_true(ctx, "(re-full-match? pat-ab \"ab\")")
+  sample_assert_false(ctx, "(re-full-match? pat-ab \"abc\")")
+  sample_assert_false(ctx, "(re-full-match? pat-ab \"a\")")
+
+  // --- Test: alternation a|b ---
+  sample_eval(ctx, "(define pat-a-or-b (alt (lit #\\a) (lit #\\b)))")
+  sample_assert_true(ctx, "(re-full-match? pat-a-or-b \"a\")")
+  sample_assert_true(ctx, "(re-full-match? pat-a-or-b \"b\")")
+  sample_assert_false(ctx, "(re-full-match? pat-a-or-b \"c\")")
+
+  // --- Test: star a* ---
+  sample_eval(ctx, "(define pat-a-star (star (lit #\\a)))")
+  sample_assert_true(ctx, "(re-full-match? pat-a-star \"\")")
+  sample_assert_true(ctx, "(re-full-match? pat-a-star \"aaa\")")
+  sample_assert_false(ctx, "(re-full-match? pat-a-star \"ab\")")
+
+  // --- Test: plus a+b ---
+  sample_eval(ctx, "(define pat-a-plus-b (seq (plus (lit #\\a)) (lit #\\b)))")
+  sample_assert_true(ctx, "(re-full-match? pat-a-plus-b \"ab\")")
+  sample_assert_true(ctx, "(re-full-match? pat-a-plus-b \"aaab\")")
+  sample_assert_false(ctx, "(re-full-match? pat-a-plus-b \"b\")")
+
+  // --- Test: any character a.b ---
+  sample_eval(ctx, "(define pat-a-dot-b (seq (lit #\\a) (seq (any) (lit #\\b))))")
+  sample_assert_true(ctx, "(re-full-match? pat-a-dot-b \"axb\")")
+  sample_assert_false(ctx, "(re-full-match? pat-a-dot-b \"ab\")")
+
+  // --- Test: optional colou?r ---
+  sample_eval(ctx,
+    "(define pat-color (seq (lit #\\c) (seq (lit #\\o) (seq (lit #\\l) (seq (lit #\\o) (seq (opt (lit #\\u)) (lit #\\r)))))))",
+  )
+  sample_assert_true(ctx, "(re-full-match? pat-color \"color\")")
+  sample_assert_true(ctx, "(re-full-match? pat-color \"colour\")")
+  sample_assert_false(ctx, "(re-full-match? pat-color \"colouur\")")
+
+  // --- Test: .* matches anything ---
+  sample_eval(ctx, "(define pat-any-star (star (any)))")
+  sample_assert_true(ctx, "(re-full-match? pat-any-star \"\")")
+  sample_assert_true(ctx, "(re-full-match? pat-any-star \"hello\")")
+
+  // --- Combined verification ---
+  sample_eval(ctx,
+    "(define (regexp-check) (and (re-full-match? pat-ab \"ab\") (not (re-full-match? pat-ab \"abc\")) (re-full-match? pat-a-or-b \"a\") (re-full-match? pat-a-or-b \"b\") (not (re-full-match? pat-a-or-b \"c\")) (re-full-match? pat-a-star \"\") (re-full-match? pat-a-star \"aaa\") (not (re-full-match? pat-a-star \"ab\")) (re-full-match? pat-a-plus-b \"aaab\") (not (re-full-match? pat-a-plus-b \"b\")) (re-full-match? pat-a-dot-b \"axb\") (re-full-match? pat-color \"color\") (re-full-match? pat-color \"colour\") (re-full-match? pat-any-star \"hello\")))",
+  )
+  sample_assert_true(ctx, "(regexp-check)")
+}
