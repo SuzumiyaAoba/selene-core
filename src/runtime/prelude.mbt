@@ -14,15 +14,11 @@ using @core {
   type VMClosure,
   type VMContinuation,
   type VMCallFrame,
-  type ContinuationCall,
-  type Port,
-  type PortDirection,
   new_continuation_id,
   empty_env,
   extend,
   lookup,
   define_var,
-  set_bang,
   sexpr_to_value,
   values_eqv,
   remove_continuation,
@@ -30,11 +26,10 @@ using @core {
   expand_macro,
   make_pair,
   make_box,
-  type BoxedValue,
 }
 using @frontend { parse }
 using @ffi { file_exists, read_file }
-using @compiler { type CodeChunk, type CompiledModule, type Opcode, type BCValue, type PrimOpKind, bc_value_to_value, compile_to_module }
+using @compiler { type CodeChunk, type CompiledModule, type Opcode, type PrimOpKind, bc_value_to_value, compile_to_module }
 using @builtin {
   builtin_abs,
   builtin_acos,

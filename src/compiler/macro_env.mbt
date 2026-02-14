@@ -49,5 +49,5 @@ pub fn lookup_macro(env : MacroEnv, name : String) -> SyntaxRules? {
 
 /// Check if a name is defined as a macro
 pub fn is_macro(env : MacroEnv, name : String) -> Bool {
-  not(lookup_macro(env, name).is_empty())
+  not(lookup_macro(env, name) is None)
 }

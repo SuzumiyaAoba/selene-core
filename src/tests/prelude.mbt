@@ -66,8 +66,8 @@ pub using @compiler {
   initial_globals,
   default_dump_options,
   compact_dump_options,
-  dump_module,
-  dump_module_stats,
+  dump_compiled_mod,
+  dump_compiled_mod_stats,
   dump_chunk,
   compile_and_dump_default,
 }

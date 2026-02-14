@@ -49,20 +49,6 @@ fn sample_assert_false(ctx : VMReplContext, expr : String) -> Unit raise Error {
   }
 }
 
-fn sample_assert_value(ctx : VMReplContext, expr : String, expected : String) -> Unit raise Error {
-  let code = "(equal? " + expr + " " + expected + ")"
-  match repl_eval(ctx, code) {
-    Ok(Value::Bool(true)) => ()
-    Ok(v) => {
-      match repl_eval(ctx, expr) {
-        Ok(actual) => fail("expected " + expected + ", got " + actual.to_string())
-        Err(e) => fail("error getting actual: " + e)
-      }
-    }
-    Err(e) => fail("error: " + e)
-  }
-}
-
 // ============================================================
 // samples/fibonacci/fibonacci.scm
 // ============================================================

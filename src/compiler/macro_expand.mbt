@@ -240,8 +240,8 @@ fn expand_let_syntax(
 
       // Build rename map for hygienic expansion
       let rename_map : Map[String, String] = Map::new()
-      for var in all_free_vars {
-        rename_map.set(var, gensym(var))
+      for free_var in all_free_vars {
+        rename_map.set(free_var, gensym(free_var))
       }
 
       // Register macros with the rename map
@@ -263,7 +263,7 @@ fn expand_let_syntax(
       }
 
       // Wrap in let bindings if there are any renames
-      if rename_map.size() == 0 {
+      if rename_map.length() == 0 {
         Ok(expanded_body)
       } else {
         // Build (let ((gensym1 orig1) ...) expanded_body)

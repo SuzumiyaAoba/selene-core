@@ -580,17 +580,3 @@ fn debug_value_to_string(value : Value) -> String {
   }
 }
 
-/// Left padding a string to a specified width
-fn pad_start(s : String, width : Int, pad_char : Char) -> String {
-  let len = s.length()
-  if len >= width {
-    return s
-  }
-  let mut result = ""
-  let mut i = 0
-  while i < width - len {
-    result = result + pad_char.to_string()
-    i = i + 1
-  }
-  result + s
-}

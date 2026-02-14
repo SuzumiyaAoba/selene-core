@@ -1,7 +1,7 @@
 /// Bytecode Dump Tool
 ///
-/// Display compiled modules in a human-readable format:
-/// - Dump the entire module
+/// Display compiled compiled_mods in a human-readable format:
+/// - Dump the entire compiled_mod
 /// - Detailed view by chunk
 /// - Disassembling orders
 /// - View Constant Pool Name Table
@@ -39,7 +39,7 @@ pub fn compact_dump_options() -> DumpOptions {
 }
 
 /// Dump Entire Module
-pub fn dump_module(module : CompiledModule, options : DumpOptions) -> String {
+pub fn dump_compiled_mod(compiled_mod : CompiledModule, options : DumpOptions) -> String {
   let mut result = "=".repeat(60) + "\n"
   result = result + "BYTECODE MODULE DUMP\n"
   result = result + "=".repeat(60) + "\n\n"
@@ -47,24 +47,24 @@ pub fn dump_module(module : CompiledModule, options : DumpOptions) -> String {
   // Main chunk
   result = result + "MAIN CHUNK:\n"
   result = result + "-".repeat(40) + "\n"
-  result = result + dump_chunk(module.main, -1, module, options)
+  result = result + dump_chunk(compiled_mod.main, -1, compiled_mod, options)
   result = result + "\n"
 
   // Child chunks
-  if module.chunks.length() > 0 {
-    result = result + "CHILD CHUNKS (" + module.chunks.length().to_string() + "):\n"
+  if compiled_mod.chunks.length() > 0 {
+    result = result + "CHILD CHUNKS (" + compiled_mod.chunks.length().to_string() + "):\n"
     result = result + "-".repeat(40) + "\n\n"
 
     let mut i = 0
-    while i < module.chunks.length() {
-      let chunk = module.chunks[i]
+    while i < compiled_mod.chunks.length() {
+      let chunk = compiled_mod.chunks[i]
       result = result + "CHUNK #" + i.to_string()
       match chunk.debug_name {
         Some(name) => result = result + " (" + name + ")"
         None => ()
       }
       result = result + ":\n"
-      result = result + dump_chunk(chunk, i, module, options)
+      result = result + dump_chunk(chunk, i, compiled_mod, options)
       result = result + "\n"
       i = i + 1
     }
@@ -81,7 +81,7 @@ pub fn dump_module(module : CompiledModule, options : DumpOptions) -> String {
 pub fn dump_chunk(
   chunk : CodeChunk,
   chunk_idx : Int,
-  module : CompiledModule,
+  compiled_mod : CompiledModule,
   options : DumpOptions
 ) -> String {
   let indent = " ".repeat(options.indent_width)
@@ -104,7 +104,7 @@ pub fn dump_chunk(
   }
 
   // Code
-  result = result + dump_code(chunk, chunk_idx, module, options)
+  result = result + dump_code(chunk, chunk_idx, compiled_mod, options)
 
   result
 }
@@ -154,7 +154,7 @@ fn dump_names(chunk : CodeChunk, options : DumpOptions) -> String {
 fn dump_code(
   chunk : CodeChunk,
   _chunk_idx : Int,
-  _module : CompiledModule,
+  _compiled_mod : CompiledModule,
   options : DumpOptions
 ) -> String {
   let indent = " ".repeat(options.indent_width)
@@ -526,22 +526,11 @@ fn dump_pad_left(s : String, width : Int, pad_char : Char) -> String {
   result + s
 }
 
-/// Repeat String
-fn repeat(self : String, n : Int) -> String {
-  let mut result = ""
-  let mut i = 0
-  while i < n {
-    result = result + self
-    i = i + 1
-  }
-  result
-}
-
 /// Compile and dump S-expression
 pub fn compile_and_dump(source : String, options : DumpOptions) -> Result[String, String] {
   let expr = parse_one(source)
   match compile_to_module(expr) {
-    Ok(module) => Ok(dump_module(module, options))
+    Ok(compiled_mod) => Ok(dump_compiled_mod(compiled_mod, options))
     Err(e) => Err(e.to_string())
   }
 }
@@ -551,25 +540,25 @@ pub fn compile_and_dump_default(source : String) -> Result[String, String] {
   compile_and_dump(source, default_dump_options())
 }
 
-/// Get module statistics
-pub fn dump_module_stats(module : CompiledModule) -> String {
+/// Get compiled_mod statistics
+pub fn dump_compiled_mod_stats(compiled_mod : CompiledModule) -> String {
   let mut result = "Module Statistics:\n"
   result = result + "-".repeat(30) + "\n"
 
   // Main Chunk Statistics
   result = result + "Main chunk:\n"
-  result = result + "  Code size: " + module.main.code.length().to_string() + " instructions\n"
-  result = result + "  Constants: " + module.main.constants.length().to_string() + "\n"
-  result = result + "  Names: " + module.main.names.length().to_string() + "\n"
+  result = result + "  Code size: " + compiled_mod.main.code.length().to_string() + " instructions\n"
+  result = result + "  Constants: " + compiled_mod.main.constants.length().to_string() + "\n"
+  result = result + "  Names: " + compiled_mod.main.names.length().to_string() + "\n"
 
   // Child Chunk Statistics
-  result = result + "Child chunks: " + module.chunks.length().to_string() + "\n"
+  result = result + "Child chunks: " + compiled_mod.chunks.length().to_string() + "\n"
 
-  let mut total_code = module.main.code.length()
-  let mut total_constants = module.main.constants.length()
-  let mut total_names = module.main.names.length()
+  let mut total_code = compiled_mod.main.code.length()
+  let mut total_constants = compiled_mod.main.constants.length()
+  let mut total_names = compiled_mod.main.names.length()
 
-  for chunk in module.chunks {
+  for chunk in compiled_mod.chunks {
     total_code = total_code + chunk.code.length()
     total_constants = total_constants + chunk.constants.length()
     total_names = total_names + chunk.names.length()
@@ -582,7 +571,7 @@ pub fn dump_module_stats(module : CompiledModule) -> String {
 
   // Order type statistics
   result = result + "\nInstruction breakdown:\n"
-  let instr_counts = count_instructions(module)
+  let instr_counts = count_instructions(compiled_mod)
   for entry in instr_counts {
     let (name, count) = entry
     if count > 0 {
@@ -594,7 +583,7 @@ pub fn dump_module_stats(module : CompiledModule) -> String {
 }
 
 /// Count Instructions in Module
-fn count_instructions(module : CompiledModule) -> Array[(String, Int)] {
+fn count_instructions(compiled_mod : CompiledModule) -> Array[(String, Int)] {
   let counts : @hashmap.T[String, Int] = @hashmap.new()
 
   fn count_chunk(chunk : CodeChunk) {
@@ -607,8 +596,8 @@ fn count_instructions(module : CompiledModule) -> Array[(String, Int)] {
     }
   }
 
-  count_chunk(module.main)
-  for chunk in module.chunks {
+  count_chunk(compiled_mod.main)
+  for chunk in compiled_mod.chunks {
     count_chunk(chunk)
   }
 

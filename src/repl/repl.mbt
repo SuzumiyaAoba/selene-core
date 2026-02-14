@@ -450,7 +450,7 @@ pub fn run_vm_interactive() -> Unit {
     match repl_eval(ctx, input) {
       Ok(value) => {
         // Expressions starting with define are displayed as void
-        let is_define = input.trim().starts_with("(define")
+        let is_define = input.trim().has_prefix("(define")
         if is_define {
           println("#<void>")
         } else {

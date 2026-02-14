@@ -12,11 +12,6 @@ pub(all) enum SerializeError {
   InvalidPrimOpKind(String)
 } derive(Show)
 
-/// Convert PrimOpKind to String
-fn primop_to_string(kind : PrimOpKind) -> String {
-  kind.to_string()
-}
-
 /// Convert from string to PrimOpKind
 fn string_to_primop(s : String) -> Result[PrimOpKind, SerializeError] {
   match s {
@@ -563,7 +558,7 @@ fn split_by_comma(s : String) -> Array[String] {
 }
 
 /// parser state
-struct DeserializeState {
+priv struct DeserializeState {
   lines : Array[String]
   mut pos : Int
 }
@@ -576,15 +571,6 @@ fn next_line(state : DeserializeState) -> Result[String, SerializeError] {
   let line = state.lines[state.pos]
   state.pos = state.pos + 1
   Ok(line)
-}
-
-/// peak line
-fn peek_line(state : DeserializeState) -> String? {
-  if state.pos >= state.lines.length() {
-    None
-  } else {
-    Some(state.lines[state.pos])
-  }
 }
 
 /// Get value from line in "key:value" format
@@ -942,7 +928,7 @@ fn op_allocate_locals() -> Int { 25 }
 fn op_init_local() -> Int { 26 }
 
 /// binary buffer
-struct BinaryBuffer {
+priv struct BinaryBuffer {
   data : Array[Int]
 }
 
@@ -1344,7 +1330,7 @@ pub fn serialize_module_to_binary(m : CompiledModule) -> Array[Int] {
 /// ========================================
 
 /// binary reader
-struct BinaryReader {
+priv struct BinaryReader {
   data : Array[Int]
   mut pos : Int
 }
@@ -1397,14 +1383,14 @@ fn read_string_binary(r : BinaryReader) -> Result[String, SerializeError] {
     }
     // UTF-8 decoding (simple implementation)
     if b < 128 {
-      result = result + Char::from_int(b).to_string()
+      result = result + Int::unsafe_to_char(b).to_string()
     } else if (b & 0xE0) == 0xC0 {
       let b2 = match read_byte(r) {
         Ok(b) => b
         Err(e) => return Err(e)
       }
       let code = ((b & 0x1F) << 6) | (b2 & 0x3F)
-      result = result + Char::from_int(code).to_string()
+      result = result + Int::unsafe_to_char(code).to_string()
     } else if (b & 0xF0) == 0xE0 {
       let b2 = match read_byte(r) {
         Ok(b) => b
@@ -1415,7 +1401,7 @@ fn read_string_binary(r : BinaryReader) -> Result[String, SerializeError] {
         Err(e) => return Err(e)
       }
       let code = ((b & 0x0F) << 12) | ((b2 & 0x3F) << 6) | (b3 & 0x3F)
-      result = result + Char::from_int(code).to_string()
+      result = result + Int::unsafe_to_char(code).to_string()
     }
     i = i + 1
   }
@@ -1465,7 +1451,7 @@ fn read_bc_value(r : BinaryReader) -> Result[BCValue, SerializeError] {
         Ok(n) => n
         Err(e) => return Err(e)
       }
-      Ok(BCValue::Char(Char::from_int(code)))
+      Ok(BCValue::Char(Int::unsafe_to_char(code)))
     }
     5 => {  // tag_string()
       let s = match read_string_binary(r) {

@@ -3,7 +3,7 @@
 /// Generate bytecode from intermediate representation
 
 /// code generation context
-struct CodegenContext {
+priv struct CodegenContext {
   /// main builder
   builder : CodeChunkBuilder
   /// Generated child chunks (nested functions)
@@ -293,7 +293,7 @@ fn codegen_lambda(ctx : CodegenContext, info : LambdaInfo) -> Unit {
   // Also pass lambda params and free_vars for nested lambda capture index calculation
   let func_ctx = new_context_with_boxing(None, adjusted_boxed_params, func_boxed_locals, info.params, info.free_vars)
   func_ctx.builder.arity = info.arity
-  func_ctx.builder.has_rest_param = not(info.rest_param.is_empty())
+  func_ctx.builder.has_rest_param = not(info.rest_param is None)
   // Number of local variables: number of captures + number of parameters (including rest param if any)
   func_ctx.builder.num_locals = info.free_vars.length() + info.params.length()
   func_ctx.builder.num_free_vars = info.free_vars.length()

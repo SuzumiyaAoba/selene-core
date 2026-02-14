@@ -332,14 +332,14 @@ pub fn profiler_full_report(profiler : Profiler) -> String {
   result
 }
 
-/// Count the number of entries in HashMap
+/// Count the number of entries in @hashmap.T
 fn count_hashmap_entries(map : @hashmap.T[String, InstructionStats]) -> Int {
   let mut count = 0
   map.each(fn(_k, _v) { count = count + 1 })
   count
 }
 
-/// Count the number of entries in HashMap (Int key)
+/// Count the number of entries in @hashmap.T (Int key)
 fn count_hashmap_entries_int(map : @hashmap.T[Int, FunctionStats]) -> Int {
   let mut count = 0
   map.each(fn(_k, _v) { count = count + 1 })
