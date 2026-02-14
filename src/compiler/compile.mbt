@@ -427,6 +427,7 @@ pub fn compile(
   match expr {
     // self-assessment
     SExpr::Number(n) => Ok(IRExpr::Const(IRConst::Int(n)))
+    SExpr::Real(r) => Ok(IRExpr::Const(IRConst::Real(r)))
     SExpr::Bool(b) => Ok(IRExpr::Const(IRConst::Bool(b)))
     SExpr::Char(c) => Ok(IRExpr::Const(IRConst::Char(c)))
     SExpr::String(s) => Ok(IRExpr::Const(IRConst::String(s)))
@@ -624,6 +625,7 @@ fn compile_lambda(args : SExpr, env : CompileEnv) -> Result[IRExpr, CompileError
         boxed_params,
         boxed_locals,
         boxed_free_vars,
+        vars_adjusted: false,
       }))
     }
     _ => Err(CompileError::SyntaxError("lambda: invalid syntax"))
@@ -1675,6 +1677,7 @@ fn compile_delay(args : SExpr, env : CompileEnv) -> Result[IRExpr, CompileError]
         boxed_params: [],
         boxed_locals: [],
         boxed_free_vars,
+        vars_adjusted: false,
       }
       Ok(IRExpr::Delay(IRExpr::Lambda(lambda_info)))
     }

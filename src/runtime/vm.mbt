@@ -235,6 +235,7 @@ pub fn create_initial_globals() -> @hashmap.T[String, Value] {
     // String
     "string-length", "string-ref", "string-append",
     "string=?", "string<?", "string>?", "string<=?", "string>=?",
+    "string-ci=?", "string-ci<?", "string-ci>?", "string-ci<=?", "string-ci>=?",
     "make-string", "substring", "string->list", "list->string",
     // Vector
     "make-vector", "vector", "vector-length", "vector-ref",
@@ -252,8 +253,13 @@ pub fn create_initial_globals() -> @hashmap.T[String, Value] {
     "numerator", "denominator", "rational?", "exact?", "inexact?",
     // I/O
     "display", "newline", "write", "read",
+    // Port operations
+    "input-port?", "output-port?", "port?",
+    "open-input-file", "open-output-file",
+    "close-input-port", "close-output-port",
+    "read-char", "peek-char", "write-char", "eof-object?",
     // Higher-order
-    "apply", "force",
+    "apply", "force", "filter", "fold-left", "fold-right",
     "values", "call-with-values", "dynamic-wind",
     // Association lists
     "assq", "assv", "assoc", "memq", "memv", "member",

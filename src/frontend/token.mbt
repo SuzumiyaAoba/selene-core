@@ -5,6 +5,7 @@ pub enum Token {
   RParen
   Identifier(String)
   Number(Int)
+  Real(Double)
   Boolean(Bool)
   String(String)
   Char(Char)

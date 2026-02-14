@@ -71,6 +71,7 @@ fn parse_expr(tokens : Array[Token], start : Int) -> (SExpr, Int) {
     Token::Boolean(b) => (SExpr::Bool(b), start + 1)
     Token::Identifier(name) => (SExpr::Symbol(name), start + 1)
     Token::Number(value) => (SExpr::Number(value), start + 1)
+    Token::Real(value) => (SExpr::Real(value), start + 1)
     Token::String(s) => (SExpr::String(s), start + 1)
     Token::Char(c) => (SExpr::Char(c), start + 1)
     Token::Quote => {

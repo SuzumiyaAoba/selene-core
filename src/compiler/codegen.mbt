@@ -106,39 +106,11 @@ fn codegen_const(ctx : CodegenContext, c : IRConst) -> Unit {
 /// - Free variables: depth=0, index=capture position
 /// - Parameters: depth=0, index=number of captures + parameter position
 fn codegen_var(ctx : CodegenContext, var_ref : VarRef) -> Unit {
-  // For depth=0 variables, we need to check if it's a lambda parameter
-  // and adjust the index to account for captured free variables
-  let actual_index = if var_ref.depth == 0 {
-    // Check if this is a lambda parameter
-    let mut param_index = -1
-    for i in 0..<ctx.lambda_params.length() {
-      if ctx.lambda_params[i] == var_ref.name {
-        param_index = i
-        break
-      }
-    }
-    if param_index >= 0 {
-      // It's a parameter: runtime index = num_captures + param_index
-      ctx.builder.num_free_vars + param_index
-    } else {
-      // Check if it's a captured free variable
-      let mut capture_index = -1
-      for i in 0..<ctx.lambda_free_vars.length() {
-        if ctx.lambda_free_vars[i].name == var_ref.name {
-          capture_index = i
-          break
-        }
-      }
-      if capture_index >= 0 {
-        capture_index
-      } else {
-        // It's a let-bound local or other variable
-        var_ref.index
-      }
-    }
-  } else {
-    var_ref.index
-  }
+  // The optimizer's adjust_lambda_var_refs has already adjusted all depth=0
+  // indices to account for free_vars prepending in the lambda frame.
+  // Use the adjusted index directly - name-based lookup is unreliable
+  // when variable names are shadowed (e.g. nested named-let with same name).
+  let actual_index = var_ref.index
 
   ctx.builder.emit(Opcode::LoadLocal(var_ref.depth, actual_index))
 
@@ -329,6 +301,14 @@ fn codegen_lambda(ctx : CodegenContext, info : LambdaInfo) -> Unit {
   // Let bindings inside the lambda body should start after these slots
   func_ctx.local_offset = info.free_vars.length() + info.params.length()
 
+  // Pre-allocate all local variable slots at function entry
+  let initial_offset = info.free_vars.length() + info.params.length()
+  let max_locals = count_max_locals(info.body, initial_offset)
+  let extra_locals = max_locals - initial_offset
+  if extra_locals > 0 {
+    func_ctx.builder.emit(Opcode::AllocateLocals(extra_locals))
+  }
+
   // Box parameters that require boxing when starting Lambda
   // Note: The captured box is already boxed, so skip it
   for boxed_param_idx in info.boxed_params {
@@ -374,33 +354,11 @@ fn codegen_lambda(ctx : CodegenContext, info : LambdaInfo) -> Unit {
     // Calculate the correct index and depth for capture instructions.
     // These instructions are emitted in the enclosing context's code.
     let actual_index = if var_ref.depth == 0 {
-      // Check if this var is a parameter of the enclosing lambda (ctx)
-      let mut param_index = -1
-      for i in 0..<ctx.lambda_params.length() {
-        if ctx.lambda_params[i] == var_ref.name {
-          param_index = i
-          break
-        }
-      }
-      if param_index >= 0 {
-        // It's a parameter: runtime index = num_captures + param_index
-        ctx.builder.num_free_vars + param_index
-      } else {
-        // It's a capture: find index in ctx.lambda_free_vars by name
-        let mut capture_index = -1
-        for i in 0..<ctx.lambda_free_vars.length() {
-          if ctx.lambda_free_vars[i].name == var_ref.name {
-            capture_index = i
-            break
-          }
-        }
-        if capture_index >= 0 {
-          capture_index
-        } else {
-          // Fallback to original index (for let bindings etc.)
-          var_ref.index
-        }
-      }
+      // The optimizer's adjust_lambda_var_refs has already shifted indices
+      // to account for free_vars prepending in the parent's frame.
+      // Use the adjusted index directly - name-based lookup is unreliable
+      // when variable names are shadowed (e.g. nested named-let with same name).
+      var_ref.index
     } else {
       // For depth > 0: try to find the variable in the current context first.
       // This is essential for delay lambdas where the parent frame may not be
@@ -842,8 +800,7 @@ fn codegen_let(
     needs_boxing.push(need)
   }
 
-  // Reserve local variable slot
-  ctx.builder.emit(Opcode::AllocateLocals(num_bindings))
+  // Slots are pre-allocated at function entry (no AllocateLocals needed here)
 
   // Save current offset and update for new bindings
   let saved_offset = ctx.local_offset
@@ -959,8 +916,7 @@ fn codegen_letrec(
     needs_boxing.push(need)
   }
 
-  // First, reserve slots for all bindings
-  ctx.builder.emit(Opcode::AllocateLocals(num_bindings))
+  // Slots are pre-allocated at function entry (no AllocateLocals needed here)
 
   // Save current offset and update for new bindings
   let saved_offset = ctx.local_offset
@@ -1001,6 +957,8 @@ fn codegen_letrec(
       ctx.builder.emit(Opcode::LoadLocal(0, saved_offset + i))
       codegen_expr(ctx, bindings[i].init)
       ctx.builder.emit(Opcode::BoxSet)
+      // BoxSet pushes Nil (unspecified return value); discard it
+      ctx.builder.emit(Opcode::Pop)
     } else {
       // Non-boxed: evaluate and store directly
       codegen_expr(ctx, bindings[i].init)
@@ -1200,9 +1158,117 @@ fn codegen_or(ctx : CodegenContext, exprs : Array[IRExpr]) -> Unit {
   }
 }
 
+/// Count the maximum number of local variable slots needed by an expression tree.
+/// `current_offset` is the current local_offset (number of slots already in use).
+/// Returns the high-water mark of local_offset across all paths.
+fn count_max_locals(expr : IRExpr, current_offset : Int) -> Int {
+  match expr {
+    IRExpr::Const(_) | IRExpr::Var(_) | IRExpr::GlobalVar(_) | IRExpr::Quote(_) =>
+      current_offset
+    IRExpr::Let(bindings, body) => {
+      // Init expressions are compiled at current_offset (before bindings are established)
+      let mut max_val = current_offset
+      for binding in bindings {
+        let v = count_max_locals(binding.init, current_offset)
+        if v > max_val {
+          max_val = v
+        }
+      }
+      // After bindings, offset increases
+      let new_offset = current_offset + bindings.length()
+      if new_offset > max_val {
+        max_val = new_offset
+      }
+      let body_max = count_max_locals(body, new_offset)
+      if body_max > max_val {
+        max_val = body_max
+      }
+      max_val
+    }
+    IRExpr::Letrec(bindings, body) => {
+      // For letrec, init expressions see the bindings (new_offset)
+      let new_offset = current_offset + bindings.length()
+      let mut max_val = new_offset
+      for binding in bindings {
+        let v = count_max_locals(binding.init, new_offset)
+        if v > max_val {
+          max_val = v
+        }
+      }
+      let body_max = count_max_locals(body, new_offset)
+      if body_max > max_val {
+        max_val = body_max
+      }
+      max_val
+    }
+    IRExpr::If(cond, then_branch, else_branch) => {
+      let mut max_val = count_max_locals(cond, current_offset)
+      let v1 = count_max_locals(then_branch, current_offset)
+      if v1 > max_val {
+        max_val = v1
+      }
+      let v2 = count_max_locals(else_branch, current_offset)
+      if v2 > max_val {
+        max_val = v2
+      }
+      max_val
+    }
+    IRExpr::Begin(exprs) => {
+      let mut max_val = current_offset
+      for expr in exprs {
+        let v = count_max_locals(expr, current_offset)
+        if v > max_val {
+          max_val = v
+        }
+      }
+      max_val
+    }
+    IRExpr::Lambda(_) => current_offset // nested lambda has its own frame
+    IRExpr::App(func, args) | IRExpr::TailApp(func, args) => {
+      let mut max_val = count_max_locals(func, current_offset)
+      for arg in args {
+        let v = count_max_locals(arg, current_offset)
+        if v > max_val {
+          max_val = v
+        }
+      }
+      max_val
+    }
+    IRExpr::PrimOp(_, args) => {
+      let mut max_val = current_offset
+      for arg in args {
+        let v = count_max_locals(arg, current_offset)
+        if v > max_val {
+          max_val = v
+        }
+      }
+      max_val
+    }
+    IRExpr::Set(_, value) | IRExpr::GlobalSet(_, value) =>
+      count_max_locals(value, current_offset)
+    IRExpr::CallCC(proc) => count_max_locals(proc, current_offset)
+    IRExpr::Delay(body) => count_max_locals(body, current_offset)
+    IRExpr::And(exprs) | IRExpr::Or(exprs) => {
+      let mut max_val = current_offset
+      for expr in exprs {
+        let v = count_max_locals(expr, current_offset)
+        if v > max_val {
+          max_val = v
+        }
+      }
+      max_val
+    }
+  }
+}
+
 /// Convert IR to compiled module
 pub fn generate(ir : IRExpr) -> CompiledModule {
   let ctx = new_context(Some("main"))
+  // Pre-allocate all local variable slots at the start of the main chunk
+  let max_locals = count_max_locals(ir, 0)
+  if max_locals > 0 {
+    ctx.builder.emit(Opcode::AllocateLocals(max_locals))
+  }
   codegen_expr(ctx, ir)
   ctx.builder.emit(Opcode::Halt)
   let main_chunk = ctx.builder.build()

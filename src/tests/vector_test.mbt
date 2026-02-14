@@ -151,9 +151,11 @@ test "vector-ref last" {
 }
 
 /// Basic operation of vector-set!
+/// R5RS: vector-set! mutates in place and returns unspecified
 test "vector-set! basic" {
   let env = initial_env()
-  let expr = parse_one("(vector-set! (vector 1 2 3) 1 99)")
+  // vector-set! mutates the vector in place and returns unspecified (Nil)
+  let expr = parse_one("(let ((v (vector 1 2 3))) (vector-set! v 1 99) v)")
   match eval(expr, env) {
     Ok(Value::Vector(items)) => {
       assert_eq(items.length(), 3)
@@ -287,10 +289,10 @@ test "vector with complex elements" {
 }
 
 /// Combination of make-vector and vector-set!
+/// R5RS: vector-set! mutates in place and returns unspecified
 test "make-vector with vector-set!" {
   let env = initial_env()
-  // Change the intermediate element with (vector-set! (make-vector 3 0) 1 99)
-  let expr = parse_one("(vector-set! (make-vector 3 0) 1 99)")
+  let expr = parse_one("(let ((v (make-vector 3 0))) (vector-set! v 1 99) v)")
   match eval(expr, env) {
     Ok(Value::Vector(items)) => {
       assert_eq(items.length(), 3)

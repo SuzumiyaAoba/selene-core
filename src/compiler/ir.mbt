@@ -252,6 +252,8 @@ pub(all) struct LambdaInfo {
   boxed_locals : Array[String]
   /// Indices of free_vars that require boxing
   boxed_free_vars : Array[Int]
+  /// Whether VarRef indices in body have been adjusted for free vars
+  vars_adjusted : Bool
 } derive(Show)
 
 /// intermediate representation expression
@@ -336,6 +338,7 @@ pub fn sexpr_to_ir_const(sexpr : SExpr) -> IRConst {
     SExpr::Nil => IRConst::Nil
     SExpr::Bool(b) => IRConst::Bool(b)
     SExpr::Number(n) => IRConst::Int(n)
+    SExpr::Real(r) => IRConst::Real(r)
     SExpr::Char(c) => IRConst::Char(c)
     SExpr::String(s) => IRConst::String(s)
     SExpr::Symbol(s) => IRConst::Symbol(s)

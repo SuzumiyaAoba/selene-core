@@ -26,6 +26,7 @@ fn token_snapshot(token : Token) -> String {
     Token::RParen => "RParen"
     Token::Identifier(name) => "Identifier(" + name + ")"
     Token::Number(value) => "Number(" + value.to_string() + ")"
+    Token::Real(value) => "Real(" + value.to_string() + ")"
     Token::Boolean(b) => "Boolean(" + b.to_string() + ")"
     Token::String(s) => "String(" + s + ")"
     Token::Char(c) => "Char(" + c.to_string() + ")"

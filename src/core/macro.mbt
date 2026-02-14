@@ -101,6 +101,11 @@ fn match_pattern_inner(
         SExpr::Number(m) => n == m
         _ => false
       }
+    SExpr::Real(r) =>
+      match expr {
+        SExpr::Real(s) => r == s
+        _ => false
+      }
     // boolean literal
     SExpr::Bool(b) =>
       match expr {

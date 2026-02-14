@@ -125,6 +125,7 @@ pub fn eval(expr : SExpr, env : Env) -> Result[Value, EvalError] {
   match expr {
     // self-assessment
     SExpr::Number(n) => Ok(Value::Number(Number::Int(n)))
+    SExpr::Real(r) => Ok(Value::Number(Number::Real(r)))
     SExpr::Bool(b) => Ok(Value::Bool(b))
     SExpr::Char(c) => Ok(Value::Char(c))
     SExpr::String(s) => Ok(Value::String(s))
