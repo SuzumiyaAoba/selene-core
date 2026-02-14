@@ -5,6 +5,7 @@ fn sexpr_snapshot(expr : SExpr) -> String {
     SExpr::Bool(b) => "Bool(" + b.to_string() + ")"
     SExpr::Symbol(name) => "Symbol(" + name + ")"
     SExpr::Number(value) => "Number(" + value.to_string() + ")"
+    SExpr::Real(value) => "Real(" + value.to_string() + ")"
     SExpr::Char(c) => "Char(" + c.to_string() + ")"
     SExpr::String(s) => "String(" + s + ")"
     SExpr::Pair(left, right) =>

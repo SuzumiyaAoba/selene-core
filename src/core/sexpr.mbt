@@ -4,6 +4,7 @@ pub(all) enum SExpr {
   Bool(Bool)
   Symbol(String)
   Number(Int)
+  Real(Double)
   Char(Char)
   String(String)
   Pair(SExpr, SExpr)
@@ -31,6 +32,7 @@ pub fn sexpr_to_value(sexpr : SExpr) -> Value {
     SExpr::Bool(b) => Value::Bool(b)
     SExpr::Symbol(name) => Value::Symbol(name)
     SExpr::Number(n) => Value::Number(Number::Int(n))
+    SExpr::Real(r) => Value::Number(Number::Real(r))
     SExpr::Char(c) => Value::Char(c)
     SExpr::String(s) => Value::String(s)
     SExpr::Pair(car, cdr) =>

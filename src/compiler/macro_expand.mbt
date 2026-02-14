@@ -54,6 +54,7 @@ pub fn expand_expr(expr : SExpr, macro_env : MacroEnv) -> Result[SExpr, CompileE
   match expr {
     // Atomic values: return as-is
     SExpr::Number(_)
+    | SExpr::Real(_)
     | SExpr::Bool(_)
     | SExpr::String(_)
     | SExpr::Char(_)

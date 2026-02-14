@@ -110,21 +110,9 @@ pub fn builtin_vector_set(args : Array[Value]) -> Result[Value, EvalError] {
       if k < 0 || k >= items.length() {
         return Err(EvalError::InvalidSyntax("vector-set!: index out of bounds"))
       }
-      let new_items : Array[Value] = []
-      let mut i = 0
-      let len = items.length()
-      let _ = while i < len {
-        if i == k {
-          new_items.push(args[2])
-        } else {
-          new_items.push(items[i])
-        }
-        i = i + 1
-      } else {
-        ()
-      }
-      // Note: Originally only side effects, the return value is undefined, but the invariant model returns a new vector
-      Ok(Value::Vector(new_items))
+      // Mutate the vector in place (vector-set! is a side-effect operation)
+      items[k] = args[2]
+      Ok(Value::Nil)
     }
     (Value::Vector(_), _) =>
       Err(

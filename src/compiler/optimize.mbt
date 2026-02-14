@@ -8,12 +8,12 @@
 /// Optimize IR expressions
 pub fn optimize(expr : IRExpr) -> IRExpr {
   // Apply optimization recursively
-  let optimized = optimize_expr(expr)
+  let optimized = optimize_expr(expr, 0)
   // Optimize in multiple passes until convergence (up to 10 times)
   let mut result = optimized
   let mut i = 0
   while i < 10 {
-    let new_result = optimize_expr(result)
+    let new_result = optimize_expr(result, 0)
     // End if there is no change (simple equality check)
     if ir_expr_equal(result, new_result) {
       break
@@ -25,7 +25,8 @@ pub fn optimize(expr : IRExpr) -> IRExpr {
 }
 
 /// Optimize IR expression in one pass
-fn optimize_expr(expr : IRExpr) -> IRExpr {
+/// frame_size: number of local variable slots allocated so far in the current frame
+fn optimize_expr(expr : IRExpr, frame_size : Int) -> IRExpr {
   match expr {
     IRExpr::Const(_) => expr
     IRExpr::Var(_) => expr
@@ -33,62 +34,62 @@ fn optimize_expr(expr : IRExpr) -> IRExpr {
     IRExpr::Quote(_) => expr
 
     IRExpr::If(cond, then_branch, else_branch) =>
-      optimize_if(cond, then_branch, else_branch)
+      optimize_if(cond, then_branch, else_branch, frame_size)
 
     IRExpr::Begin(exprs) =>
-      optimize_begin(exprs)
+      optimize_begin(exprs, frame_size)
 
     IRExpr::Lambda(info) =>
       optimize_lambda(info)
 
     IRExpr::App(func, args) =>
-      optimize_app(func, args, false)
+      optimize_app(func, args, false, frame_size)
 
     IRExpr::TailApp(func, args) =>
-      optimize_app(func, args, true)
+      optimize_app(func, args, true, frame_size)
 
     IRExpr::Let(bindings, body) =>
-      optimize_let(bindings, body)
+      optimize_let(bindings, body, frame_size)
 
     IRExpr::Letrec(bindings, body) =>
-      optimize_letrec(bindings, body)
+      optimize_letrec(bindings, body, frame_size)
 
     IRExpr::Set(var_ref, value) =>
-      IRExpr::Set(var_ref, optimize_expr(value))
+      IRExpr::Set(var_ref, optimize_expr(value, frame_size))
 
     IRExpr::GlobalSet(name, value) =>
-      IRExpr::GlobalSet(name, optimize_expr(value))
+      IRExpr::GlobalSet(name, optimize_expr(value, frame_size))
 
     IRExpr::PrimOp(kind, args) =>
-      optimize_primop(kind, args)
+      optimize_primop(kind, args, frame_size)
 
     IRExpr::CallCC(proc) =>
-      IRExpr::CallCC(optimize_expr(proc))
+      IRExpr::CallCC(optimize_expr(proc, frame_size))
 
     IRExpr::Delay(body) =>
-      IRExpr::Delay(optimize_expr(body))
+      IRExpr::Delay(optimize_expr(body, frame_size))
 
     IRExpr::And(exprs) =>
-      optimize_and(exprs)
+      optimize_and(exprs, frame_size)
 
     IRExpr::Or(exprs) =>
-      optimize_or(exprs)
+      optimize_or(exprs, frame_size)
   }
 }
 
 /// Optimize arrays of expressions
-fn optimize_exprs(exprs : Array[IRExpr]) -> Array[IRExpr] {
+fn optimize_exprs(exprs : Array[IRExpr], frame_size : Int) -> Array[IRExpr] {
   let result : Array[IRExpr] = []
   for expr in exprs {
-    result.push(optimize_expr(expr))
+    result.push(optimize_expr(expr, frame_size))
   }
   result
 }
 
 /// Optimize function application (including inline expansion)
-fn optimize_app(func : IRExpr, args : Array[IRExpr], is_tail : Bool) -> IRExpr {
-  let opt_func = optimize_expr(func)
-  let opt_args = optimize_exprs(args)
+fn optimize_app(func : IRExpr, args : Array[IRExpr], is_tail : Bool, frame_size : Int) -> IRExpr {
+  let opt_func = optimize_expr(func, frame_size)
+  let opt_args = optimize_exprs(args, frame_size)
 
   // Inline direct Lambda calls
   // ((lambda (x) body) arg) => (let ((x arg)) body)
@@ -110,7 +111,7 @@ fn optimize_app(func : IRExpr, args : Array[IRExpr], is_tail : Bool) -> IRExpr {
             // Convert TailApp to App in the body since after inlining,
             // the code is no longer in tail position
             let untailed_body = untail_calls(info.body)
-            return optimize_expr(IRExpr::Let(bindings, untailed_body))
+            return optimize_expr(IRExpr::Let(bindings, untailed_body), frame_size)
           }
         }
       }
@@ -200,10 +201,10 @@ fn ir_expr_size(expr : IRExpr) -> Int {
 }
 
 /// Optimize if expressions
-fn optimize_if(cond : IRExpr, then_branch : IRExpr, else_branch : IRExpr) -> IRExpr {
-  let opt_cond = optimize_expr(cond)
-  let opt_then = optimize_expr(then_branch)
-  let opt_else = optimize_expr(else_branch)
+fn optimize_if(cond : IRExpr, then_branch : IRExpr, else_branch : IRExpr, frame_size : Int) -> IRExpr {
+  let opt_cond = optimize_expr(cond, frame_size)
+  let opt_then = optimize_expr(then_branch, frame_size)
+  let opt_else = optimize_expr(else_branch, frame_size)
 
   // Constant condition reduction
   match opt_cond {
@@ -216,8 +217,8 @@ fn optimize_if(cond : IRExpr, then_branch : IRExpr, else_branch : IRExpr) -> IRE
 }
 
 /// Optimize the begin expression
-fn optimize_begin(exprs : Array[IRExpr]) -> IRExpr {
-  let optimized = optimize_exprs(exprs)
+fn optimize_begin(exprs : Array[IRExpr], frame_size : Int) -> IRExpr {
+  let optimized = optimize_exprs(exprs, frame_size)
 
   // Empty begin is nil
   if optimized.length() == 0 {
@@ -270,35 +271,48 @@ fn optimize_begin(exprs : Array[IRExpr]) -> IRExpr {
 
 /// Optimize lambda expressions
 fn optimize_lambda(info : LambdaInfo) -> IRExpr {
-  // Adjust variable references in Lambda
-  // - Free variables (contained in free_vars): depth=0, index=free_vars position in list
-  // - Parameter (depth=0): add num_captures to index
-  let adjusted_body = adjust_lambda_var_refs(
-    info.body,
-    info.params,
-    info.free_vars
-  )
+  // Only adjust VarRefs once (on first optimization pass)
+  let adjusted_body = if not(info.vars_adjusted) {
+    // Adjust variable references in Lambda
+    // - Free variables (contained in free_vars): depth=0, index=free_vars position in list
+    // - Parameter (depth=0): add num_captures to index
+    adjust_lambda_var_refs(
+      info.body,
+      info.params,
+      info.free_vars
+    )
+  } else {
+    info.body
+  }
 
   // Adjust VarRef of free_vars so that it can be referenced from the parent scope.
   // From the perspective of the parent scope, depth needs to be decreased by 1
   let adjusted_free_vars : Array[VarRef] = []
   for var_ref in info.free_vars {
-    adjusted_free_vars.push({
-      name: var_ref.name,
-      depth: if var_ref.depth > 0 { var_ref.depth - 1 } else { 0 },
-      index: var_ref.index
-    })
+    if not(info.vars_adjusted) {
+      adjusted_free_vars.push({
+        name: var_ref.name,
+        depth: if var_ref.depth > 0 { var_ref.depth - 1 } else { 0 },
+        index: var_ref.index
+      })
+    } else {
+      adjusted_free_vars.push(var_ref)
+    }
   }
+
+  // After adjustment, frame starts with free_vars then params
+  let lambda_frame_size = info.free_vars.length() + info.params.length()
 
   IRExpr::Lambda({
     params: info.params,
     arity: info.arity,
     rest_param: info.rest_param,
-    body: optimize_expr(adjusted_body),
+    body: optimize_expr(adjusted_body, lambda_frame_size),
     free_vars: adjusted_free_vars,
     boxed_params: info.boxed_params,
     boxed_locals: info.boxed_locals,
     boxed_free_vars: info.boxed_free_vars,
+    vars_adjusted: true,
   })
 }
 
@@ -311,11 +325,15 @@ fn adjust_lambda_var_refs(
   match expr {
     IRExpr::Var(var_ref) => {
       // Check whether it is included in the free variable list
+      // Only match when depth > 0: depth=0 vars are always local (params/let/letrec bindings)
+      // and should never be mapped to captures, even if they share a name with a free var
       let mut free_var_index = -1
-      for i in 0..<free_vars.length() {
-        if free_vars[i].name == var_ref.name {
-          free_var_index = i
-          break
+      if var_ref.depth > 0 {
+        for i in 0..<free_vars.length() {
+          if free_vars[i].name == var_ref.name {
+            free_var_index = i
+            break
+          }
         }
       }
 
@@ -327,41 +345,13 @@ fn adjust_lambda_var_refs(
           index: free_var_index,
         })
       } else if var_ref.depth == 0 {
-        // Check if this is a parameter (by checking if name is in params)
-        let mut is_param = false
-        for p in params {
-          if p == var_ref.name {
-            is_param = true
-            break
-          }
-        }
-        if is_param {
-          // Parameter: check if already adjusted (index >= params.length())
-          if var_ref.index < params.length() {
-            // Not yet adjusted: add num_captures to index
-            IRExpr::Var({
-              name: var_ref.name,
-              depth: 0,
-              index: var_ref.index + free_vars.length(),
-            })
-          } else {
-            // Already adjusted
-            expr
-          }
-        } else {
-          // Let binding: check if already adjusted (index >= free_vars.length() + params.length())
-          if var_ref.index < free_vars.length() + params.length() {
-            // Not yet adjusted: add num_captures to index
-            IRExpr::Var({
-              name: var_ref.name,
-              depth: 0,
-              index: var_ref.index + free_vars.length(),
-            })
-          } else {
-            // Already adjusted
-            expr
-          }
-        }
+        // This function is only called once (guarded by vars_adjusted flag),
+        // so unconditionally shift all depth=0 vars by free_vars.length()
+        IRExpr::Var({
+          name: var_ref.name,
+          depth: 0,
+          index: var_ref.index + free_vars.length(),
+        })
       } else {
         // Variables in further outer scope (for nested lambdas)
         // Keep as is (processed by nested lambda)
@@ -381,10 +371,29 @@ fn adjust_lambda_var_refs(
       }
       IRExpr::Begin(adjusted)
     }
-    IRExpr::Lambda(_lambda_info) =>
-      // Leave nested lambdas alone
-      // optimize_expr → processed independently by optimize_lambda
-      expr
+    IRExpr::Lambda(lambda_info) => {
+      // Adjust free_vars that reference the current frame (depth == 1 from nested lambda's perspective)
+      let adjusted_fv : Array[VarRef] = []
+      for fv in lambda_info.free_vars {
+        if fv.depth == 1 {
+          // This free var references our frame - shift index by our free_vars count
+          adjusted_fv.push({ name: fv.name, depth: 1, index: fv.index + free_vars.length() })
+        } else {
+          adjusted_fv.push(fv)
+        }
+      }
+      IRExpr::Lambda({
+        params: lambda_info.params,
+        arity: lambda_info.arity,
+        rest_param: lambda_info.rest_param,
+        body: lambda_info.body,
+        free_vars: adjusted_fv,
+        boxed_params: lambda_info.boxed_params,
+        boxed_locals: lambda_info.boxed_locals,
+        boxed_free_vars: lambda_info.boxed_free_vars,
+        vars_adjusted: lambda_info.vars_adjusted,
+      })
+    }
     IRExpr::App(func, args) => {
       let adjusted_args : Array[IRExpr] = []
       for arg in args {
@@ -421,11 +430,14 @@ fn adjust_lambda_var_refs(
     }
     IRExpr::Set(var_ref, value) => {
       // Check whether it is included in the free variable list
+      // Only match when depth > 0: depth=0 vars are always local
       let mut free_var_index = -1
-      for i in 0..<free_vars.length() {
-        if free_vars[i].name == var_ref.name {
-          free_var_index = i
-          break
+      if var_ref.depth > 0 {
+        for i in 0..<free_vars.length() {
+          if free_vars[i].name == var_ref.name {
+            free_var_index = i
+            break
+          }
         }
       }
 
@@ -433,29 +445,9 @@ fn adjust_lambda_var_refs(
         // free variable
         { name: var_ref.name, depth: 0, index: free_var_index }
       } else if var_ref.depth == 0 {
-        // Check if this is a parameter
-        let mut is_param = false
-        for p in params {
-          if p == var_ref.name {
-            is_param = true
-            break
-          }
-        }
-        if is_param {
-          // Parameter: check if already adjusted
-          if var_ref.index < params.length() {
-            { name: var_ref.name, depth: 0, index: var_ref.index + free_vars.length() }
-          } else {
-            var_ref
-          }
-        } else {
-          // Let binding: check if already adjusted
-          if var_ref.index < free_vars.length() + params.length() {
-            { name: var_ref.name, depth: 0, index: var_ref.index + free_vars.length() }
-          } else {
-            var_ref
-          }
-        }
+        // This function is only called once (guarded by vars_adjusted flag),
+        // so unconditionally shift all depth=0 vars by free_vars.length()
+        { name: var_ref.name, depth: 0, index: var_ref.index + free_vars.length() }
       } else {
         // variables in further outer scopes
         var_ref
@@ -494,15 +486,16 @@ fn adjust_lambda_var_refs(
 }
 
 /// Optimize let expressions
-fn optimize_let(bindings : Array[LetBinding], body : IRExpr) -> IRExpr {
-  // Optimize binding initialization expressions
+/// base_offset: frame position where the let bindings start (= frame_size before this let)
+fn optimize_let(bindings : Array[LetBinding], body : IRExpr, base_offset : Int) -> IRExpr {
+  // Optimize binding initialization expressions (inits use pre-let frame)
   let opt_bindings : Array[LetBinding] = []
   for binding in bindings {
-    opt_bindings.push({ name: binding.name, init: optimize_expr(binding.init) })
+    opt_bindings.push({ name: binding.name, init: optimize_expr(binding.init, base_offset) })
   }
 
-  // Optimize the body
-  let opt_body = optimize_expr(body)
+  // Optimize the body (body uses post-let frame)
+  let opt_body = optimize_expr(body, base_offset + opt_bindings.length())
 
   // Empty binding removes let
   if opt_bindings.length() == 0 {
@@ -523,10 +516,12 @@ fn optimize_let(bindings : Array[LetBinding], body : IRExpr) -> IRExpr {
     } else if has_side_effect(binding.init) {
       // Execute only the expression if there are side effects
       side_effect_exprs.push(binding.init)
-      removed_indices.push(idx)
+      // Store frame-absolute index (base_offset + binding-local index)
+      removed_indices.push(base_offset + idx)
     } else {
       // Remove if not used and have no side effects
-      removed_indices.push(idx)
+      // Store frame-absolute index (base_offset + binding-local index)
+      removed_indices.push(base_offset + idx)
     }
     idx = idx + 1
   }
@@ -575,13 +570,16 @@ fn optimize_let(bindings : Array[LetBinding], body : IRExpr) -> IRExpr {
 }
 
 /// Optimize letrec expressions
-fn optimize_letrec(bindings : Array[LetBinding], body : IRExpr) -> IRExpr {
+/// base_offset: frame position where the letrec bindings start
+fn optimize_letrec(bindings : Array[LetBinding], body : IRExpr, base_offset : Int) -> IRExpr {
+  // letrec inits can reference the bindings (mutual recursion), so use post-let frame
+  let letrec_frame_size = base_offset + bindings.length()
   let opt_bindings : Array[LetBinding] = []
   for binding in bindings {
-    opt_bindings.push({ name: binding.name, init: optimize_expr(binding.init) })
+    opt_bindings.push({ name: binding.name, init: optimize_expr(binding.init, letrec_frame_size) })
   }
 
-  let opt_body = optimize_expr(body)
+  let opt_body = optimize_expr(body, letrec_frame_size)
 
   if opt_bindings.length() == 0 {
     return opt_body
@@ -613,9 +611,11 @@ fn optimize_letrec(bindings : Array[LetBinding], body : IRExpr) -> IRExpr {
       live_bindings.push(binding)
     } else if has_side_effect(binding.init) {
       side_effect_exprs.push(binding.init)
-      removed_indices.push(idx)
+      // Store frame-absolute index
+      removed_indices.push(base_offset + idx)
     } else {
-      removed_indices.push(idx)
+      // Store frame-absolute index
+      removed_indices.push(base_offset + idx)
     }
     idx = idx + 1
   }
@@ -657,8 +657,8 @@ fn optimize_letrec(bindings : Array[LetBinding], body : IRExpr) -> IRExpr {
 }
 
 /// Optimize primitive operations (constant folding)
-fn optimize_primop(kind : PrimOpKind, args : Array[IRExpr]) -> IRExpr {
-  let opt_args = optimize_exprs(args)
+fn optimize_primop(kind : PrimOpKind, args : Array[IRExpr], frame_size : Int) -> IRExpr {
+  let opt_args = optimize_exprs(args, frame_size)
 
   // Check if all arguments are constants
   if all_const(opt_args) {
@@ -728,8 +728,8 @@ fn optimize_primop(kind : PrimOpKind, args : Array[IRExpr]) -> IRExpr {
 }
 
 /// Optimize and expressions
-fn optimize_and(exprs : Array[IRExpr]) -> IRExpr {
-  let opt_exprs = optimize_exprs(exprs)
+fn optimize_and(exprs : Array[IRExpr], frame_size : Int) -> IRExpr {
+  let opt_exprs = optimize_exprs(exprs, frame_size)
 
   if opt_exprs.length() == 0 {
     return IRExpr::Const(IRConst::Bool(true))
@@ -769,8 +769,8 @@ fn optimize_and(exprs : Array[IRExpr]) -> IRExpr {
 }
 
 /// Optimize the or expression
-fn optimize_or(exprs : Array[IRExpr]) -> IRExpr {
-  let opt_exprs = optimize_exprs(exprs)
+fn optimize_or(exprs : Array[IRExpr], frame_size : Int) -> IRExpr {
+  let opt_exprs = optimize_exprs(exprs, frame_size)
 
   if opt_exprs.length() == 0 {
     return IRExpr::Const(IRConst::Bool(false))
@@ -1858,6 +1858,7 @@ fn adjust_var_indices_inner(
         boxed_params: info.boxed_params,
         boxed_locals: info.boxed_locals,
         boxed_free_vars: info.boxed_free_vars,
+        vars_adjusted: info.vars_adjusted,
       })
     }
 

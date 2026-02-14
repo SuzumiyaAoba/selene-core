@@ -215,7 +215,20 @@ pub fn tokenize(input : String) -> Array[Token] {
         value = value * 10 + digit_value(chars[i])
         i = i + 1
       } else { () }
-      tokens.push(Token::Number(value))
+      // Check for decimal point
+      if i < len && chars[i] == '.' && i + 1 < len && is_digit(chars[i + 1]) {
+        i = i + 1 // skip '.'
+        let mut frac = 0.0
+        let mut frac_div = 1.0
+        let _ = while i < len && is_digit(chars[i]) {
+          frac = frac * 10.0 + digit_value(chars[i]).to_double()
+          frac_div = frac_div * 10.0
+          i = i + 1
+        } else { () }
+        tokens.push(Token::Real(value.to_double() + frac / frac_div))
+      } else {
+        tokens.push(Token::Number(value))
+      }
       continue
     }
     // Handle +/- followed by digit as signed number literal
@@ -227,7 +240,20 @@ pub fn tokenize(input : String) -> Array[Token] {
         value = value * 10 + digit_value(chars[i])
         i = i + 1
       } else { () }
-      tokens.push(Token::Number(sign * value))
+      // Check for decimal point
+      if i < len && chars[i] == '.' && i + 1 < len && is_digit(chars[i + 1]) {
+        i = i + 1 // skip '.'
+        let mut frac = 0.0
+        let mut frac_div = 1.0
+        let _ = while i < len && is_digit(chars[i]) {
+          frac = frac * 10.0 + digit_value(chars[i]).to_double()
+          frac_div = frac_div * 10.0
+          i = i + 1
+        } else { () }
+        tokens.push(Token::Real(sign.to_double() * (value.to_double() + frac / frac_div)))
+      } else {
+        tokens.push(Token::Number(sign * value))
+      }
       continue
     }
     if is_ident_initial(ch) {
