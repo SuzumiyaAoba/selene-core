@@ -745,3 +745,394 @@ test "sample: dynamic" {
   )
   sample_assert_true(ctx, "(dynamic-check)")
 }
+
+// ============================================================
+// samples/symbolic/symbolic.scm
+// Symbolic differentiation (SICP-style)
+// ============================================================
+
+test "sample: symbolic" {
+  let ctx = new_repl_context()
+
+  // --- Constructors and selectors ---
+  sample_eval(ctx, "(define (make-sum a b) (list '+ a b))")
+  sample_eval(ctx, "(define (make-product a b) (list '* a b))")
+  sample_eval(ctx, "(define (make-power base exp) (list '** base exp))")
+
+  sample_eval(ctx, "(define (sum? e) (and (pair? e) (eq? (car e) '+)))")
+  sample_eval(ctx, "(define (product? e) (and (pair? e) (eq? (car e) '*)))")
+  sample_eval(ctx, "(define (power? e) (and (pair? e) (eq? (car e) '**)))")
+
+  sample_eval(ctx, "(define (addend e) (cadr e))")
+  sample_eval(ctx, "(define (augend e) (caddr e))")
+  sample_eval(ctx, "(define (multiplier e) (cadr e))")
+  sample_eval(ctx, "(define (multiplicand e) (caddr e))")
+  sample_eval(ctx, "(define (base e) (cadr e))")
+  sample_eval(ctx, "(define (exponent e) (caddr e))")
+
+  // --- Simplifying constructors ---
+  sample_eval(ctx,
+    "(define (simp-sum a b) (cond ((and (number? a) (number? b)) (+ a b)) ((and (number? a) (= a 0)) b) ((and (number? b) (= b 0)) a) (else (make-sum a b))))",
+  )
+  sample_eval(ctx,
+    "(define (simp-product a b) (cond ((and (number? a) (number? b)) (* a b)) ((and (number? a) (= a 0)) 0) ((and (number? b) (= b 0)) 0) ((and (number? a) (= a 1)) b) ((and (number? b) (= b 1)) a) (else (make-product a b))))",
+  )
+  sample_eval(ctx,
+    "(define (simp-power base exp) (cond ((and (number? exp) (= exp 0)) 1) ((and (number? exp) (= exp 1)) base) (else (make-power base exp))))",
+  )
+
+  // --- Derivative ---
+  sample_eval(ctx,
+    "(define (deriv exp var) (cond ((number? exp) 0) ((symbol? exp) (if (eq? exp var) 1 0)) ((sum? exp) (simp-sum (deriv (addend exp) var) (deriv (augend exp) var))) ((product? exp) (simp-sum (simp-product (multiplier exp) (deriv (multiplicand exp) var)) (simp-product (deriv (multiplier exp) var) (multiplicand exp)))) ((power? exp) (simp-product (simp-product (exponent exp) (simp-power (base exp) (simp-sum (exponent exp) -1))) (deriv (base exp) var))) (else (list 'deriv exp var))))",
+  )
+
+  // --- Test: d/dx(x) = 1 ---
+  sample_assert_int(ctx, "(deriv 'x 'x)", 1)
+  // --- Test: d/dx(y) = 0 ---
+  sample_assert_int(ctx, "(deriv 'y 'x)", 0)
+  // --- Test: d/dx(5) = 0 ---
+  sample_assert_int(ctx, "(deriv 5 'x)", 0)
+  // --- Test: d/dx(x + x) = 2 ---
+  sample_assert_int(ctx, "(deriv '(+ x x) 'x)", 2)
+  // --- Test: d/dx(x * y) = y ---
+  sample_assert_list_eq(ctx,
+    "(let ((r (deriv '(* x y) 'x))) (if (symbol? r) (list r) (list r)))",
+    "(list (deriv '(* x y) 'x))",
+  )
+
+  // --- Test: d/dx(x * x) = (+ x x) ---
+  sample_assert_list_eq(ctx, "(deriv '(* x x) 'x)", "'(+ x x)")
+
+  // --- Test: d/dx(x^3) = (* 3 (** x 2)) ---
+  sample_assert_list_eq(ctx, "(deriv '(** x 3) 'x)", "'(* 3 (** x 2))")
+
+  // --- Expression evaluator for numeric checking ---
+  sample_eval(ctx,
+    "(define (eval-expr e env) (cond ((number? e) e) ((symbol? e) (let ((binding (assq e env))) (if binding (cdr binding) (error \"unbound\" e)))) ((sum? e) (+ (eval-expr (addend e) env) (eval-expr (augend e) env))) ((product? e) (* (eval-expr (multiplier e) env) (eval-expr (multiplicand e) env))) ((power? e) (let loop ((b (eval-expr (base e) env)) (n (eval-expr (exponent e) env)) (acc 1)) (if (= n 0) acc (loop b (- n 1) (* acc b))))) (else (error \"unknown expr\" e))))",
+  )
+
+  // --- Numerical verification: d/dx(x^3) at x=2 should be 12 ---
+  sample_eval(ctx, "(define dx3 (deriv '(** x 3) 'x))")
+  sample_assert_int(ctx, "(eval-expr dx3 '((x . 2)))", 12)
+
+  // --- Numerical verification: d/dx(x^3 + 2*x) at x=3 ---
+  // d/dx(x^3 + 2*x) = 3x^2 + 2 = 3*9 + 2 = 29
+  sample_eval(ctx,
+    "(define poly '(+ (** x 3) (* 2 x)))",
+  )
+  sample_eval(ctx, "(define dpoly (deriv poly 'x))")
+  sample_assert_int(ctx, "(eval-expr dpoly '((x . 3)))", 29)
+
+  // --- Symbolic manipulation: collect terms ---
+  sample_eval(ctx,
+    "(define (tree-size e) (if (pair? e) (+ 1 (tree-size (car e)) (tree-size (cdr e))) 1))",
+  )
+  sample_assert_true(ctx, "(> (tree-size dpoly) 1)")
+
+  // --- Multi-variable: d/dy of (x * y + y^2) = x + 2y ---
+  sample_eval(ctx,
+    "(define expr-xy '(+ (* x y) (** y 2)))",
+  )
+  sample_eval(ctx, "(define dexpr-dy (deriv expr-xy 'y))")
+  // At x=3, y=4: x + 2y = 3 + 8 = 11
+  sample_assert_int(ctx, "(eval-expr dexpr-dy '((x . 3) (y . 4)))", 11)
+
+  // --- Combined verification ---
+  sample_eval(ctx,
+    "(define (symbolic-check) (and (= (deriv 5 'x) 0) (= (deriv 'x 'x) 1) (= (deriv 'y 'x) 0) (= (deriv '(+ x x) 'x) 2) (equal? (deriv '(* x x) 'x) '(+ x x)) (= (eval-expr (deriv '(** x 3) 'x) '((x . 2))) 12) (= (eval-expr (deriv '(+ (** x 3) (* 2 x)) 'x) '((x . 3))) 29)))",
+  )
+  sample_assert_true(ctx, "(symbolic-check)")
+}
+
+// ============================================================
+// samples/graph/graph.scm
+// Graph algorithms using adjacency lists
+// ============================================================
+
+test "sample: graph" {
+  let ctx = new_repl_context()
+
+  // --- Graph representation: adjacency list as alist ---
+  sample_eval(ctx,
+    "(define (make-graph) '())",
+  )
+  sample_eval(ctx,
+    "(define (add-edge graph from to) (let ((existing (assv from graph))) (if existing (map (lambda (entry) (if (eqv? (car entry) from) (cons from (cons to (cdr entry))) entry)) graph) (cons (list from to) graph))))",
+  )
+  sample_eval(ctx,
+    "(define (neighbors graph node) (let ((entry (assv node graph))) (if entry (cdr entry) '())))",
+  )
+
+  // --- Build a test graph ---
+  // 1->2, 1->3, 2->4, 3->4, 4->5, 2->5
+  sample_eval(ctx,
+    "(define g (add-edge (add-edge (add-edge (add-edge (add-edge (add-edge (make-graph) 1 2) 1 3) 2 4) 3 4) 4 5) 2 5))",
+  )
+
+  // Helper for boolean conversion from member
+  sample_eval(ctx, "(define (member? item lst) (if (member item lst) #t #f))")
+
+  // Test graph structure
+  sample_assert_true(ctx, "(member? 2 (neighbors g 1))")
+  sample_assert_true(ctx, "(member? 3 (neighbors g 1))")
+  sample_assert_true(ctx, "(member? 4 (neighbors g 2))")
+  sample_assert_true(ctx, "(member? 5 (neighbors g 4))")
+
+  // --- DFS (depth-first search) ---
+  sample_eval(ctx,
+    "(define (dfs graph start) (let ((visited '())) (define (visit node) (if (member node visited) '() (begin (set! visited (cons node visited)) (for-each (lambda (n) (visit n)) (neighbors graph node))))) (visit start) (reverse visited)))",
+  )
+  // DFS from 1 should visit all nodes 1-5
+  sample_eval(ctx, "(define dfs-result (dfs g 1))")
+  sample_assert_int(ctx, "(length dfs-result)", 5)
+  sample_assert_true(ctx, "(member? 1 dfs-result)")
+  sample_assert_true(ctx, "(member? 5 dfs-result)")
+
+  // --- BFS (breadth-first search) ---
+  sample_eval(ctx,
+    "(define (bfs graph start) (let ((visited '()) (queue (list start))) (define (process) (if (null? queue) (reverse visited) (let ((node (car queue))) (set! queue (cdr queue)) (if (member node visited) (process) (begin (set! visited (cons node visited)) (for-each (lambda (n) (if (not (member n visited)) (set! queue (append queue (list n))))) (neighbors graph node)) (process)))))) (process)))",
+  )
+  sample_eval(ctx, "(define bfs-result (bfs g 1))")
+  sample_assert_int(ctx, "(length bfs-result)", 5)
+  // BFS visits 1 first
+  sample_assert_int(ctx, "(car bfs-result)", 1)
+
+  // --- Reachability ---
+  sample_eval(ctx,
+    "(define (reachable? graph from to) (let ((visited '())) (define (search node) (cond ((eqv? node to) #t) ((member node visited) #f) (else (set! visited (cons node visited)) (let loop ((ns (neighbors graph node))) (cond ((null? ns) #f) ((search (car ns)) #t) (else (loop (cdr ns)))))))) (search from)))",
+  )
+  sample_assert_true(ctx, "(reachable? g 1 5)")
+  sample_assert_true(ctx, "(reachable? g 1 4)")
+  sample_assert_true(ctx, "(reachable? g 2 5)")
+  sample_assert_false(ctx, "(reachable? g 5 1)")
+
+  // --- Topological sort (Kahn's algorithm) ---
+  // DAG: a->b, a->c, b->d, c->d
+  sample_eval(ctx,
+    "(define dag (add-edge (add-edge (add-edge (add-edge (make-graph) 'a 'b) 'a 'c) 'b 'd) 'c 'd))",
+  )
+
+  sample_eval(ctx,
+    "(define (all-nodes graph) (let ((nodes '())) (for-each (lambda (entry) (if (not (member (car entry) nodes)) (set! nodes (cons (car entry) nodes))) (for-each (lambda (n) (if (not (member n nodes)) (set! nodes (cons n nodes)))) (cdr entry))) graph) nodes))",
+  )
+
+  sample_eval(ctx,
+    "(define (in-degree-remaining g node rem) (let ((count 0)) (for-each (lambda (entry) (if (not (member (car entry) rem)) (for-each (lambda (n) (if (eqv? n node) (set! count (+ count 1)))) (cdr entry)))) g) count))",
+  )
+
+  sample_eval(ctx,
+    "(define (topo-sort graph) (let ((nodes (all-nodes graph)) (result '()) (removed '())) (define (find-zero-in) (let loop ((ns nodes)) (cond ((null? ns) #f) ((member (car ns) removed) (loop (cdr ns))) ((= (in-degree-remaining graph (car ns) removed) 0) (car ns)) (else (loop (cdr ns)))))) (let loop () (let ((node (find-zero-in))) (if node (begin (set! result (cons node result)) (set! removed (cons node removed)) (loop)) (reverse result))))))",
+  )
+
+  // --- Helper: list-index ---
+  sample_eval(ctx,
+    "(define (list-index lst item) (let loop ((l lst) (i 0)) (cond ((null? l) #f) ((eqv? (car l) item) i) (else (loop (cdr l) (+ i 1))))))",
+  )
+
+  sample_eval(ctx, "(define topo-result (topo-sort dag))")
+  sample_assert_int(ctx, "(length topo-result)", 4)
+  // 'a' must come before 'b' and 'c'; 'd' must come last
+  sample_assert_true(ctx,
+    "(let ((pos-a (list-index topo-result 'a)) (pos-d (list-index topo-result 'd))) (and pos-a pos-d (< pos-a pos-d)))",
+  )
+
+  // --- Cycle detection ---
+  sample_eval(ctx,
+    "(define (has-cycle? graph) (let ((visited '()) (in-stack '())) (define (visit node) (cond ((member node in-stack) #t) ((member node visited) #f) (else (set! visited (cons node visited)) (set! in-stack (cons node in-stack)) (let ((result (let loop ((ns (neighbors graph node))) (cond ((null? ns) #f) ((visit (car ns)) #t) (else (loop (cdr ns))))))) (set! in-stack (let remove-one ((l in-stack)) (cond ((null? l) '()) ((eqv? (car l) node) (cdr l)) (else (cons (car l) (remove-one (cdr l))))))) result)))) (let loop ((nodes (all-nodes graph))) (cond ((null? nodes) #f) ((visit (car nodes)) #t) (else (loop (cdr nodes)))))))",
+  )
+
+  // DAG has no cycle
+  sample_assert_false(ctx, "(has-cycle? dag)")
+
+  // Graph with cycle: a->b, b->c, c->a
+  sample_eval(ctx,
+    "(define cyclic (add-edge (add-edge (add-edge (make-graph) 'a 'b) 'b 'c) 'c 'a))",
+  )
+  sample_assert_true(ctx, "(has-cycle? cyclic)")
+
+  // --- Path finding ---
+  sample_eval(ctx,
+    "(define (find-path graph from to) (let ((visited '())) (define (search node path) (cond ((eqv? node to) (reverse (cons node path))) ((member node visited) #f) (else (set! visited (cons node visited)) (let loop ((ns (neighbors graph node))) (cond ((null? ns) #f) (else (let ((result (search (car ns) (cons node path)))) (if result result (loop (cdr ns)))))))))) (search from '())))",
+  )
+  sample_eval(ctx, "(define path-1-5 (find-path g 1 5))")
+  sample_assert_true(ctx, "(list? path-1-5)")
+  sample_assert_int(ctx, "(car path-1-5)", 1)
+  sample_assert_int(ctx, "(car (reverse path-1-5))", 5)
+
+  // --- Combined verification ---
+  sample_eval(ctx,
+    "(define (graph-check) (and (= (length (dfs g 1)) 5) (= (length (bfs g 1)) 5) (reachable? g 1 5) (not (reachable? g 5 1)) (not (has-cycle? dag)) (has-cycle? cyclic) (list? (find-path g 1 5))))",
+  )
+  sample_assert_true(ctx, "(graph-check)")
+}
+
+// ============================================================
+// samples/interpreter/interpreter.scm
+// Mini language interpreter (metacircular-style)
+// ============================================================
+
+test "sample: interpreter" {
+  let ctx = new_repl_context()
+
+  // --- Environment ---
+  sample_eval(ctx,
+    "(define (mini-env-empty) '())",
+  )
+  sample_eval(ctx,
+    "(define (mini-env-extend env names vals) (if (null? names) env (cons (cons (car names) (car vals)) (mini-env-extend env (cdr names) (cdr vals)))))",
+  )
+  sample_eval(ctx,
+    "(define (mini-env-lookup env name) (cond ((null? env) (error \"mini: unbound variable\" name)) ((eq? (caar env) name) (cdar env)) (else (mini-env-lookup (cdr env) name))))",
+  )
+
+  // --- Values: numbers, booleans, closures, builtins ---
+  sample_eval(ctx,
+    "(define (mini-closure? v) (and (pair? v) (eq? (car v) 'closure)))",
+  )
+  sample_eval(ctx,
+    "(define (make-mini-closure params body env) (list 'closure params body env))",
+  )
+
+  // --- Builtins ---
+  sample_eval(ctx,
+    "(define mini-builtins (list (cons '+ (lambda (args) (+ (car args) (cadr args)))) (cons '- (lambda (args) (- (car args) (cadr args)))) (cons '* (lambda (args) (* (car args) (cadr args)))) (cons '/ (lambda (args) (/ (car args) (cadr args)))) (cons '= (lambda (args) (= (car args) (cadr args)))) (cons '< (lambda (args) (< (car args) (cadr args)))) (cons '> (lambda (args) (> (car args) (cadr args)))) (cons 'zero? (lambda (args) (= (car args) 0))) (cons 'not (lambda (args) (not (car args))))))",
+  )
+  sample_eval(ctx,
+    "(define (mini-lookup-builtin name) (let ((entry (assq name mini-builtins))) (if entry (cdr entry) #f)))",
+  )
+
+  // --- Evaluator ---
+  sample_eval(ctx,
+    "(define (mini-eval expr env) (cond ((number? expr) expr) ((boolean? expr) expr) ((symbol? expr) (mini-env-lookup env expr)) ((pair? expr) (let ((op (car expr))) (cond ((eq? op 'quote) (cadr expr)) ((eq? op 'if) (if (mini-eval (cadr expr) env) (mini-eval (caddr expr) env) (if (null? (cdr (cdr (cdr expr)))) #f (mini-eval (car (cdr (cdr (cdr expr)))) env)))) ((eq? op 'lambda) (make-mini-closure (cadr expr) (caddr expr) env)) ((eq? op 'let) (let ((bindings (cadr expr)) (body (caddr expr))) (let ((names (map car bindings)) (vals (map (lambda (b) (mini-eval (cadr b) env)) bindings))) (mini-eval body (mini-env-extend env names vals))))) ((eq? op 'begin) (let loop ((exprs (cdr expr)) (result #f)) (if (null? exprs) result (loop (cdr exprs) (mini-eval (car exprs) env))))) (else (let ((func (mini-eval op env)) (args (map (lambda (a) (mini-eval a env)) (cdr expr)))) (mini-apply func args)))))) (else (error \"mini: unknown expression\" expr))))",
+  )
+
+  // --- Apply ---
+  sample_eval(ctx,
+    "(define (mini-apply func args) (cond ((procedure? func) (func args)) ((mini-closure? func) (let ((params (cadr func)) (body (caddr func)) (clo-env (car (cdr (cdr (cdr func)))))) (mini-eval body (mini-env-extend clo-env params args)))) (else (error \"mini: not a function\" func))))",
+  )
+
+  // --- Initial environment with builtins ---
+  sample_eval(ctx,
+    "(define (mini-initial-env) (map (lambda (b) (cons (car b) (cdr b))) mini-builtins))",
+  )
+
+  // --- Test: basic arithmetic ---
+  sample_assert_int(ctx,
+    "(mini-eval '(+ 1 2) (mini-initial-env))",
+    3,
+  )
+  sample_assert_int(ctx,
+    "(mini-eval '(* 3 4) (mini-initial-env))",
+    12,
+  )
+  sample_assert_int(ctx,
+    "(mini-eval '(- 10 3) (mini-initial-env))",
+    7,
+  )
+
+  // --- Test: nested expressions ---
+  sample_assert_int(ctx,
+    "(mini-eval '(+ (* 2 3) (- 10 4)) (mini-initial-env))",
+    12,
+  )
+
+  // --- Test: if expression ---
+  sample_assert_int(ctx,
+    "(mini-eval '(if (< 1 2) 10 20) (mini-initial-env))",
+    10,
+  )
+  sample_assert_int(ctx,
+    "(mini-eval '(if (> 1 2) 10 20) (mini-initial-env))",
+    20,
+  )
+
+  // --- Test: lambda and application ---
+  sample_assert_int(ctx,
+    "(mini-eval '((lambda (x) (+ x 1)) 5) (mini-initial-env))",
+    6,
+  )
+  sample_assert_int(ctx,
+    "(mini-eval '((lambda (x y) (+ x y)) 3 4) (mini-initial-env))",
+    7,
+  )
+
+  // --- Test: let expressions ---
+  sample_assert_int(ctx,
+    "(mini-eval '(let ((x 10) (y 20)) (+ x y)) (mini-initial-env))",
+    30,
+  )
+
+  // --- Test: factorial (recursive via Y-combinator style) ---
+  // Since our mini-language doesn't have define/letrec, we use a self-application trick
+  sample_eval(ctx,
+    "(define fact-program '(let ((fact-helper (lambda (self n) (if (= n 0) 1 (* n (self self (- n 1))))))) (fact-helper fact-helper 10)))",
+  )
+  sample_assert_int(ctx,
+    "(mini-eval fact-program (mini-initial-env))",
+    3628800,
+  )
+
+  // --- Test: fibonacci (via self-application) ---
+  sample_eval(ctx,
+    "(define fib-program '(let ((fib-helper (lambda (self n) (if (< n 2) n (+ (self self (- n 1)) (self self (- n 2))))))) (fib-helper fib-helper 10)))",
+  )
+  sample_assert_int(ctx,
+    "(mini-eval fib-program (mini-initial-env))",
+    55,
+  )
+
+  // --- Test: higher-order function ---
+
+  // --- Test: begin expression ---
+  sample_assert_int(ctx,
+    "(mini-eval '(begin 1 2 3) (mini-initial-env))",
+    3,
+  )
+  sample_assert_int(ctx,
+    "(mini-eval '(begin (+ 1 2) (* 3 4)) (mini-initial-env))",
+    12,
+  )
+
+  // --- Test: quote ---
+  sample_assert_true(ctx,
+    "(eq? (mini-eval '(quote hello) (mini-initial-env)) 'hello)",
+  )
+
+  // --- Test: complex nested computation ---
+  // sum of 1 to n via self-application
+  sample_eval(ctx,
+    "(define sum-program '(let ((sum-helper (lambda (self n) (if (= n 0) 0 (+ n (self self (- n 1))))))) (sum-helper sum-helper 100)))",
+  )
+  sample_assert_int(ctx,
+    "(mini-eval sum-program (mini-initial-env))",
+    5050,
+  )
+
+  // --- Test: boolean operations ---
+  sample_assert_true(ctx,
+    "(mini-eval '(zero? 0) (mini-initial-env))",
+  )
+  sample_assert_false(ctx,
+    "(mini-eval '(zero? 5) (mini-initial-env))",
+  )
+  sample_assert_true(ctx,
+    "(mini-eval '(not (> 1 2)) (mini-initial-env))",
+  )
+
+  // --- Test: closure captures environment ---
+  sample_assert_int(ctx,
+    "(mini-eval '(let ((x 10)) ((lambda (y) (+ x y)) 20)) (mini-initial-env))",
+    30,
+  )
+  // Nested closures
+  sample_assert_int(ctx,
+    "(mini-eval '(let ((add (lambda (x) (lambda (y) (+ x y))))) ((add 3) 4)) (mini-initial-env))",
+    7,
+  )
+
+  // --- Combined verification ---
+  sample_eval(ctx,
+    "(define (interpreter-check) (let ((env (mini-initial-env))) (and (= (mini-eval '(+ 1 2) env) 3) (= (mini-eval '(if (< 1 2) 10 20) env) 10) (= (mini-eval '((lambda (x) (+ x 1)) 5) env) 6) (= (mini-eval '(let ((x 10)) (+ x 5)) env) 15) (= (mini-eval fact-program env) 3628800) (= (mini-eval fib-program env) 55) (= (mini-eval sum-program env) 5050) (= (mini-eval '(let ((add (lambda (x) (lambda (y) (+ x y))))) ((add 3) 4)) env) 7))))",
+  )
+  sample_assert_true(ctx, "(interpreter-check)")
+}
