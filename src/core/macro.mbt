@@ -39,7 +39,7 @@ pub fn expand_macro(
 
 /// Apply hygienic renaming to an expanded macro form
 fn apply_hygienic_rename(sexpr : SExpr, rename_map : Map[String, String]) -> SExpr {
-  if rename_map.size() == 0 {
+  if rename_map.length() == 0 {
     return sexpr
   }
   match sexpr {

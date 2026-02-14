@@ -218,7 +218,7 @@ pub fn builtin_eqv_p(args : Array[Value]) -> Result[Value, EvalError] {
 
 /// Helper function to check physical identity
 /// MoonBit is difficult to reference and compare, so always return false
-fn physical_identity[T](_a : T, _b : T) -> Bool {
+fn[T] physical_identity(_a : T, _b : T) -> Bool {
   false
 }
 

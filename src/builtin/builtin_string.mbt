@@ -133,7 +133,7 @@ fn string_downcase(s : String) -> String {
     let code = c.to_int()
     if code >= 65 && code <= 90 {
       // A-Z -> a-z
-      builder.write_char(Char::from_int(code + 32))
+      builder.write_char(Int::unsafe_to_char(code + 32))
     } else {
       builder.write_char(c)
     }

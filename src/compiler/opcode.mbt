@@ -182,22 +182,22 @@ pub fn new_builder(debug_name : String?) -> CodeChunkBuilder {
 }
 
 /// add instruction
-pub fn emit(self : CodeChunkBuilder, op : Opcode) -> Unit {
+pub fn CodeChunkBuilder::emit(self : CodeChunkBuilder, op : Opcode) -> Unit {
   self.code.push(op)
 }
 
 /// Get current instruction position
-pub fn current_pos(self : CodeChunkBuilder) -> Int {
+pub fn CodeChunkBuilder::current_pos(self : CodeChunkBuilder) -> Int {
   self.code.length()
 }
 
 /// Update instructions at specific locations (for jump destination patching)
-pub fn patch(self : CodeChunkBuilder, pos : Int, op : Opcode) -> Unit {
+pub fn CodeChunkBuilder::patch(self : CodeChunkBuilder, pos : Int, op : Opcode) -> Unit {
   self.code[pos] = op
 }
 
 /// Add constant and return constant pool index
-pub fn add_const(self : CodeChunkBuilder, value : BCValue) -> Int {
+pub fn CodeChunkBuilder::add_const(self : CodeChunkBuilder, value : BCValue) -> Int {
   // Generate key for duplicate check
   let key = bc_value_to_key(value)
   match self.const_map.get(key) {
@@ -226,7 +226,7 @@ fn bc_value_to_key(value : BCValue) -> String {
 }
 
 /// Add global name and return name table index
-pub fn add_name(self : CodeChunkBuilder, name : String) -> Int {
+pub fn CodeChunkBuilder::add_name(self : CodeChunkBuilder, name : String) -> Int {
   match self.name_map.get(name) {
     Some(idx) => idx
     None => {
@@ -239,7 +239,7 @@ pub fn add_name(self : CodeChunkBuilder, name : String) -> Int {
 }
 
 /// Generate code chunks from builder
-pub fn build(self : CodeChunkBuilder) -> CodeChunk {
+pub fn CodeChunkBuilder::build(self : CodeChunkBuilder) -> CodeChunk {
   {
     code: self.code,
     constants: self.constants,

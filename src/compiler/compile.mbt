@@ -62,8 +62,8 @@ fn is_global(env : CompileEnv, name : String) -> Bool {
 
 /// Check if a name is shadowed by a local variable in the current scope
 fn is_shadowed(env : CompileEnv, name : String) -> Bool {
-  for local in env.locals {
-    if local == name {
+  for local_name in env.locals {
+    if local_name == name {
       return true
     }
   }
@@ -633,7 +633,7 @@ fn compile_lambda(args : SExpr, env : CompileEnv) -> Result[IRExpr, CompileError
 }
 
 /// Result of parameter extraction
-struct ParamsResult {
+priv struct ParamsResult {
   /// Required parameter names
   params : Array[String]
   /// Rest parameter name (if any)
@@ -697,7 +697,7 @@ fn compile_body(
   // Splice begin forms at the beginning of the body (R5RS 5.2.2)
   // (begin (define ...) ...) at body start is equivalent to (define ...)
   // Only splice if "begin" is the keyword, not a variable binding
-  let begin_is_keyword = lookup_local(env, "begin").is_empty()
+  let begin_is_keyword = lookup_local(env, "begin") is None
   let spliced_exprs : Array[SExpr] = []
   let mut splice_done = false
   for expr in exprs {
@@ -1207,7 +1207,7 @@ fn compile_case_to_cond(
 
   // Build test: (or (eqv? tmp datum1) (eqv? tmp datum2) ...)
   let temp_var_ref = match lookup_local(env, temp_name) {
-    Some(ref) => ref
+    Some(var_ref) => var_ref
     None => { name: temp_name, depth: 0, index: 0 } // fallback
   }
   let temp_var = IRExpr::Var(temp_var_ref)
@@ -1844,7 +1844,7 @@ fn collect_set_vars(body : IRExpr) -> Array[String] {
 }
 
 /// Collect free variables
-fn collect_free_vars(body : IRExpr, bound : Array[String]) -> Array[VarRef] {
+fn collect_free_vars(body : IRExpr, _bound : Array[String]) -> Array[VarRef] {
   let free_vars : Array[VarRef] = []
   let seen : @hashmap.T[String, Unit] = @hashmap.new()
 
@@ -2118,7 +2118,7 @@ fn compile_quasiquote(
     SExpr::Pair(car, cdr) => compile_quasiquote_list(car, cdr, env, depth)
 
     // Quote: preserve as constant
-    SExpr::Quote(inner) => Ok(IRExpr::Const(sexpr_to_ir_const(expr)))
+    SExpr::Quote(_) => Ok(IRExpr::Const(sexpr_to_ir_const(expr)))
 
     // Atoms: convert to constant
     _ => Ok(IRExpr::Const(sexpr_to_ir_const(expr)))

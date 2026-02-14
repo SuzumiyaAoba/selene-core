@@ -186,7 +186,7 @@ pub fn builtin_char_upcase(args : Array[Value]) -> Result[Value, EvalError] {
       let code = c.to_int()
       if code >= 97 && code <= 122 {
         // Lowercase - > Uppercase
-        Ok(Value::Char(Char::from_int(code - 32)))
+        Ok(Value::Char(Int::unsafe_to_char(code - 32)))
       } else {
         Ok(Value::Char(c))
       }
@@ -208,7 +208,7 @@ pub fn builtin_char_downcase(args : Array[Value]) -> Result[Value, EvalError] {
       let code = c.to_int()
       if code >= 65 && code <= 90 {
         // Uppercase/Lowercase
-        Ok(Value::Char(Char::from_int(code + 32)))
+        Ok(Value::Char(Int::unsafe_to_char(code + 32)))
       } else {
         Ok(Value::Char(c))
       }
@@ -242,7 +242,7 @@ pub fn builtin_integer_to_char(args : Array[Value]) -> Result[Value, EvalError] 
   match args[0] {
     Value::Number(Number::Int(n)) => {
       if n >= 0 && n <= 1114111 {
-        Ok(Value::Char(Char::from_int(n)))
+        Ok(Value::Char(Int::unsafe_to_char(n)))
       } else {
         Err(
           EvalError::TypeError(

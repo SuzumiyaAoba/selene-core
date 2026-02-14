@@ -18,7 +18,7 @@ pub fn vm_apply_closure(
   closure : VMClosure,
   args : Array[Value]
 ) -> Result[Value, EvalError] {
-  let module = match active_vm_module.val {
+  let compiled_mod = match active_vm_module.val {
     Some(m) => m
     None =>
       return Err(
@@ -36,7 +36,7 @@ pub fn vm_apply_closure(
         ),
       )
   }
-  let target_chunk = module.chunks[closure.chunk_idx]
+  let target_chunk = compiled_mod.chunks[closure.chunk_idx]
 
   // Arity check
   if target_chunk.has_rest_param {
@@ -70,20 +70,8 @@ pub fn vm_apply_closure(
     }
   }
 
-  // Create a mini compiled module with just a call-and-return wrapper
-  // We build a small main chunk that calls the closure
-  let main_code : Array[Opcode] = []
-
-  // Push closure captures
-  for capture in closure.captures {
-    let idx = main_code.length()
-    // We need to push capture values onto the stack, so use Push with constants
-    // But we can't easily add constants. Instead, we'll set up the VM state directly.
-    let _ = idx
-  }
-
   // Rather than building bytecode, set up VM state directly
-  let vm = new_vm_state_with_globals(module, globals)
+  let vm = new_vm_state_with_globals(compiled_mod, globals)
 
   // Push captures and args onto the stack
   for capture in closure.captures {
@@ -96,7 +84,7 @@ pub fn vm_apply_closure(
   // Set up call frame
   let frame : VMCallFrame = {
     return_chunk: -1,
-    return_ip: module.main.code.length(),
+    return_ip: compiled_mod.main.code.length(),
     base_ptr: 0,
     num_locals: closure.captures.length() + actual_args.length(),
   }
@@ -501,8 +489,6 @@ fn primop_to_builtin_name(kind : PrimOpKind) -> String {
     PrimOpKind::Cdadr => "cdadr"
     PrimOpKind::Cddar => "cddar"
     PrimOpKind::Cdddr => "cdddr"
-    // String comparison (case-insensitive)
-    _ => kind.to_string()
   }
 }
 
