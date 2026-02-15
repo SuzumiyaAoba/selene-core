@@ -370,3 +370,60 @@ fn vector_test_value_to_string(value : Value) -> String {
     Value::Box(_) => "#<box>"
   }
 }
+
+// ============================================================
+// Extended vector tests (VM-based)
+// ============================================================
+
+/// Helper: assert expression evaluates to #t
+fn vec_assert_true(ctx : VMReplContext, code : String) -> Unit raise Error {
+  match repl_eval(ctx, code) {
+    Ok(Value::Bool(true)) => ()
+    Ok(v) => fail("expected #t, got " + v.to_string() + " for: " + code)
+    Err(e) => fail("error: " + e + " for: " + code)
+  }
+}
+
+test "vector->list vm basic" {
+  let ctx = new_repl_context()
+  vec_assert_true(ctx, "(equal? (vector->list (vector 1 2 3)) '(1 2 3))")
+}
+
+test "vector->list vm empty" {
+  let ctx = new_repl_context()
+  match repl_eval(ctx, "(vector->list (vector))") {
+    Ok(Value::Nil) => ()
+    Ok(v) => fail("expected (), got " + v.to_string())
+    Err(e) => fail("error: " + e)
+  }
+}
+
+test "list->vector vm basic" {
+  let ctx = new_repl_context()
+  match repl_eval(ctx, "(list->vector '(1 2 3))") {
+    Ok(Value::Vector(items)) => assert_eq(items.length(), 3)
+    Ok(v) => fail("expected vector, got " + v.to_string())
+    Err(e) => fail("error: " + e)
+  }
+}
+
+test "list->vector vm empty" {
+  let ctx = new_repl_context()
+  match repl_eval(ctx, "(list->vector '())") {
+    Ok(Value::Vector(items)) => assert_eq(items.length(), 0)
+    Ok(v) => fail("expected empty vector, got " + v.to_string())
+    Err(e) => fail("error: " + e)
+  }
+}
+
+test "vector->list->vector vm roundtrip" {
+  let ctx = new_repl_context()
+  vec_assert_true(ctx, "(equal? (list->vector (vector->list (vector 1 2 3))) (vector 1 2 3))")
+}
+
+test "vector-fill! vm" {
+  let ctx = new_repl_context()
+  let _ = repl_eval(ctx, "(define v (make-vector 3 0))")
+  let _ = repl_eval(ctx, "(vector-fill! v 7)")
+  vec_assert_true(ctx, "(equal? (vector->list v) '(7 7 7))")
+}

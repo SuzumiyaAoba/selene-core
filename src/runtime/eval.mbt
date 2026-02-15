@@ -416,6 +416,7 @@ pub fn initial_env() -> Env {
   let env = define_var(env, "vector-length", Value::Procedure(Procedure::Native("vector-length")))
   let env = define_var(env, "vector-ref", Value::Procedure(Procedure::Native("vector-ref")))
   let env = define_var(env, "vector-set!", Value::Procedure(Procedure::Native("vector-set!")))
+  let env = define_var(env, "vector-fill!", Value::Procedure(Procedure::Native("vector-fill!")))
   let env = define_var(env, "vector->list", Value::Procedure(Procedure::Native("vector->list")))
   let env = define_var(env, "list->vector", Value::Procedure(Procedure::Native("list->vector")))
   // Numerical functions

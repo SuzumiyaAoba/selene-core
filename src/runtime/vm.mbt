@@ -227,7 +227,7 @@ pub fn create_initial_globals() -> @hashmap.T[String, Value] {
     "make-string", "substring", "string->list", "list->string",
     // Vector
     "make-vector", "vector", "vector-length", "vector-ref",
-    "vector-set!", "vector->list", "list->vector",
+    "vector-set!", "vector-fill!", "vector->list", "list->vector",
     // Math
     "floor", "ceiling", "truncate", "round", "sqrt", "expt",
     "sin", "cos", "tan", "asin", "acos", "atan", "exp", "log",
@@ -278,7 +278,10 @@ fn vm_pop(vm : VMState) -> Result[Value, VMError] {
   if vm.stack.length() == 0 {
     Err(VMError::StackUnderflow)
   } else {
-    Ok(vm.stack.pop().unwrap())
+    match vm.stack.pop() {
+      Some(v) => Ok(v)
+      None => Err(VMError::StackUnderflow)
+    }
   }
 }
 
@@ -931,6 +934,25 @@ fn vm_values_equal(a : Value, b : Value) -> Bool {
     (Value::String(x), Value::String(y)) => x == y
     (Value::Pair(car1, cdr1, _), Value::Pair(car2, cdr2, _)) =>
       vm_values_equal(car1, car2) && vm_values_equal(cdr1, cdr2)
+    (Value::Vector(v1), Value::Vector(v2)) => {
+      if v1.length() != v2.length() {
+        false
+      } else {
+        let mut i = 0
+        let len = v1.length()
+        let mut result = true
+        let _ = while i < len {
+          if not(vm_values_equal(v1[i], v2[i])) {
+            result = false
+            break
+          }
+          i = i + 1
+        } else {
+          ()
+        }
+        result
+      }
+    }
     _ => false
   }
 }
@@ -1369,13 +1391,17 @@ pub fn vm_step(vm : VMState) -> Result[Bool, VMError] {
             vm_push(vm, result)
             return Ok(false)
           }
-          let frame = vm.call_stack.pop().unwrap()
-          while vm.stack.length() > frame.base_ptr {
-            let _ = vm.stack.pop()
+          match vm.call_stack.pop() {
+            Some(frame) => {
+              while vm.stack.length() > frame.base_ptr {
+                let _ = vm.stack.pop()
+              }
+              vm_push(vm, result)
+              vm.current_chunk = frame.return_chunk
+              vm.ip = frame.return_ip
+            }
+            None => return Err(VMError::StackUnderflow)
           }
-          vm_push(vm, result)
-          vm.current_chunk = frame.return_chunk
-          vm.ip = frame.return_ip
           Ok(true)
         }
         Err(e) => Err(e)
