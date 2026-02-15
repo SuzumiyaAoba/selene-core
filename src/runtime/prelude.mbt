@@ -176,6 +176,7 @@ using @builtin {
   builtin_vector_length,
   builtin_vector_p,
   builtin_vector_ref,
+  builtin_vector_fill,
   builtin_vector_set,
   builtin_vector_to_list,
   builtin_write,

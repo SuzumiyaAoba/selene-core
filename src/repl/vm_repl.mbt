@@ -45,8 +45,14 @@ fn init_prelude(ctx : VMReplContext) -> Unit {
 
 /// Evaluate expressions in REPL context
 pub fn repl_eval(ctx : VMReplContext, input : String) -> Result[Value, String] {
-  let expr = parse_one(input)
-  repl_eval_expr(ctx, expr)
+  let exprs = parse(input)
+  if exprs.length() == 0 {
+    return Err("Parse Error: Empty input")
+  }
+  if exprs.length() > 1 {
+    return Err("Parse Error: Multiple expressions in input")
+  }
+  repl_eval_expr(ctx, exprs[0])
 }
 
 /// Evaluate SExpr in REPL context

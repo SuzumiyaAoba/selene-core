@@ -138,7 +138,7 @@ pub fn tokenize(input : String) -> Array[Token] {
                     if name_chars.length() == 1 {
                       name_chars[0]
                     } else {
-                      panic()  // Unsupported character name
+                      panic() // Unsupported character name
                     }
                   }
                 }
@@ -150,13 +150,13 @@ pub fn tokenize(input : String) -> Array[Token] {
                 continue
               }
             } else {
-              panic()  // Nothing after #\
+              panic() // Nothing after #\
             }
           }
-          _ => panic()  // Unsupported # literal
+          _ => panic() // Unsupported # literal
         }
       } else {
-        panic()  // nothing after #
+        panic() // nothing after #
       }
     }
     if ch == '"' {
@@ -186,7 +186,7 @@ pub fn tokenize(input : String) -> Array[Token] {
             }
             i = i + 1
           } else {
-            panic()  // nothing after escape
+            panic() // nothing after escape
           }
         } else {
           builder.write_char(str_ch)
@@ -265,7 +265,7 @@ pub fn tokenize(input : String) -> Array[Token] {
       tokens.push(Token::Identifier(builder.to_string()))
       continue
     }
-    panic()
+    panic() // Unexpected character
   } else { () }
   tokens
 }

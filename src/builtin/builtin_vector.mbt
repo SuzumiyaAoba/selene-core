@@ -123,6 +123,31 @@ pub fn builtin_vector_set(args : Array[Value]) -> Result[Value, EvalError] {
   }
 }
 
+/// Built-in function: vector-fill!
+/// (vector-fill! vector fill) - fills all elements of the vector with fill
+pub fn builtin_vector_fill(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 2 {
+    return Err(
+      EvalError::ArityError("vector-fill!: requires exactly 2 arguments"),
+    )
+  }
+  match args[0] {
+    Value::Vector(items) => {
+      let mut i = 0
+      let len = items.length()
+      let _ = while i < len {
+        items[i] = args[1]
+        i = i + 1
+      } else {
+        ()
+      }
+      Ok(Value::Nil)
+    }
+    _ =>
+      Err(EvalError::TypeError("vector-fill!: first argument must be a vector"))
+  }
+}
+
 /// Built-in function: vector- > list
 /// (vector- > list vector) - Convert vector to list
 pub fn builtin_vector_to_list(args : Array[Value]) -> Result[Value, EvalError] {

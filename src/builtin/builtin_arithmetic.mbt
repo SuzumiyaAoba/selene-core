@@ -10,6 +10,16 @@ fn expect_number(value : Value) -> Result[Number, EvalError] {
   }
 }
 
+/// Check if a number is zero
+fn is_zero_number(n : Number) -> Bool {
+  match n {
+    Number::Int(x) => x == 0
+    Number::Real(x) => x == 0.0
+    Number::Rational(n, _) => n == 0
+    Number::Complex(r, i) => r == 0.0 && i == 0.0
+  }
+}
+
 /// Convert a number to Double
 fn number_to_double(n : Number) -> Double {
   match n {
@@ -298,6 +308,9 @@ pub fn builtin_div(args : Array[Value]) -> Result[Value, EvalError] {
     let num = match expect_number(args[i]) {
       Ok(n) => n
       Err(e) => return Err(e)
+    }
+    if is_zero_number(num) {
+      return Err(EvalError::TypeError("/: division by zero"))
     }
     result = div_numbers(result, num)
     i = i + 1

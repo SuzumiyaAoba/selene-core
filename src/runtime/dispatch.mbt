@@ -112,6 +112,7 @@ pub fn apply_builtin(name : String, args : Array[Value]) -> Result[Value, EvalEr
     "vector-length" => builtin_vector_length(args)
     "vector-ref" => builtin_vector_ref(args)
     "vector-set!" => builtin_vector_set(args)
+    "vector-fill!" => builtin_vector_fill(args)
     "vector->list" => builtin_vector_to_list(args)
     "list->vector" => builtin_list_to_vector(args)
     "floor" => builtin_floor(args)
