@@ -325,3 +325,86 @@ test "R5RS 6.3.5: string-fill!" {
     Err(e) => fail("error: " + e)
   }
 }
+
+// Additional string tests (8 new tests)
+
+fn s6_3_5_assert_error(ctx : VMReplContext, code : String) -> Unit raise Error {
+  match repl_eval(ctx, code) {
+    Ok(v) => fail("expected error, got " + v.to_string() + " for: " + code)
+    Err(_) => ()  // Error expected
+  }
+}
+
+fn s6_3_5_assert_true(ctx : VMReplContext, code : String) -> Unit raise Error {
+  match repl_eval(ctx, code) {
+    Ok(Value::Bool(true)) => ()
+    Ok(v) => fail("expected #t, got " + v.to_string() + " for: " + code)
+    Err(e) => fail("error: " + e + " for: " + code)
+  }
+}
+
+test "R5RS 6.3.5: string constructor (NOT IMPLEMENTED)" {
+  let ctx = new_repl_context()
+  // (string char ...) constructs a string from chars
+  s6_3_5_assert_error(ctx, "(string #\\a #\\b #\\c)")
+}
+
+test "R5RS 6.3.5: string-copy identity" {
+  let ctx = new_repl_context()
+  // string-copy creates a new string with same content
+  s6_3_5_assert_true(ctx, "(equal? (string-copy \"hello\") \"hello\")")
+  // NOTE: Physical identity test (not eq?) would require separate strings
+}
+
+test "R5RS 6.3.5: string-append multiple" {
+  let ctx = new_repl_context()
+  match repl_eval(ctx, "(string-append \"a\" \"b\" \"c\" \"d\")") {
+    Ok(Value::String(s)) => assert_eq(s, "abcd")
+    Ok(v) => fail("expected \"abcd\", got " + v.to_string())
+    Err(e) => fail("error: " + e)
+  }
+}
+
+test "R5RS 6.3.5: string-append empty strings" {
+  let ctx = new_repl_context()
+  match repl_eval(ctx, "(string-append \"\" \"hello\" \"\")") {
+    Ok(Value::String(s)) => assert_eq(s, "hello")
+    Ok(v) => fail("expected \"hello\", got " + v.to_string())
+    Err(e) => fail("error: " + e)
+  }
+}
+
+test "R5RS 6.3.5: string comparison edge cases" {
+  let ctx = new_repl_context()
+  s6_3_5_assert_true(ctx, "(string=? \"\" \"\")")
+  s6_3_5_assert_true(ctx, "(string<? \"\" \"a\")")
+  s6_3_5_assert_true(ctx, "(string>? \"b\" \"a\")")
+}
+
+test "R5RS 6.3.5: substring edge cases" {
+  let ctx = new_repl_context()
+  match repl_eval(ctx, "(substring \"hello\" 0 0)") {
+    Ok(Value::String(s)) => assert_eq(s, "")
+    Ok(v) => fail("expected empty string, got " + v.to_string())
+    Err(e) => fail("error: " + e)
+  }
+  match repl_eval(ctx, "(substring \"hello\" 0 5)") {
+    Ok(Value::String(s)) => assert_eq(s, "hello")
+    Ok(v) => fail("expected \"hello\", got " + v.to_string())
+    Err(e) => fail("error: " + e)
+  }
+}
+
+test "R5RS 6.3.5: string->list empty string" {
+  let ctx = new_repl_context()
+  s6_3_5_assert_true(ctx, "(equal? (string->list \"\") '())")
+}
+
+test "R5RS 6.3.5: number->string negative" {
+  let ctx = new_repl_context()
+  match repl_eval(ctx, "(number->string -42)") {
+    Ok(Value::String(s)) => assert_eq(s, "-42")
+    Ok(v) => fail("expected \"-42\", got " + v.to_string())
+    Err(e) => fail("error: " + e)
+  }
+}

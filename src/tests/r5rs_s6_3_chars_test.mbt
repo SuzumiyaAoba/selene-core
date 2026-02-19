@@ -223,3 +223,95 @@ test "R5RS 6.3.4: char-ci=? NOT IMPLEMENTED" {
     Err(_) => ()
   }
 }
+
+// Additional character tests (11 new tests)
+
+fn s6_3_chars_assert_false(ctx : VMReplContext, code : String) -> Unit raise Error {
+  match repl_eval(ctx, code) {
+    Ok(Value::Bool(false)) => ()
+    Ok(v) => fail("expected #f, got " + v.to_string() + " for: " + code)
+    Err(e) => fail("error: " + e + " for: " + code)
+  }
+}
+
+fn s6_3_chars_assert_error(ctx : VMReplContext, code : String) -> Unit raise Error {
+  match repl_eval(ctx, code) {
+    Ok(v) => fail("expected error, got " + v.to_string() + " for: " + code)
+    Err(_) => ()  // Error expected
+  }
+}
+
+test "R5RS 6.3.4: char-ci<? (NOT IMPLEMENTED)" {
+  let ctx = new_repl_context()
+  s6_3_chars_assert_error(ctx, "(char-ci<? #\\a #\\B)")
+}
+
+test "R5RS 6.3.4: char-ci>? (NOT IMPLEMENTED)" {
+  let ctx = new_repl_context()
+  s6_3_chars_assert_error(ctx, "(char-ci>? #\\Z #\\a)")
+}
+
+test "R5RS 6.3.4: char-ci<=? (NOT IMPLEMENTED)" {
+  let ctx = new_repl_context()
+  s6_3_chars_assert_error(ctx, "(char-ci<=? #\\a #\\A)")
+}
+
+test "R5RS 6.3.4: char-ci>=? (NOT IMPLEMENTED)" {
+  let ctx = new_repl_context()
+  s6_3_chars_assert_error(ctx, "(char-ci>=? #\\B #\\b)")
+}
+
+test "R5RS 6.3.4: char comparison chained" {
+  let ctx = new_repl_context()
+  // NOTE: Current implementation requires exactly 2 arguments
+  s6_3_chars_assert(ctx, "(and (char=? #\\a #\\a) (char=? #\\a #\\a))")
+  s6_3_chars_assert(ctx, "(and (char<? #\\a #\\b) (char<? #\\b #\\c))")
+}
+
+test "R5RS 6.3.4: char predicates on special chars" {
+  let ctx = new_repl_context()
+  s6_3_chars_assert(ctx, "(char-whitespace? #\\space)")
+  s6_3_chars_assert(ctx, "(char-whitespace? #\\newline)")
+  s6_3_chars_assert_false(ctx, "(char-alphabetic? #\\space)")
+}
+
+test "R5RS 6.3.4: char-numeric? digits" {
+  let ctx = new_repl_context()
+  s6_3_chars_assert(ctx, "(char-numeric? #\\0)")
+  s6_3_chars_assert(ctx, "(char-numeric? #\\9)")
+  s6_3_chars_assert_false(ctx, "(char-numeric? #\\a)")
+}
+
+test "R5RS 6.3.4: char-upcase lowercase" {
+  let ctx = new_repl_context()
+  match repl_eval(ctx, "(char-upcase #\\z)") {
+    Ok(Value::Char('Z')) => ()
+    Ok(v) => fail("expected #\\Z, got " + v.to_string())
+    Err(e) => fail("error: " + e)
+  }
+}
+
+test "R5RS 6.3.4: char-downcase uppercase" {
+  let ctx = new_repl_context()
+  match repl_eval(ctx, "(char-downcase #\\Z)") {
+    Ok(Value::Char('z')) => ()
+    Ok(v) => fail("expected #\\z, got " + v.to_string())
+    Err(e) => fail("error: " + e)
+  }
+}
+
+test "R5RS 6.3.4: char case conversion idempotent" {
+  let ctx = new_repl_context()
+  s6_3_chars_assert(ctx, "(char=? (char-upcase #\\A) #\\A)")
+  s6_3_chars_assert(ctx, "(char=? (char-downcase #\\z) #\\z)")
+}
+
+test "R5RS 6.3.4: char->integer range" {
+  let ctx = new_repl_context()
+  // char->integer should return valid ASCII/Unicode code points
+  match repl_eval(ctx, "(char->integer #\\space)") {
+    Ok(Value::Number(Number::Int(n))) => assert_eq(n, 32)
+    Ok(v) => fail("expected 32, got " + v.to_string())
+    Err(e) => fail("error: " + e)
+  }
+}

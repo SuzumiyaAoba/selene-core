@@ -81,3 +81,21 @@ test "R5RS 6.3.3: symbol? nil" {
     Err(e) => fail("error: " + e)
   }
 }
+
+// Additional symbol test (1 new test)
+
+test "R5RS 6.3.3: symbol interning" {
+  let ctx = new_repl_context()
+  // Same symbol literal should be eq?
+  match repl_eval(ctx, "(eq? 'foo 'foo)") {
+    Ok(Value::Bool(true)) => ()
+    Ok(v) => fail("expected #t, got " + v.to_string())
+    Err(e) => fail("error: " + e)
+  }
+  // string->symbol with same string should produce eq? symbols
+  match repl_eval(ctx, "(eq? (string->symbol \"bar\") (string->symbol \"bar\"))") {
+    Ok(Value::Bool(true)) => ()
+    Ok(v) => fail("expected #t, got " + v.to_string())
+    Err(e) => fail("error: " + e)
+  }
+}

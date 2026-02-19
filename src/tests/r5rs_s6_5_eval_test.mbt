@@ -60,3 +60,25 @@ test "R5RS 6.5: eval with let" {
   let ctx = new_repl_context()
   s6_5_assert_int(ctx, "(eval '(let ((x 10) (y 20)) (+ x y)))", 30)
 }
+
+// Additional eval tests (2 new tests)
+
+fn s6_5_assert_error(ctx : VMReplContext, code : String) -> Unit raise Error {
+  match repl_eval(ctx, code) {
+    Ok(v) => fail("expected error, got " + v.to_string() + " for: " + code)
+    Err(_) => ()  // Error expected
+  }
+}
+
+test "R5RS 6.5: eval with define" {
+  let ctx = new_repl_context()
+  // eval can evaluate define expressions
+  s6_5_assert_int(ctx, "(eval '(begin (define z 42) z))", 42)
+}
+
+test "R5RS 6.5: scheme-report-environment (NOT IMPLEMENTED)" {
+  let ctx = new_repl_context()
+  // scheme-report-environment and null-environment are not implemented
+  s6_5_assert_error(ctx, "(scheme-report-environment 5)")
+  s6_5_assert_error(ctx, "(null-environment 5)")
+}
