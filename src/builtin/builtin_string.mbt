@@ -406,3 +406,91 @@ pub fn builtin_string_to_number(args : Array[Value]) -> Result[Value, EvalError]
     _ => Err(EvalError::TypeError("string->number: argument must be a string"))
   }
 }
+
+/// Built-in function: string-copy
+/// (string-copy str) - Returns a copy of the string
+pub fn builtin_string_copy(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 1 {
+    return Err(
+      EvalError::ArityError("string-copy: requires exactly 1 argument"),
+    )
+  }
+  match args[0] {
+    Value::String(s) => {
+      // MoonBit strings are immutable, so a "copy" is the same string
+      // but semantically this fulfills R5RS string-copy
+      Ok(Value::String(s))
+    }
+    _ => Err(EvalError::TypeError("string-copy: argument must be a string"))
+  }
+}
+
+/// Built-in function: string-set!
+/// (string-set! str k char) - Stores char in element k of string
+/// Note: MoonBit strings are immutable, so we return a new string
+pub fn builtin_string_set(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 3 {
+    return Err(
+      EvalError::ArityError("string-set!: requires exactly 3 arguments"),
+    )
+  }
+  match (args[0], args[1], args[2]) {
+    (Value::String(s), Value::Number(Number::Int(k)), Value::Char(c)) => {
+      if k < 0 || k >= s.length() {
+        return Err(EvalError::TypeError("string-set!: index out of range"))
+      }
+      let chars : Array[Char] = []
+      let mut i = 0
+      let _ = while i < s.length() {
+        if i == k {
+          chars.push(c)
+        } else {
+          chars.push(Char::from_int(s[i].to_int()))
+        }
+        i = i + 1
+      } else {
+        ()
+      }
+      let result = chars.fold(init="", fn (acc, ch) { acc + "\{ch}" })
+      Ok(Value::String(result))
+    }
+    _ =>
+      Err(
+        EvalError::TypeError(
+          "string-set!: requires string, integer, and char arguments",
+        ),
+      )
+  }
+}
+
+/// Built-in function: string-fill!
+/// (string-fill! str char) - Stores char in every element of string
+/// Note: MoonBit strings are immutable, so we return a new string
+pub fn builtin_string_fill(args : Array[Value]) -> Result[Value, EvalError] {
+  if args.length() != 2 {
+    return Err(
+      EvalError::ArityError("string-fill!: requires exactly 2 arguments"),
+    )
+  }
+  match (args[0], args[1]) {
+    (Value::String(s), Value::Char(c)) => {
+      let chars : Array[Char] = []
+      let mut i = 0
+      let len = s.length()
+      let _ = while i < len {
+        chars.push(c)
+        i = i + 1
+      } else {
+        ()
+      }
+      let result = chars.fold(init="", fn (acc, ch) { acc + "\{ch}" })
+      Ok(Value::String(result))
+    }
+    _ =>
+      Err(
+        EvalError::TypeError(
+          "string-fill!: requires string and char arguments",
+        ),
+      )
+  }
+}

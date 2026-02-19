@@ -224,7 +224,8 @@ pub fn create_initial_globals() -> @hashmap.T[String, Value] {
     "string-length", "string-ref", "string-append",
     "string=?", "string<?", "string>?", "string<=?", "string>=?",
     "string-ci=?", "string-ci<?", "string-ci>?", "string-ci<=?", "string-ci>=?",
-    "make-string", "substring", "string->list", "list->string",
+    "make-string", "substring", "string-copy", "string-set!", "string-fill!",
+    "string->list", "list->string",
     // Vector
     "make-vector", "vector", "vector-length", "vector-ref",
     "vector-set!", "vector-fill!", "vector->list", "list->vector",
@@ -257,6 +258,8 @@ pub fn create_initial_globals() -> @hashmap.T[String, Value] {
     "cdaar", "cdadr", "cddar", "cdddr",
     // Continuation
     "call/cc", "call-with-current-continuation",
+    // Eval
+    "eval",
   ]
   for name in names {
     globals.set(name, Value::Procedure(Procedure::Native(name)))
@@ -917,6 +920,8 @@ fn vm_values_eq(a : Value, b : Value) -> Bool {
     (Value::Symbol(x), Value::Symbol(y)) => x == y
     (Value::Char(x), Value::Char(y)) => x == y
     (Value::Pair(_, _, id1), Value::Pair(_, _, id2)) => id1 == id2
+    (Value::Procedure(Procedure::Native(a)), Value::Procedure(Procedure::Native(b))) =>
+      a == b
     (Value::Procedure(Procedure::VMCont(a)), Value::Procedure(Procedure::VMCont(b))) =>
       a.id == b.id
     _ => false
@@ -1180,20 +1185,54 @@ fn vm_call_function(
       Ok(())
     }
     Value::Procedure(Procedure::Native(name)) => {
-      // Set active VM context so native builtins (like map) can call VMClosures
-      let prev_module = active_vm_module.val
-      let prev_globals = active_vm_globals.val
-      active_vm_module.val = Some(vm.compiled_module)
-      active_vm_globals.val = Some(vm.globals)
-      let result = apply_builtin(name, args)
-      active_vm_module.val = prev_module
-      active_vm_globals.val = prev_globals
-      match result {
-        Ok(v) => {
-          vm_push(vm, v)
-          Ok(())
+      // Special handling for eval: needs VM context
+      if name == "eval" {
+        if args.length() < 1 {
+          return Err(VMError::ArityError("eval: requires at least 1 argument"))
         }
-        Err(e) => Err(VMError::RuntimeError(e.to_string()))
+        let sexpr = value_to_sexpr(args[0])
+        // Compile the expression using current globals
+        let compiler_globals = @hashmap.new()
+        vm.globals.each(fn(k, _v) { compiler_globals.set(k, ()) })
+        match compile_toplevel_with_globals(sexpr, compiler_globals) {
+          Ok(ir) => {
+            let optimized = optimize(ir)
+            let compiled_module = generate(optimized)
+            // Run in a mini VM with current globals
+            let mini_vm = new_vm_state_with_globals(compiled_module, vm.globals)
+            match vm_run(mini_vm) {
+              Ok(result) => {
+                // Handle global defines
+                match optimized {
+                  IRExpr::GlobalSet(gname, _) => {
+                    vm.globals.set(gname, result)
+                  }
+                  _ => ()
+                }
+                vm_push(vm, result)
+                Ok(())
+              }
+              Err(e) => Err(e)
+            }
+          }
+          Err(e) => Err(VMError::RuntimeError("eval compile error: " + e.to_string()))
+        }
+      } else {
+        // Set active VM context so native builtins (like map) can call VMClosures
+        let prev_module = active_vm_module.val
+        let prev_globals = active_vm_globals.val
+        active_vm_module.val = Some(vm.compiled_module)
+        active_vm_globals.val = Some(vm.globals)
+        let result = apply_builtin(name, args)
+        active_vm_module.val = prev_module
+        active_vm_globals.val = prev_globals
+        match result {
+          Ok(v) => {
+            vm_push(vm, v)
+            Ok(())
+          }
+          Err(e) => Err(VMError::RuntimeError(e.to_string()))
+        }
       }
     }
     Value::Procedure(Procedure::VMCont(cont)) => {

@@ -25,6 +25,30 @@ pub fn sym(name : String) -> SExpr {
   SExpr::Symbol(name)
 }
 
+/// Convert Value to SExpr (for eval)
+/// The Value is already evaluated data (from quote), convert it directly
+pub fn value_to_sexpr(value : Value) -> SExpr {
+  match value {
+    Value::Nil => SExpr::Nil
+    Value::Bool(b) => SExpr::Bool(b)
+    Value::Symbol(s) => SExpr::Symbol(s)
+    Value::Number(Number::Int(n)) => SExpr::Number(n)
+    Value::Number(Number::Real(r)) => SExpr::Real(r)
+    Value::Char(c) => SExpr::Char(c)
+    Value::String(s) => SExpr::String(s)
+    Value::Pair(car, cdr, _) =>
+      SExpr::Pair(value_to_sexpr(car), value_to_sexpr(cdr))
+    Value::Vector(items) => {
+      let sexprs : Array[SExpr] = []
+      for item in items {
+        sexprs.push(value_to_sexpr(item))
+      }
+      SExpr::Vector(sexprs)
+    }
+    _ => SExpr::Nil // procedures, ports, etc. can't be converted
+  }
+}
+
 /// Convert SExpr to Value (convert without evaluating).
 pub fn sexpr_to_value(sexpr : SExpr) -> Value {
   match sexpr {
