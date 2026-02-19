@@ -94,3 +94,95 @@ test "R5RS 6.3.6: vector roundtrip" {
     "(equal? (vector->list (list->vector '(a b c))) '(a b c))"
   )
 }
+
+// Additional vector tests (15 new tests)
+
+test "R5RS 6.3.6: vector with mixed types" {
+  let ctx = new_repl_context()
+  s6_3_6_assert_true(ctx, "(equal? (vector 1 'a \"hello\" #t) (vector 1 'a \"hello\" #t))")
+  s6_3_6_assert_true(ctx, "(vector? (vector 1 'a \"hello\" #t))")
+}
+
+test "R5RS 6.3.6: empty vector" {
+  let ctx = new_repl_context()
+  s6_3_6_assert_int(ctx, "(vector-length (vector))", 0)
+  s6_3_6_assert_true(ctx, "(equal? (vector) (make-vector 0))")
+}
+
+test "R5RS 6.3.6: vector-set! multiple" {
+  let ctx = new_repl_context()
+  s6_3_6_assert_true(ctx,
+    "(let ((v (vector 1 2 3 4 5))) (vector-set! v 0 10) (vector-set! v 4 50) (equal? v (vector 10 2 3 4 50)))"
+  )
+}
+
+test "R5RS 6.3.6: vector-set! same index" {
+  let ctx = new_repl_context()
+  s6_3_6_assert_true(ctx,
+    "(let ((v (vector 1 2 3))) (vector-set! v 1 20) (vector-set! v 1 99) (equal? v (vector 1 99 3)))"
+  )
+}
+
+test "R5RS 6.3.6: make-vector with fill" {
+  let ctx = new_repl_context()
+  s6_3_6_assert_true(ctx, "(equal? (make-vector 4 'x) (vector 'x 'x 'x 'x))")
+  s6_3_6_assert_true(ctx, "(equal? (make-vector 2 \"hi\") (vector \"hi\" \"hi\"))")
+}
+
+test "R5RS 6.3.6: vector-ref bounds" {
+  let ctx = new_repl_context()
+  s6_3_6_assert_int(ctx, "(vector-ref (vector 10 20 30) 0)", 10)
+  s6_3_6_assert_int(ctx, "(vector-ref (vector 10 20 30) 2)", 30)
+}
+
+test "R5RS 6.3.6: vector-fill! with symbol" {
+  let ctx = new_repl_context()
+  s6_3_6_assert_true(ctx,
+    "(let ((v (vector 1 2 3))) (vector-fill! v 'filled) (equal? v (vector 'filled 'filled 'filled)))"
+  )
+}
+
+test "R5RS 6.3.6: vector->list empty" {
+  let ctx = new_repl_context()
+  s6_3_6_assert_true(ctx, "(equal? (vector->list (vector)) '())")
+}
+
+test "R5RS 6.3.6: list->vector empty" {
+  let ctx = new_repl_context()
+  s6_3_6_assert_true(ctx, "(equal? (list->vector '()) (vector))")
+}
+
+test "R5RS 6.3.6: vector with nested lists" {
+  let ctx = new_repl_context()
+  s6_3_6_assert_true(ctx, "(equal? (vector '(1 2) '(3 4)) (vector '(1 2) '(3 4)))")
+}
+
+test "R5RS 6.3.6: vector equality" {
+  let ctx = new_repl_context()
+  s6_3_6_assert_true(ctx, "(equal? (vector 1 2 3) (vector 1 2 3))")
+  s6_3_6_assert_false(ctx, "(equal? (vector 1 2 3) (vector 1 2 4))")
+}
+
+test "R5RS 6.3.6: vector single element" {
+  let ctx = new_repl_context()
+  s6_3_6_assert_int(ctx, "(vector-length (vector 'only))", 1)
+  s6_3_6_assert_true(ctx, "(equal? (vector-ref (vector 'only) 0) 'only)")
+}
+
+test "R5RS 6.3.6: make-vector zero length" {
+  let ctx = new_repl_context()
+  s6_3_6_assert_int(ctx, "(vector-length (make-vector 0))", 0)
+}
+
+test "R5RS 6.3.6: vector large size" {
+  let ctx = new_repl_context()
+  s6_3_6_assert_int(ctx, "(vector-length (make-vector 100))", 100)
+  s6_3_6_assert_true(ctx, "(equal? (make-vector 100 0) (make-vector 100 0))")
+}
+
+test "R5RS 6.3.6: vector with booleans" {
+  let ctx = new_repl_context()
+  s6_3_6_assert_true(ctx, "(equal? (vector #t #f #t) (vector #t #f #t))")
+  s6_3_6_assert_true(ctx, "(vector-ref (vector #t #f) 0)")
+  s6_3_6_assert_false(ctx, "(vector-ref (vector #t #f) 1)")
+}
