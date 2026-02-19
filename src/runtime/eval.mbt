@@ -409,6 +409,9 @@ pub fn initial_env() -> Env {
   let env = define_var(env, "string-ci>=?", Value::Procedure(Procedure::Native("string-ci>=?")))
   let env = define_var(env, "make-string", Value::Procedure(Procedure::Native("make-string")))
   let env = define_var(env, "substring", Value::Procedure(Procedure::Native("substring")))
+  let env = define_var(env, "string-copy", Value::Procedure(Procedure::Native("string-copy")))
+  let env = define_var(env, "string-set!", Value::Procedure(Procedure::Native("string-set!")))
+  let env = define_var(env, "string-fill!", Value::Procedure(Procedure::Native("string-fill!")))
   // Vector manipulation
   let env = define_var(env, "vector?", Value::Procedure(Procedure::Native("vector?")))
   let env = define_var(env, "make-vector", Value::Procedure(Procedure::Native("make-vector")))

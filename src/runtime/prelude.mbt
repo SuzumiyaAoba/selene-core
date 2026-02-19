@@ -20,6 +20,7 @@ using @core {
   lookup,
   define_var,
   sexpr_to_value,
+  value_to_sexpr,
   values_eqv,
   remove_continuation,
   clear_continuations,
@@ -29,7 +30,7 @@ using @core {
 }
 using @frontend { parse }
 using @ffi { file_exists, read_file }
-using @compiler { type CodeChunk, type CompiledModule, type Opcode, type PrimOpKind, bc_value_to_value, compile_to_module }
+using @compiler { type CodeChunk, type CompiledModule, type Opcode, type PrimOpKind, type IRExpr, bc_value_to_value, compile_to_module, compile_toplevel_with_globals, optimize, generate }
 using @builtin {
   builtin_abs,
   builtin_acos,
@@ -168,6 +169,9 @@ using @builtin {
   builtin_string_to_symbol,
   builtin_sub,
   builtin_substring,
+  builtin_string_copy,
+  builtin_string_set,
+  builtin_string_fill,
   builtin_symbol_p,
   builtin_symbol_to_string,
   builtin_tan,

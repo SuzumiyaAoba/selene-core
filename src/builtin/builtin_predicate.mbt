@@ -175,13 +175,18 @@ pub fn builtin_eq_p(args : Array[Value]) -> Result[Value, EvalError] {
   if args.length() != 2 {
     return Err(EvalError::ArityError("eq?: requires exactly 2 arguments"))
   }
-  // Simple Implementation: Numeric and Boolean Equivalence Check
+  // eq? checks identity (same object)
   let result = match (args[0], args[1]) {
     (Value::Nil, Value::Nil) => true
     (Value::Bool(a), Value::Bool(b)) => a == b
     (Value::Number(Number::Int(a)), Value::Number(Number::Int(b))) => a == b
     (Value::Symbol(a), Value::Symbol(b)) => a == b
+    (Value::Char(a), Value::Char(b)) => a == b
     (Value::Pair(_, _, id1), Value::Pair(_, _, id2)) => id1 == id2
+    (Value::Procedure(Procedure::Native(a)), Value::Procedure(Procedure::Native(b))) =>
+      a == b
+    (Value::Procedure(Procedure::Cont(a)), Value::Procedure(Procedure::Cont(b))) =>
+      a.id == b.id
     _ => false
   }
   Ok(Value::Bool(result))

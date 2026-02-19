@@ -106,6 +106,9 @@ pub fn apply_builtin(name : String, args : Array[Value]) -> Result[Value, EvalEr
     "string-ci>=?" => builtin_string_ci_ge(args)
     "make-string" => builtin_make_string(args)
     "substring" => builtin_substring(args)
+    "string-copy" => builtin_string_copy(args)
+    "string-set!" => builtin_string_set(args)
+    "string-fill!" => builtin_string_fill(args)
     "vector?" => builtin_vector_p(args)
     "make-vector" => builtin_make_vector(args)
     "vector" => builtin_vector(args)
@@ -167,6 +170,7 @@ pub fn apply_builtin(name : String, args : Array[Value]) -> Result[Value, EvalEr
     "peek-char" => builtin_peek_char(args)
     "eof-object?" => builtin_eof_object_p(args)
     "write-char" => builtin_write_char_port(args)
+    "eval" => Err(EvalError::InvalidSyntax("eval: can only be used in VM context"))
     _ => Err(EvalError::InvalidSyntax("unknown builtin: " + name))
   }
 }

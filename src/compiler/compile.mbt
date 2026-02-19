@@ -1013,6 +1013,46 @@ fn compile_cond_clauses(
       compile_body_exprs(exprs, env, tail)
     }
     _ => {
+      // Check for arrow form: (test => proc)
+      if exprs.length() == 2 {
+        match exprs[0] {
+          SExpr::Symbol("=>") => {
+            // Arrow form: evaluate test, if true apply proc to test result
+            // Compile as: (let (($cond-tmp test)) (if $cond-tmp (proc $cond-tmp) else))
+            let temp_name = "$cond-tmp"
+            let test_ir = match compile(test_sexpr, env, false) {
+              Ok(ir) => ir
+              Err(e) => return Err(e)
+            }
+            let temp_binding : LetBinding = { name: temp_name, init: test_ir }
+            let cond_env = extend_compile_env_same_frame(env, [temp_name])
+            let cond_var = match compile(SExpr::Symbol(temp_name), cond_env, false) {
+              Ok(ir) => ir
+              Err(e) => return Err(e)
+            }
+            let app_var = match compile(SExpr::Symbol(temp_name), cond_env, false) {
+              Ok(ir) => ir
+              Err(e) => return Err(e)
+            }
+            let proc_ir = match compile(exprs[1], cond_env, false) {
+              Ok(ir) => ir
+              Err(e) => return Err(e)
+            }
+            let app_ir = if tail {
+              IRExpr::TailApp(proc_ir, [app_var])
+            } else {
+              IRExpr::App(proc_ir, [app_var])
+            }
+            let else_ir = match compile_cond_clauses(tests, bodies, index + 1, cond_env, tail) {
+              Ok(ir) => ir
+              Err(e) => return Err(e)
+            }
+            return Ok(IRExpr::Let([temp_binding], IRExpr::If(cond_var, app_ir, else_ir)))
+          }
+          _ => ()
+        }
+      }
+
       // Regular clause
       let test_ir = match compile(test_sexpr, env, false) {
         Ok(ir) => ir
