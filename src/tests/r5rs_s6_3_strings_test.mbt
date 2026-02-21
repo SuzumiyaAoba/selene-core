@@ -356,7 +356,7 @@ test "R5RS 6.3.5: string-copy identity" {
   // NOTE: Physical identity test (not eq?) would require separate strings
 }
 
-test "R5RS 6.3.5: string-append multiple" {
+test "R5RS 6.3.5: string-append multiple (4 args)" {
   let ctx = new_repl_context()
   match repl_eval(ctx, "(string-append \"a\" \"b\" \"c\" \"d\")") {
     Ok(Value::String(s)) => assert_eq(s, "abcd")

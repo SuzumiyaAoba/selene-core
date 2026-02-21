@@ -52,7 +52,7 @@ test "display - requires exactly 1 argument" {
 
 test "display - fails with too many arguments" {
   let env = initial_env()
-  let expr = parse_one("(display 1 2)")
+  let expr = parse_one("(display 1 2 3)")
   let result = eval(expr, env)
   match result {
     Err(EvalError::ArityError(_)) => ()
@@ -70,13 +70,13 @@ test "newline - outputs newline" {
   }
 }
 
-test "newline - requires exactly 0 arguments" {
+test "newline - requires at most 1 argument" {
   let env = initial_env()
-  let expr = parse_one("(newline 1)")
+  let expr = parse_one("(newline 1 2)")
   let result = eval(expr, env)
   match result {
     Err(EvalError::ArityError(_)) => ()
-    _ => @test.fail("newline should fail with arity error when given arguments")
+    _ => @test.fail("newline should fail with arity error when given too many arguments")
   }
 }
 
@@ -132,7 +132,7 @@ test "write - requires exactly 1 argument" {
 
 test "write - fails with too many arguments" {
   let env = initial_env()
-  let expr = parse_one("(write 1 2)")
+  let expr = parse_one("(write 1 2 3)")
   let result = eval(expr, env)
   match result {
     Err(EvalError::ArityError(_)) => ()
