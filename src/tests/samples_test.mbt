@@ -1484,3 +1484,41 @@ test "sample: regexp" {
   )
   sample_assert_true(ctx, "(regexp-check)")
 }
+
+test "sample: raytracer (2x2)" {
+  let ctx = new_repl_context()
+
+  // Vector operations
+  sample_eval(ctx, "(define (vec3 x y z) (list x y z))")
+  sample_eval(ctx, "(define (vec-x v) (car v))")
+  sample_eval(ctx, "(define (vec-y v) (cadr v))")
+  sample_eval(ctx, "(define (vec-z v) (caddr v))")
+
+  // Color conversion
+  sample_eval(ctx, "(define (clamp x) (max 0 (min 255 (truncate (* 255 x)))))")
+  sample_eval(ctx, "(define (color-to-rgb c) (list (clamp (vec-x c)) (clamp (vec-y c)) (clamp (vec-z c))))")
+
+  // Simple color function for tiny raytracer
+  sample_eval(ctx, "(define (simple-color x y) (vec3 (/ x 2.0) (/ y 2.0) 0.5))")
+
+  // Render tiny 2x2 image
+  sample_eval(ctx, "(define (render-tiny) (list (list (color-to-rgb (simple-color 0.0 0.0)) (color-to-rgb (simple-color 1.0 0.0))) (list (color-to-rgb (simple-color 0.0 1.0)) (color-to-rgb (simple-color 1.0 1.0)))))")
+
+  // Verify rendering produces nested list structure
+  match repl_eval(ctx, "(render-tiny)") {
+    Ok(Value::Pair(_, _, _)) => ()  // Should return nested list
+    Ok(v) => fail("expected list, got " + v.to_string())
+    Err(e) => fail("render-tiny failed: " + e)
+  }
+
+  // Verify color-to-rgb produces valid RGB values
+  sample_eval(ctx, "(define test-color (color-to-rgb (vec3 1.0 0.5 0.0)))")
+  sample_assert_int(ctx, "(car test-color)", 255)  // red channel
+  sample_assert_int(ctx, "(cadr test-color)", 127)  // green channel
+  sample_assert_int(ctx, "(caddr test-color)", 0)  // blue channel
+
+  // Verify gradient computation
+  sample_eval(ctx, "(define gradient (simple-color 1.0 1.0))")
+  sample_assert_true(ctx, "(> (vec-x gradient) 0)")
+  sample_assert_true(ctx, "(> (vec-y gradient) 0)")
+}
